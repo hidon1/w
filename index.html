@@ -1,10 +1,16 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מערכת ניטור יין</title>
-    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <title>מערכת ניטור יין - משופרת</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Playfair+Display:wght@400;700&family=Noto+Sans+Hebrew:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- הוספת ספריות ל-PDF עם תמיכה בעברית -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script> <!-- For advanced graphs -->
     <style>
         :root {
             --primary-color: #8B0000;
@@ -22,7 +28,7 @@
             --graph-area-color: rgba(218, 165, 32, 0.2);
             --graph-point-color: #B8860B;
             --graph-average-color: #6B8E23;
-            --top-section-background: #F8F0E3;
+            --top-section-background: linear-gradient(135deg, #FFF8E1, #F5F5DC);
             --top-section-border: #D4C6B1;
             --dark-background-color: #2F4F4F;
             --dark-card-background: #36454F;
@@ -35,40 +41,82 @@
             --dark-accent-color: #ADFF2F;
             --dark-graph-line-color: #FFD700;
             --dark-graph-area-color: rgba(255, 215, 0, 0.2);
+            --font-size-base: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Heebo', sans-serif;
+            font-family: 'Noto Sans Hebrew', 'Heebo', sans-serif;
+            font-weight: 400;
+            font-size: var(--font-size-base);
             margin: 0;
             padding: 0;
             padding-bottom: 180px;
-            background-color: var(--background-color);
+            background: var(--top-section-background);
             color: var(--text-color);
             direction: rtl;
             line-height: 1.6;
             overflow-x: hidden;
-            transition: background-color var(--animation-speed), color var(--animation-speed);
+            transition: all var(--animation-speed);
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         body.dark-mode {
-            background-color: var(--dark-background-color);
+            background: linear-gradient(135deg, var(--dark-background-color), #1a1a1a);
             color: var(--dark-text-color);
         }
 
+        h1, h2 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: calc(var(--font-size-base) * 1.5);
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+            transition: color var(--animation-speed);
+        }
+
+        h3, h4 {
+            font-family: 'Noto Sans Hebrew', 'Heebo', sans-serif;
+            font-weight: 700;
+            font-size: calc(var(--font-size-base) * 1.2);
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+        }
+
+        p, span, div {
+            font-family: 'Noto Sans Hebrew', 'Heebo', sans-serif;
+            font-weight: 300;
+        }
+
         .top-section-wrapper {
-            background-color: var(--top-section-background);
+            background: var(--top-section-background);
             padding-top: 5px;
             padding-left: 25px;
             padding-right: 25px;
             border-bottom-left-radius: var(--border-radius);
             border-bottom-right-radius: var(--border-radius);
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            transition: background-color var(--animation-speed);
+            transition: all var(--animation-speed);
             border-bottom: 1px solid var(--top-section-border);
+            animation: slideInDown 0.5s ease-out;
+        }
+
+        @keyframes slideInDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         body.dark-mode .top-section-wrapper {
-            background-color: var(--dark-card-background);
+            background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
             border-color: var(--dark-border-color);
         }
 
@@ -79,14 +127,18 @@
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
             padding: 30px;
-            animation: fadeIn var(--animation-speed) ease-out;
-            transition: background-color var(--animation-speed), box-shadow var(--animation-speed), border-color var(--animation-speed);
+            animation: fadeInUp 0.5s ease-out;
+            transition: all var(--animation-speed);
             position: relative;
         }
 
-        @keyframes fadeIn {
+        @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        body.dark-mode .container {
+            background-color: var(--dark-card-background);
         }
 
         .project-header {
@@ -101,27 +153,29 @@
 
         #currentProjectName {
             font-family: 'Playfair Display', serif;
-            font-size: 2.5em;
+            font-size: calc(var(--font-size-base) * 1.5);
             color: var(--primary-color);
             font-weight: 700;
             cursor: pointer;
             transition: color var(--animation-speed);
             margin: 0;
+            text-align: center;
         }
 
         #currentProjectName:hover {
             text-decoration: underline;
+            color: var(--secondary-color);
         }
 
         #editProjectNameInput {
-            font-family: 'Heebo', sans-serif;
-            font-size: 1.3em;
+            font-family: 'Noto Sans Hebrew', sans-serif;
+            font-size: calc(var(--font-size-base) * 1.2);
             padding: 5px 10px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             background-color: var(--card-background);
             color: var(--text-color);
-            transition: background-color var(--animation-speed), color var(--animation-speed), border-color var(--animation-speed);
+            transition: all var(--animation-speed);
             text-align: center;
             max-width: 80%;
         }
@@ -135,14 +189,14 @@
             margin-top: 15px;
             margin-bottom: 20px;
             padding: 10px;
-            background-color: var(--top-section-background);
+            background: linear-gradient(135deg, #F8F0E3, #E6D7C3);
             border-radius: var(--border-radius);
-            transition: background-color var(--animation-speed);
+            transition: all var(--animation-speed);
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
         body.dark-mode .stage-nav-container {
-            background-color: var(--dark-card-background);
+            background: linear-gradient(135deg, var(--dark-card-background), #3a3a3a);
         }
 
         .stage-nav-button {
@@ -152,11 +206,28 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: calc(var(--font-size-base) * 0.9);
             font-weight: 700;
-            transition: background-color 0.3s ease, transform 0.2s ease, border-color var(--animation-speed);
+            transition: all 0.3s ease, transform 0.2s ease;
             min-width: 100px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stage-nav-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .stage-nav-button:hover::before {
+            left: 100%;
         }
 
         .stage-nav-button:hover {
@@ -200,7 +271,7 @@
         }
 
         .wine-icon-container img:hover {
-            transform: scale(1.1);
+            transform: scale(1.1) rotate(5deg);
         }
 
         .dashboard-section {
@@ -217,7 +288,7 @@
             padding: 10px 15px;
             color: white;
             text-align: center;
-            transition: background var(--animation-speed), box-shadow var(--animation-speed);
+            transition: all var(--animation-speed);
             z-index: 999;
             display: flex;
             flex-direction: column;
@@ -231,7 +302,7 @@
             margin-top: 0;
             margin-bottom: 5px;
             font-family: 'Playfair Display', serif;
-            font-size: 1.4em;
+            font-size: calc(var(--font-size-base) * 1.2);
             font-weight: 700;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
             transition: color var(--animation-speed);
@@ -275,8 +346,8 @@
             margin-top: 0;
             margin-bottom: 2px;
             color: var(--accent-color);
-            font-family: 'Heebo', sans-serif;
-            font-size: 0.75em;
+            font-family: 'Noto Sans Hebrew', sans-serif;
+            font-size: calc(var(--font-size-base) * 0.7);
             font-weight: 700;
             white-space: nowrap;
             overflow: hidden;
@@ -285,7 +356,7 @@
         }
 
         .dashboard-item p {
-            font-size: 1.1em;
+            font-size: calc(var(--font-size-base) * 1);
             font-weight: 700;
             color: white;
             margin: 0;
@@ -306,18 +377,24 @@
         }
 
         .input-group {
-            background-color: #fdfdfd;
+            background: linear-gradient(135deg, #fdfdfd, #f0f0f0);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
             padding: 20px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease, background-color var(--animation-speed), border-color var(--animation-speed), box-shadow var(--animation-speed);
+            transition: transform 0.3s ease, all var(--animation-speed);
         }
 
         .input-group:hover {
             transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode .input-group {
+            background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
+            border-color: var(--dark-border-color);
         }
 
         .input-group label {
@@ -325,7 +402,7 @@
             margin-bottom: 10px;
             font-weight: 700;
             color: var(--light-text-color);
-            font-size: 1.1em;
+            font-size: calc(var(--font-size-base) * 1);
             transition: color var(--animation-speed);
         }
 
@@ -335,9 +412,16 @@
             margin-bottom: 15px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            font-size: 1em;
+            font-size: calc(var(--font-size-base) * 1);
             color: var(--text-color);
-            transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color var(--animation-speed), color var(--animation-speed);
+            transition: all 0.3s ease, background-color var(--animation-speed), color var(--animation-speed);
+            background-color: var(--card-background);
+        }
+
+        body.dark-mode .input-group input[type="number"], body.dark-mode .input-group input[type="text"], body.dark-mode .input-group select, body.dark-mode .input-group textarea {
+            background-color: var(--dark-card-background);
+            color: var(--dark-text-color);
+            border-color: var(--dark-border-color);
         }
 
         .input-group input[type="number"]:focus, .input-group input[type="text"]:focus, .input-group select:focus, .input-group textarea:focus {
@@ -347,20 +431,20 @@
         }
 
         .input-group button {
-            background-color: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
             padding: 12px 20px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 1em;
+            font-size: calc(var(--font-size-base) * 1);
             font-weight: 700;
-            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            transition: all 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
             align-self: flex-end;
         }
 
         .input-group button:hover {
-            background-color: var(--secondary-color);
+            background: linear-gradient(135deg, var(--secondary-color), #8B0000);
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
@@ -385,7 +469,7 @@
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 0.9em;
+            font-size: calc(var(--font-size-base) * 0.9);
             font-weight: 700;
             transition: all var(--animation-speed) ease-out;
             background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
@@ -407,7 +491,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 0 5px;
-            font-size: 0.75em;
+            font-size: calc(var(--font-size-base) * 0.7);
             color: #888;
             z-index: 1;
             transition: color var(--animation-speed);
@@ -439,19 +523,19 @@
         }
 
         .modal-content {
-            background-color: var(--card-background);
+            background: linear-gradient(135deg, var(--card-background), #f9f9f9);
             margin: auto;
             padding: 30px;
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
             width: 80%;
-            max-width: 800px;
+            max-width: 1000px;
             animation: slideInModal 0.4s ease-out;
             position: relative;
             display: flex;
             flex-direction: column;
             max-height: 90vh;
-            transition: background-color var(--animation-speed), box-shadow var(--animation-speed), border-color var(--animation-speed);
+            transition: all var(--animation-speed);
         }
 
         @keyframes slideInModal {
@@ -459,10 +543,14 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
+        body.dark-mode .modal-content {
+            background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
+        }
+
         .close-button {
             color: #aaa;
             float: left;
-            font-size: 30px;
+            font-size: calc(var(--font-size-base) * 1.8);
             font-weight: bold;
             transition: color 0.3s ease;
             position: absolute;
@@ -480,7 +568,7 @@
             text-align: center;
             color: var(--primary-color);
             font-family: 'Playfair Display', serif;
-            font-size: 2em;
+            font-size: calc(var(--font-size-base) * 1.5);
             margin-bottom: 20px;
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
@@ -489,7 +577,7 @@
 
         .modal-graph-container {
             width: 100%;
-            height: 250px;
+            height: 350px;
             margin: 20px auto 30px auto;
             background-color: #f0f0f0;
             border-radius: 8px;
@@ -497,6 +585,13 @@
             position: relative;
             overflow: hidden;
             transition: background-color var(--animation-speed), border-color var(--animation-speed);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        body.dark-mode .modal-graph-container {
+            background-color: var(--dark-card-background);
+            border-color: var(--dark-border-color);
         }
 
         .modal-graph-svg {
@@ -531,14 +626,14 @@
         }
 
         .modal-graph-label-x {
-            font-size: 10px;
+            font-size: calc(var(--font-size-base) * 0.6);
             fill: #888;
             text-anchor: middle;
             transition: fill var(--animation-speed);
         }
 
         .modal-graph-label-y {
-            font-size: 10px;
+            font-size: calc(var(--font-size-base) * 0.6);
             fill: #888;
             text-anchor: end;
             transition: fill var(--animation-speed);
@@ -559,9 +654,30 @@
 
         .modal-graph-average-label {
             fill: var(--graph-average-color);
-            font-size: 10px;
+            font-size: calc(var(--font-size-base) * 0.6);
             font-weight: bold;
             text-anchor: start;
+        }
+
+        .graph-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .graph-controls button {
+            background: linear-gradient(135deg, var(--accent-color), #FFD700);
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: calc(var(--font-size-base) * 0.8);
+            transition: background 0.3s ease;
+        }
+
+        .graph-controls button:hover {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
         }
 
         .history-list {
@@ -574,7 +690,7 @@
         }
 
         .history-list li {
-            background-color: #f9f9f9;
+            background: linear-gradient(135deg, #f9f9f9, #e0e0e0);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             margin-bottom: 10px;
@@ -582,16 +698,22 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 1.1em;
+            font-size: calc(var(--font-size-base) * 1);
             color: var(--text-color);
             box-shadow: 0 1px 4px rgba(0,0,0,0.03);
             position: relative;
-            transition: background-color var(--animation-speed), border-color var(--animation-speed), color var(--animation-speed);
+            transition: all var(--animation-speed);
+        }
+
+        body.dark-mode .history-list li {
+            background: linear-gradient(135deg, #3a3a5e, #2a2a2a);
+            border-color: var(--dark-border-color);
+            color: var(--dark-text-color);
         }
 
         .history-list li strong {
             color: var(--secondary-color);
-            font-size: 1.2em;
+            font-size: calc(var(--font-size-base) * 1.1);
             flex-basis: 30%;
             text-align: right;
             transition: color var(--animation-speed);
@@ -599,36 +721,36 @@
 
         .history-list li span.timestamp {
             color: var(--light-text-color);
-            font-size: 0.9em;
+            font-size: calc(var(--font-size-base) * 0.8);
             flex-basis: 60%;
             text-align: left;
             transition: color var(--animation-speed);
         }
 
         .history-list li .undo-button {
-            background-color: #f44336;
+            background: linear-gradient(135deg, #f44336, #d32f2f);
             color: white;
             border: none;
             border-radius: 5px;
             padding: 5px 10px;
             cursor: pointer;
-            font-size: 0.8em;
-            transition: background-color 0.3s ease;
+            font-size: calc(var(--font-size-base) * 0.7);
+            transition: background 0.3s ease;
             margin-right: 10px;
             flex-shrink: 0;
         }
 
         .history-list li .undo-button:hover {
-            background-color: #d32f2f;
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
         }
 
         .hamburger-menu-btn {
-            position: absolute;
+            position: fixed;
             top: 20px;
             right: 20px;
             width: 40px;
             height: 40px;
-            background: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             border-radius: var(--border-radius);
             display: flex;
             flex-direction: column;
@@ -638,11 +760,11 @@
             cursor: pointer;
             z-index: 1100;
             box-shadow: var(--shadow);
-            transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+            transition: all 0.3s ease, transform 0.2s ease;
         }
 
         .hamburger-menu-btn:hover {
-            background-color: var(--secondary-color);
+            background: linear-gradient(135deg, var(--secondary-color), #8B0000);
             transform: scale(1.05);
         }
 
@@ -673,7 +795,7 @@
             right: -300px;
             width: 280px;
             height: 100%;
-            background-color: var(--card-background);
+            background: linear-gradient(135deg, var(--card-background), #f0f0f0);
             box-shadow: -6px 0 16px rgba(0,0,0,0.2);
             z-index: 1050;
             transition: right 0.4s ease-out;
@@ -684,8 +806,8 @@
         }
 
         body.dark-mode .sidebar {
-            background-color: var(--dark-card-background);
-            box-shadow: -6px 0 16px rgba(0,0,0,0.5);
+            background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
+            box-shadow: -6px 0 16px rgba(0, 0, 0, 0.5);
             border-color: var(--dark-border-color);
         }
 
@@ -723,9 +845,9 @@
             padding: 15px 25px;
             color: var(--text-color);
             text-decoration: none;
-            font-size: 1.1em;
+            font-size: calc(var(--font-size-base) * 1);
             font-weight: 700;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            transition: all 0.3s ease, background-color 0.3s ease, color 0.3s ease;
             text-align: right;
             border: none;
             background: none;
@@ -738,12 +860,12 @@
         }
 
         .sidebar ul li a:hover, .sidebar ul li button:hover {
-            background-color: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
         }
 
         body.dark-mode .sidebar ul li a:hover, body.dark-mode .sidebar ul li button:hover {
-            background-color: var(--dark-secondary-color);
+            background: linear-gradient(135deg, var(--dark-secondary-color), var(--dark-primary-color));
             color: white;
         }
 
@@ -837,6 +959,29 @@
             transform: translateX(20px);
         }
 
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .zoom-controls button {
+            background: linear-gradient(135deg, var(--accent-color), #FFD700);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .zoom-controls button:hover {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            transform: scale(1.1);
+        }
+
         .project-modal-content {
             padding: 30px;
             text-align: right;
@@ -846,12 +991,31 @@
             text-align: center;
         }
 
+        .project-filter {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .project-filter select {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--card-background);
+            color: var(--text-color);
+            font-size: calc(var(--font-size-base) * 0.9);
+        }
+
+        body.dark-mode .project-filter select {
+            background-color: var(--dark-card-background);
+            color: var(--dark-text-color);
+            border-color: var(--dark-border-color);
+        }
+
         .project-list {
             list-style: none;
             padding: 0;
             max-height: 400px;
             overflow-y: auto;
-            margin-bottom: 20px;
         }
 
         .project-list li {
@@ -860,34 +1024,58 @@
             align-items: center;
             padding: 10px 15px;
             margin-bottom: 8px;
-            background-color: #f0f0f0;
+            background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
             border-radius: 8px;
             cursor: pointer;
-            transition: background-color 0.2s ease;
-            font-size: 1.1em;
+            transition: all 0.2s ease;
+            font-size: calc(var(--font-size-base) * 1);
+            position: relative;
         }
 
         body.dark-mode .project-list li {
-            background-color: #2a2a2a;
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
             color: var(--dark-text-color);
         }
 
         .project-list li:hover {
-            background-color: #e0e0e0;
+            background: linear-gradient(135deg, #e0e0e0, #d0d0d0);
+            transform: translateY(-2px);
         }
 
         body.dark-mode .project-list li:hover {
-            background-color: #3a3a3a;
+            background: linear-gradient(135deg, #3a3a3a, #2a3a3a);
         }
 
         .project-list li.active-project {
-            background-color: var(--secondary-color);
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
             color: white;
             font-weight: 700;
         }
 
         .project-list li.active-project:hover {
-            background-color: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), #8B0000);
+        }
+
+        .project-list li.closed {
+            opacity: 0.6;
+            background: linear-gradient(135deg, #ccc, #aaa);
+        }
+
+        .project-list li.closed::after {
+            content: 'סגור';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: #f44336;
+            color: white;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: calc(var(--font-size-base) * 0.7);
+        }
+
+        .project-actions {
+            display: flex;
+            gap: 5px;
         }
 
         .project-actions button {
@@ -896,7 +1084,7 @@
             color: var(--primary-color);
             cursor: pointer;
             margin-right: 10px;
-            font-size: 0.9em;
+            font-size: calc(var(--font-size-base) * 0.9);
             transition: color 0.2s ease;
         }
 
@@ -913,22 +1101,31 @@
             color: #d32f2f;
         }
 
+        .project-actions button.close-project {
+            color: #ff9800;
+        }
+
+        .project-actions button.close-project:hover {
+            color: #f57c00;
+        }
+
         .add-project-btn {
-            background-color: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
             padding: 10px 20px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 1em;
+            font-size: calc(var(--font-size-base) * 1);
             font-weight: 700;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
             width: 100%;
             margin-top: 20px;
         }
 
         .add-project-btn:hover {
-            background-color: var(--secondary-color);
+            background: linear-gradient(135deg, var(--secondary-color), #8B0000);
+            transform: translateY(-2px);
         }
 
         .finance-modal-content {
@@ -948,12 +1145,12 @@
             padding: 15px;
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
-            background-color: #fcfcfc;
-            transition: background-color var(--animation-speed), border-color var(--animation-speed);
+            background: linear-gradient(135deg, #fcfcfc, #f0f0f0);
+            transition: all var(--animation-speed);
         }
 
         body.dark-mode .finance-input-group {
-            background-color: #242424;
+            background: linear-gradient(135deg, #242424, #1a1a1a);
             border-color: #444;
         }
 
@@ -967,10 +1164,16 @@
             padding: 10px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            font-size: 1em;
+            font-size: calc(var(--font-size-base) * 1);
             background-color: var(--card-background);
             color: var(--text-color);
-            transition: background-color var(--animation-speed), color var(--animation-speed), border-color var(--animation-speed);
+            transition: all var(--animation-speed);
+        }
+
+        body.dark-mode .finance-input-group input, body.dark-mode .finance-input-group textarea {
+            background-color: var(--dark-card-background);
+            color: var(--dark-text-color);
+            border-color: var(--dark-border-color);
         }
 
         .finance-input-buttons {
@@ -985,25 +1188,25 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 1em;
+            font-size: calc(var(--font-size-base) * 1);
             font-weight: 700;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .finance-input-buttons .add-income-btn {
-            background-color: #4CAF50;
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
         }
 
         .finance-input-buttons .add-income-btn:hover {
-            background-color: #43a047;
+            background: linear-gradient(135deg, #43a047, #4CAF50);
         }
 
         .finance-input-buttons .add-expense-btn {
-            background-color: #F44336;
+            background: linear-gradient(135deg, #F44336, #E57373);
         }
 
         .finance-input-buttons .add-expense-btn:hover {
-            background-color: #d32f2f;
+            background: linear-gradient(135deg, #d32f2f, #F44336);
         }
 
         .finance-list {
@@ -1020,15 +1223,15 @@
             align-items: center;
             padding: 10px 15px;
             margin-bottom: 8px;
-            background-color: #f9f9f9;
+            background: linear-gradient(135deg, #f9f9f9, #e0e0e0);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            font-size: 1em;
-            transition: background-color var(--animation-speed), border-color var(--animation-speed);
+            font-size: calc(var(--font-size-base) * 1);
+            transition: all var(--animation-speed);
         }
 
         body.dark-mode .finance-list li {
-            background-color: #2a2a2a;
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
             border-color: #444;
             color: var(--dark-text-color);
         }
@@ -1057,20 +1260,13 @@
             color: #EF5350;
         }
 
-        .finance-item-details .notes {
-            font-size: 0.9em;
-            color: var(--light-text-color);
-            margin-top: 3px;
-            transition: color var(--animation-speed);
-        }
-
         .finance-item-actions button {
             background: none;
             border: none;
             color: var(--primary-color);
             cursor: pointer;
             margin-right: 8px;
-            font-size: 0.85em;
+            font-size: calc(var(--font-size-base) * 0.8);
             transition: color 0.2s ease;
         }
 
@@ -1089,12 +1285,12 @@
 
         .finance-balance-total {
             text-align: center;
-            font-size: 1.3em;
+            font-size: calc(var(--font-size-base) * 1.2);
             font-weight: 700;
             padding-top: 15px;
             border-top: 1px solid var(--border-color);
             color: var(--primary-color);
-            transition: border-color var(--animation-speed), color var(--animation-speed);
+            transition: all var(--animation-speed);
         }
 
         body.dark-mode .finance-balance-total {
@@ -1134,7 +1330,7 @@
 
         .current-project-finance-report-summary {
             margin-bottom: 20px;
-            font-size: 1.1em;
+            font-size: calc(var(--font-size-base) * 1);
             text-align: center;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
@@ -1174,6 +1370,28 @@
             color: var(--dark-primary-color);
         }
 
+        .current-project-finance-report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .current-project-finance-report-table th, .current-project-finance-report-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: center;
+            transition: border-color var(--animation-speed);
+        }
+
+        .current-project-finance-report-table th {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        body.dark-mode .current-project-finance-report-table th, body.dark-mode .current-project-finance-report-table td {
+            border-color: var(--dark-border-color);
+        }
+
         .global-finance-modal-content {
             padding: 30px;
             text-align: right;
@@ -1185,11 +1403,11 @@
 
         .global-finance-report-summary {
             margin-bottom: 20px;
-            font-size: 1.1em;
+            font-size: calc(var(--font-size-base) * 1);
             text-align: center;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
-            transition: border-color var(--animation-speed);
+            transition: all var(--animation-speed);
         }
 
         body.dark-mode .global-finance-report-summary {
@@ -1227,15 +1445,15 @@
 
         .global-finance-project-section {
             margin-bottom: 20px;
-            background-color: #f9f9f9;
+            background: linear-gradient(135deg, #f9f9f9, #e0e0e0);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
             padding: 15px;
-            transition: background-color var(--animation-speed), border-color var(--animation-speed);
+            transition: all var(--animation-speed);
         }
 
         body.dark-mode .global-finance-project-section {
-            background-color: #2a2a2a;
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
             border-color: #444;
         }
 
@@ -1243,13 +1461,13 @@
             color: var(--primary-color);
             margin-top: 0;
             margin-bottom: 10px;
-            font-size: 1.2em;
+            font-size: calc(var(--font-size-base) * 1.1);
             transition: color var(--animation-speed);
         }
 
         .global-finance-project-section p {
             margin: 5px 0;
-            font-size: 0.95em;
+            font-size: calc(var(--font-size-base) * 0.9);
         }
 
         .global-finance-project-section .project-balance {
@@ -1281,44 +1499,44 @@
             color: var(--secondary-color);
             margin-bottom: 20px;
             font-family: 'Playfair Display', serif;
-            font-size: 1.5em;
+            font-size: calc(var(--font-size-base) * 1.3);
             font-weight: 700;
             transition: color var(--animation-speed);
         }
 
         .step-cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Smaller min-width */
-            gap: 15px; /* Smaller gap */
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
         }
 
         .step-preview-card {
-            background-color: var(--card-background);
+            background: linear-gradient(135deg, var(--card-background), #f9f9f9);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
-            padding: 10px 15px; /* Smaller padding */
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease, background-color var(--animation-speed), border-color var(--animation-speed);
+            padding: 10px 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
             cursor: pointer;
         }
 
         .step-preview-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .step-preview-card h5 {
             margin-top: 0;
-            margin-bottom: 8px; /* Smaller margin */
+            margin-bottom: 8px;
             color: var(--primary-color);
-            font-size: 1em; /* Smaller font */
+            font-size: calc(var(--font-size-base) * 1);
             font-weight: 700;
             transition: color var(--animation-speed);
         }
 
         .step-preview-card p {
-            margin: 3px 0; /* Smaller margin */
-            font-size: 0.85em; /* Smaller font */
+            margin: 3px 0;
+            font-size: calc(var(--font-size-base) * 0.8);
             color: var(--text-color);
             transition: color var(--animation-speed);
         }
@@ -1334,15 +1552,15 @@
             position: fixed;
             top: 15px;
             left: 15px;
-            width: 200px; /* Wider */
+            width: 200px;
             height: 250px;
-            background-color: var(--card-background);
+            background: linear-gradient(135deg, var(--card-background), #f9f9f9);
             border-radius: var(--border-radius);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 0 10px var(--primary-color);
             border: 2px solid var(--primary-color);
             padding: 15px 10px;
             z-index: 998;
-            font-family: 'Heebo', sans-serif;
+            font-family: 'Noto Sans Hebrew', sans-serif;
             text-align: right;
             transition: all var(--animation-speed) ease-in-out;
             overflow-y: auto;
@@ -1353,7 +1571,7 @@
         }
 
         .project-details-card h4 {
-            font-size: 1.1em;
+            font-size: calc(var(--font-size-base) * 1);
             margin-top: 0;
             margin-bottom: 10px;
             color: var(--primary-color);
@@ -1379,18 +1597,18 @@
         }
 
         .project-details-item:hover {
-            background-color: #f9f9f9;
+            background-color: rgba(139, 0, 0, 0.1);
         }
 
         .project-details-item .detail-label {
-            font-size: 0.9em;
+            font-size: calc(var(--font-size-base) * 0.9);
             color: var(--light-text-color);
             margin-right: 5px;
             flex-shrink: 0;
         }
 
         .project-details-item .detail-value {
-            font-size: 1em;
+            font-size: calc(var(--font-size-base) * 1);
             font-weight: 700;
             color: var(--text-color);
             flex-grow: 1;
@@ -1403,7 +1621,7 @@
             padding: 5px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            font-size: 0.9em;
+            font-size: calc(var(--font-size-base) * 0.9);
             box-sizing: border-box;
             background-color: var(--card-background);
             color: var(--text-color);
@@ -1455,38 +1673,39 @@
         }
 
         .project-details-item.custom-property .delete-custom-prop-btn {
-            background-color: #f44336;
+            background: linear-gradient(135deg, #f44336, #d32f2f);
             color: white;
             border: none;
             border-radius: 5px;
             padding: 3px 6px;
-            font-size: 0.7em;
+            font-size: calc(var(--font-size-base) * 0.7);
             cursor: pointer;
             margin-left: 5px;
             flex-shrink: 0;
-            transition: background-color 0.2s ease;
+            transition: background 0.2s ease;
         }
 
         .project-details-item.custom-property .delete-custom-prop-btn:hover {
-            background-color: #d32f2f;
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
         }
 
         .add-custom-property-btn {
-            background-color: var(--accent-color);
+            background: linear-gradient(135deg, var(--accent-color), #FFD700);
             color: white;
             padding: 8px 15px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: calc(var(--font-size-base) * 0.9);
             font-weight: 700;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
             width: 100%;
             margin-top: 15px;
         }
 
         .add-custom-property-btn:hover {
-            background-color: #5A7F1C;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            transform: translateY(-2px);
         }
 
         #datePickerModal .modal-content {
@@ -1499,7 +1718,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
-            font-size: 1.1em;
+            font-size: calc(var(--font-size-base) * 1);
             font-weight: bold;
             color: var(--primary-color);
         }
@@ -1507,7 +1726,7 @@
         .date-picker-header button {
             background: none;
             border: none;
-            font-size: 1.5em;
+            font-size: calc(var(--font-size-base) * 1.3);
             cursor: pointer;
             color: var(--secondary-color);
             padding: 0 5px;
@@ -1518,7 +1737,7 @@
             grid-template-columns: repeat(7, 1fr);
             gap: 2px;
             text-align: center;
-            font-size: 0.9em;
+            font-size: calc(var(--font-size-base) * 0.9);
         }
 
         .date-picker-day {
@@ -1617,22 +1836,28 @@
             position: relative;
             padding: 20px 0;
             margin: 0 auto;
-            max-width: 90%;
+            width: 100%;
             height: 500px;
+            overflow-x: hidden;
             overflow-y: auto;
-            border-right: 2px solid var(--border-color);
-            padding-right: 20px;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 20px;
+            padding-top: 20px;
             direction: rtl;
+            white-space: normal;
         }
 
         .timeline-event {
             position: relative;
             margin-bottom: 30px;
-            padding-right: 40px;
+            padding-bottom: 20px;
             text-align: right;
             opacity: 0;
             transform: translateX(50px);
             animation: slideInEvent 0.5s forwards;
+            display: block;
+            vertical-align: top;
+            padding-left: 40px;
         }
 
         @keyframes slideInEvent {
@@ -1646,38 +1871,11 @@
             }
         }
 
-        .timeline-event:nth-child(even) {
-            transform: translateX(-50px);
-        }
-
-        .timeline-event:nth-child(even)::before {
-            right: unset;
-            left: -31px;
-        }
-
-        .timeline-event:nth-child(even) .timeline-event-content {
-            padding-left: 40px;
-            padding-right: 15px;
-            text-align: left;
-        }
-
-        .timeline-event:nth-child(even) h4 {
-            text-align: left;
-        }
-
-        .timeline-event:nth-child(even) p {
-            text-align: left;
-        }
-
-        .timeline-event:nth-child(even) .event-timestamp {
-            text-align: left;
-        }
-
         .timeline-event::before {
             content: '';
             position: absolute;
-            top: 8px;
-            right: -31px;
+            bottom: -10px;
+            right: 0;
             width: 16px;
             height: 16px;
             border-radius: 50%;
@@ -1693,29 +1891,29 @@
         }
 
         .timeline-event-content {
-            background-color: #f9f9f9;
+            background: linear-gradient(135deg, #f9f9f9, #e0e0e0);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
             padding: 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         body.dark-mode .timeline-event-content {
-            background-color: #3a3a5e;
+            background: linear-gradient(135deg, #3a3a5e, #2a2a2a);
         }
 
         .timeline-event h4 {
             margin-top: 0;
             margin-bottom: 5px;
             color: var(--secondary-color);
-            font-size: 1.1em;
+            font-size: calc(var(--font-size-base) * 1);
             transition: color var(--animation-speed);
         }
 
         .timeline-event p {
             margin: 0;
-            font-size: 0.9em;
+            font-size: calc(var(--font-size-base) * 0.9);
             color: var(--text-color);
             transition: color var(--animation-speed);
         }
@@ -1727,11 +1925,299 @@
         }
 
         .timeline-event .event-timestamp {
-            font-size: 0.8em;
+            font-size: calc(var(--font-size-base) * 0.8);
             color: var(--light-text-color);
             margin-top: 5px;
             display: block;
             transition: color var(--animation-speed);
+        }
+
+        .download-pdf-btn {
+            background: linear-gradient(135deg, var(--accent-color), #FFD700);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: calc(var(--font-size-base) * 1);
+            font-weight: 700;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .download-pdf-btn:hover {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            transform: translateY(-2px);
+        }
+
+        .finance-yearly-modal-content {
+            padding: 30px;
+            text-align: right;
+        }
+
+        .finance-yearly-modal-content h3 {
+            text-align: center;
+        }
+
+        .year-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .year-selector select {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--card-background);
+            color: var(--text-color);
+            font-size: calc(var(--font-size-base) * 0.9);
+        }
+
+        body.dark-mode .year-selector select {
+            background-color: var(--dark-card-background);
+            color: var(--dark-text-color);
+            border-color: var(--dark-border-color);
+        }
+
+        .year-selector button {
+            padding: 8px 15px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: calc(var(--font-size-base) * 0.9);
+            margin-left: 10px;
+        }
+
+        .year-selector button:hover {
+            background: linear-gradient(135deg, var(--secondary-color), #8B0000);
+        }
+
+        .finance-yearly-report-summary {
+            margin-bottom: 20px;
+            font-size: calc(var(--font-size-base) * 1);
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            transition: border-color var(--animation-speed);
+        }
+
+        body.dark-mode .finance-yearly-report-summary {
+            border-color: var(--dark-border-color);
+        }
+
+        .finance-yearly-report-summary div {
+            padding: 5px 0;
+            font-weight: 700;
+        }
+
+        .finance-yearly-report-summary .total-income {
+            color: #4CAF50;
+        }
+
+        .finance-yearly-report-summary .total-expense {
+            color: #F44336;
+        }
+
+        .finance-yearly-report-summary .total-balance {
+            color: var(--secondary-color);
+        }
+
+        body.dark-mode .finance-yearly-report-summary .total-income {
+            color: #8BC34A;
+        }
+
+        body.dark-mode .finance-yearly-report-summary .total-expense {
+            color: #EF5350;
+        }
+
+        body.dark-mode .finance-yearly-report-summary .total-balance {
+            color: var(--dark-primary-color);
+        }
+
+        .finance-yearly-project-section {
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #f9f9f9, #e0e0e0);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            transition: all var(--animation-speed);
+        }
+
+        body.dark-mode .finance-yearly-project-section {
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+            border-color: #444;
+        }
+
+        .finance-yearly-project-section h4 {
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: calc(var(--font-size-base) * 1.1);
+            transition: color var(--animation-speed);
+        }
+
+        .finance-yearly-project-section p {
+            margin: 5px 0;
+            font-size: calc(var(--font-size-base) * 0.9);
+        }
+
+        .finance-yearly-project-section .project-balance {
+            font-weight: 700;
+        }
+
+        .finance-yearly-project-section .project-balance.positive {
+            color: #4CAF50;
+        }
+
+        .finance-yearly-project-section .project-balance.negative {
+            color: #F44336;
+        }
+
+        body.dark-mode .finance-yearly-project-section .project-balance.positive {
+            color: #8BC34A;
+        }
+
+        body.dark-mode .finance-yearly-project-section .project-balance.negative {
+            color: #EF5350;
+        }
+
+        .reminders-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .reminders-modal-content {
+            background: linear-gradient(135deg, var(--card-background), #f9f9f9);
+            margin: auto;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 80%;
+            max-width: 600px;
+            animation: slideInModal 0.4s ease-out;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.dark-mode .reminders-modal-content {
+            background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
+        }
+
+        .reminders-list {
+            list-style: none;
+            padding: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .reminders-list li {
+            background: linear-gradient(135deg, #f9f9f9, #e0e0e0);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: calc(var(--font-size-base) * 1);
+            transition: all var(--animation-speed);
+        }
+
+        body.dark-mode .reminders-list li {
+            background: linear-gradient(135deg, #3a3a5e, #2a2a2a);
+            border-color: var(--dark-border-color);
+            color: var(--dark-text-color);
+        }
+
+        .reminder-details {
+            flex-grow: 1;
+        }
+
+        .reminder-details .text {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .reminder-details .datetime {
+            font-size: calc(var(--font-size-base) * 0.8);
+            color: var(--light-text-color);
+            margin-top: 5px;
+        }
+
+        .reminder-actions button {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: calc(var(--font-size-base) * 0.8);
+            transition: color 0.2s ease;
+        }
+
+        .reminder-actions button:hover {
+            color: var(--secondary-color);
+            text-decoration: underline;
+        }
+
+        .reminder-actions button.delete {
+            color: #f44336;
+        }
+
+        .reminder-actions button.delete:hover {
+            color: #d32f2f;
+        }
+
+        .add-reminder-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .add-reminder-form input, .add-reminder-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: calc(var(--font-size-base) * 1);
+            background-color: var(--card-background);
+            color: var(--text-color);
+            transition: all var(--animation-speed);
+        }
+
+        body.dark-mode .add-reminder-form input, body.dark-mode .add-reminder-form textarea {
+            background-color: var(--dark-card-background);
+            color: var(--dark-text-color);
+            border-color: var(--dark-border-color);
+        }
+
+        .add-reminder-form button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: calc(var(--font-size-base) * 1);
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .add-reminder-form button:hover {
+            background: linear-gradient(135deg, var(--secondary-color), #8B0000);
+            transform: translateY(-2px);
         }
 
         @media (max-width: 768px) {
@@ -1774,11 +2260,11 @@
             }
 
             .project-header h2 {
-                font-size: 2em;
+                font-size: calc(var(--font-size-base) * 1.2);
             }
 
             #editProjectNameInput {
-                font-size: 1.1em;
+                font-size: calc(var(--font-size-base) * 1);
             }
 
             .stage-nav-container {
@@ -1802,7 +2288,7 @@
             .stage-nav-button {
                 min-width: 90px;
                 padding: 8px 10px;
-                font-size: 0.8em;
+                font-size: calc(var(--font-size-base) * 0.8);
             }
 
             .dashboard-section {
@@ -1810,7 +2296,7 @@
             }
 
             .dashboard-section h2 {
-                font-size: 1.4em;
+                font-size: calc(var(--font-size-base) * 1.2);
                 margin-bottom: 5px;
             }
 
@@ -1822,16 +2308,16 @@
                 padding: 5px 8px;
                 min-width: unset;
                 width: 30%;
-                font-size: 0.75em;
+                font-size: calc(var(--font-size-base) * 0.7);
                 min-height: 70px;
             }
 
             .dashboard-item h3 {
-                font-size: 0.7em;
+                font-size: calc(var(--font-size-base) * 0.7);
             }
 
             .dashboard-item p {
-                font-size: 1.1em;
+                font-size: calc(var(--font-size-base) * 1);
             }
 
             .input-section {
@@ -1846,17 +2332,17 @@
             }
 
             .input-group label {
-                font-size: 1em;
+                font-size: calc(var(--font-size-base) * 1);
             }
 
             .input-group input[type="number"], .input-group input[type="text"], .input-group select, .input-group textarea {
                 padding: 10px;
-                font-size: 0.9em;
+                font-size: calc(var(--font-size-base) * 0.9);
             }
 
             .input-group button {
                 padding: 10px 15px;
-                font-size: 0.9em;
+                font-size: calc(var(--font-size-base) * 0.9);
             }
 
             .modal-content {
@@ -1866,13 +2352,13 @@
             }
 
             .close-button {
-                font-size: 24px;
+                font-size: calc(var(--font-size-base) * 1.5);
                 top: 5px;
                 left: 10px;
             }
 
             .modal-content h3 {
-                font-size: 1.5em;
+                font-size: calc(var(--font-size-base) * 1.2);
                 margin-bottom: 15px;
                 padding-bottom: 8px;
             }
@@ -1883,17 +2369,17 @@
             }
 
             .modal-graph-label-x {
-                font-size: 8px;
-                transform: rotate(-60deg);
+                font-size: calc(var(--font-size-base) * 0.5);
+                transform: rotate(-45deg);
                 transform-origin: center center;
             }
 
             .modal-graph-label-y {
-                font-size: 8px;
+                font-size: calc(var(--font-size-base) * 0.5);
             }
 
             .modal-graph-average-label {
-                font-size: 9px;
+                font-size: calc(var(--font-size-base) * 0.7);
                 text-anchor: end;
                 x: 95%;
             }
@@ -1908,7 +2394,7 @@
                 justify-content: flex-end;
                 padding: 10px;
                 margin-bottom: 5px;
-                font-size: 0.9em;
+                font-size: calc(var(--font-size-base) * 0.9);
             }
 
             .history-list li strong {
@@ -1920,7 +2406,7 @@
                 width: 100%;
                 text-align: right;
                 margin-top: 5px;
-                font-size: 0.75em;
+                font-size: calc(var(--font-size-base) * 0.7);
             }
 
             .history-list li .undo-button {
@@ -1928,7 +2414,7 @@
                 margin-right: 0;
                 width: 100%;
                 padding: 6px 10px;
-                font-size: 0.75em;
+                font-size: calc(var(--font-size-base) * 0.7);
             }
 
             .sidebar {
@@ -1937,7 +2423,7 @@
 
             .sidebar ul li a, .sidebar ul li button {
                 padding: 12px 20px;
-                font-size: 1em;
+                font-size: calc(var(--font-size-base) * 1);
             }
 
             .sidebar .divider {
@@ -1964,7 +2450,7 @@
 
             .finance-input-buttons button {
                 padding: 8px 12px;
-                font-size: 0.9em;
+                font-size: calc(var(--font-size-base) * 0.9);
             }
 
             .finance-list {
@@ -1974,30 +2460,30 @@
             .finance-list li {
                 padding: 8px 12px;
                 margin-bottom: 5px;
-                font-size: 0.9em;
+                font-size: calc(var(--font-size-base) * 0.9);
             }
 
             .finance-item-actions button {
                 margin-right: 5px;
-                font-size: 0.8em;
+                font-size: calc(var(--font-size-base) * 0.8);
             }
 
             .finance-balance-total {
-                font-size: 1.1em;
+                font-size: calc(var(--font-size-base) * 1);
                 padding-top: 10px;
             }
 
             .global-finance-report-summary {
-                font-size: 1em;
+                font-size: calc(var(--font-size-base) * 1);
                 padding-bottom: 10px;
             }
 
             .global-finance-project-section h4 {
-                font-size: 1.1em;
+                font-size: calc(var(--font-size-base) * 1);
             }
 
             .global-finance-project-section p {
-                font-size: 0.9em;
+                font-size: calc(var(--font-size-base) * 0.9);
             }
 
             .step-cards-grid {
@@ -2010,11 +2496,11 @@
             }
 
             .step-preview-card h5 {
-                font-size: 1em;
+                font-size: calc(var(--font-size-base) * 1);
             }
 
             .step-preview-card p {
-                font-size: 0.8em;
+                font-size: calc(var(--font-size-base) * 0.8);
             }
 
             .project-details-card {
@@ -2050,13 +2536,18 @@
             <li><button onclick="openFinanceModal();">ניהול כספים</button></li>
             <li><button onclick="openCurrentProjectFinanceReportModal();">דוח כספי</button></li>
             <li><button onclick="openGlobalFinanceReportModal();">דוח כספי כולל</button></li>
+            <li><button onclick="openFinanceYearlyModal();">דוח כספי לפי שנה</button></li>
+            <li><button onclick="openInboxModal();">תיבת דואר</button></li>
+            <li><button onclick="openRemindersModal();">תזכורות</button></li>
             <li class="divider"></li>
             <li><button onclick="openInstructionsModal()">הוראות</button></li>
             <li><button onclick="openTimelineModal()">ציר זמן</button></li>
-            <li><a href="#">הגדרות</a></li>
-            <li><a href="#">אודות</a></li>
         </ul>
         <div class="sidebar-footer">
+            <div class="zoom-controls">
+                <button onclick="zoomIn()">+</button>
+                <button onclick="zoomOut()">-</button>
+            </div>
             <span class="theme-switch">מצב כהה:
                 <label class="switch">
                     <input type="checkbox" id="darkModeToggle">
@@ -2135,6 +2626,9 @@
         <div class="modal-content">
             <span class="close-button" onclick="closeHistoryModal()">&times;</span>
             <h3 id="modalTitle"></h3>
+            <div class="graph-controls">
+                <button onclick="openProjectSelectionForComparison()">השווה לפרויקט אחר</button>
+            </div>
             <div class="modal-graph-container">
                 <svg class="modal-graph-svg" id="modalGraphSvg"></svg>
             </div>
@@ -2148,6 +2642,13 @@
         <div class="modal-content project-modal-content">
             <span class="close-button" onclick="closeProjectManagementModal()">&times;</span>
             <h3>ניהול פרויקטים</h3>
+            <div class="project-filter">
+                <label for="projectYearFilter">סינון לפי שנה:</label>
+                <select id="projectYearFilter">
+                    <option value="all">כל השנים</option>
+                    <!-- Years from 2020 to 2100 -->
+                </select>
+            </div>
             <ul id="projectList" class="project-list">
                 <!-- Project list will be added here -->
             </ul>
@@ -2187,6 +2688,20 @@
                 <div class="total-expense">סה"כ הוצאות: <span id="currentProjectTotalExpense">0</span></div>
                 <div class="total-balance">יתרה נוכחית: <span id="currentProjectTotalBalance">0</span></div>
             </div>
+            <table class="current-project-finance-report-table" id="currentProjectFinanceReportTable">
+                <thead>
+                    <tr>
+                        <th>תאריך</th>
+                        <th>סוג</th>
+                        <th>סכום</th>
+                        <th>הערות</th>
+                    </tr>
+                </thead>
+                <tbody id="currentProjectFinanceReportTableBody">
+                    <!-- Finance entries will be added here -->
+                </tbody>
+            </table>
+            <button class="download-pdf-btn" onclick="downloadCurrentProjectFinancePDF()">הורד כ-PDF</button>
         </div>
     </div>
 
@@ -2202,6 +2717,58 @@
             <div id="globalFinanceProjectsDetails">
                 <!-- Project details will be added here -->
             </div>
+            <button class="download-pdf-btn" onclick="downloadGlobalFinancePDF()">הורד כ-PDF</button>
+        </div>
+    </div>
+
+    <div id="financeYearlyModal" class="modal">
+        <div class="modal-content finance-yearly-modal-content">
+            <span class="close-button" onclick="closeFinanceYearlyModal()">&times;</span>
+            <h3>דוח כספי לפי שנה</h3>
+            <div class="year-selector">
+                <label for="yearSelect">בחר שנה:</label>
+                <select id="yearSelect">
+                    <!-- Years from 2020 to 2100 -->
+                </select>
+                <button onclick="generateYearlyReport()">צור דוח</button>
+            </div>
+            <div id="yearlyReportContent" style="display:none;">
+                <div class="finance-yearly-report-summary">
+                    <div class="total-income">סה"כ הכנסות: <span id="yearlyTotalIncome">0</span></div>
+                    <div class="total-expense">סה"כ הוצאות: <span id="yearlyTotalExpense">0</span></div>
+                    <div class="total-balance">יתרה נוכחית: <span id="yearlyTotalBalance">0</span></div>
+                </div>
+                <div id="yearlyFinanceProjectsDetails">
+                    <!-- Project details will be added here -->
+                </div>
+                <button class="download-pdf-btn" onclick="downloadYearlyFinancePDF()">הורד כ-PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="inboxModal" class="reminders-modal">
+        <div class="reminders-modal-content">
+            <span class="close-button" onclick="closeInboxModal()">&times;</span>
+            <h3>תיבת דואר</h3>
+            <ul id="inboxList" class="reminders-list">
+                <!-- Inbox items will be added here -->
+            </ul>
+        </div>
+    </div>
+
+    <div id="remindersModal" class="reminders-modal">
+        <div class="reminders-modal-content">
+            <span class="close-button" onclick="closeRemindersModal()">&times;</span>
+            <h3>תזכורות</h3>
+            <div class="add-reminder-form">
+                <input type="text" id="reminderText" placeholder="טקסט התזכורת">
+                <input type="datetime-local" id="reminderDateTime">
+                <label><input type="checkbox" id="reminderPopup"> הצג כהודעה קופצת בדפדפן</label>
+                <button onclick="addReminder()">הוסף תזכורת</button>
+            </div>
+            <ul id="remindersList" class="reminders-list">
+                <!-- Reminders will be added here -->
+            </ul>
         </div>
     </div>
 
@@ -2227,6 +2794,8 @@
                 <li>**ניהול כספים:** עקבו אחר הכנסות והוצאות לכל פרויקט, וצפו ביתרה הנוכחית. ניתן לסנן לפי סוג תנועה ותאריך.</li>
                 <li>**דוח כספי:** קבלו סיכום פיננסי רק לפרויקט הנוכחי.</li>
                 <li>**דוח כספי כולל:** קבלו סיכום פיננסי משולב מכל הפרויקטים שלכם.</li>
+                <li>**תזכורות:** הוסיפו תזכורות עם טקסט ותאריך/שעה, ותקבלו הודעה בדפדפן כשהזמן מגיע.</li>
+                <li>**תיבת דואר:** צפו בתזכורות שהתקבלו.</li>
                 <li>**מצב כהה:** עברו למצב תצוגה כהה לנוחות מירבית.</li>
             </ul>
         </div>
@@ -2239,6 +2808,7 @@
             <div class="timeline-container" id="timelineContainer">
                 <!-- Timeline events will be added here -->
             </div>
+            <button class="download-pdf-btn" onclick="downloadTimelinePDF()">הורד כ-PDF</button>
         </div>
     </div>
 
@@ -2259,6 +2829,16 @@
                 <div class="date-picker-day header">ו</div>
                 <div class="date-picker-day header">ש</div>
             </div>
+        </div>
+    </div>
+
+    <div id="projectSelectionModal" class="modal">
+        <div class="modal-content project-modal-content">
+            <span class="close-button" onclick="closeProjectSelectionModal()">&times;</span>
+            <h3>בחר פרויקט להשוואה</h3>
+            <ul id="comparisonProjectList" class="project-list">
+                <!-- Project list for comparison will be added here -->
+            </ul>
         </div>
     </div>
 
@@ -2387,6 +2967,8 @@
         const sidebar = document.getElementById('sidebar');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
         const darkModeToggle = document.getElementById('darkModeToggle');
+        const projectYearFilter = document.getElementById('projectYearFilter');
+        const yearSelect = document.getElementById('yearSelect');
 
         const currentProjectNameDisplay = document.getElementById('currentProjectName');
         const editProjectNameInput = document.getElementById('editProjectNameInput');
@@ -2421,12 +3003,29 @@
         const currentProjectTotalIncomeDisplay = document.getElementById('currentProjectTotalIncome');
         const currentProjectTotalExpenseDisplay = document.getElementById('currentProjectTotalExpense');
         const currentProjectTotalBalanceDisplay = document.getElementById('currentProjectTotalBalance');
+        const currentProjectFinanceReportTableBody = document.getElementById('currentProjectFinanceReportTableBody');
 
         const globalFinanceReportModal = document.getElementById('globalFinanceReportModal');
         const globalTotalIncomeDisplay = document.getElementById('globalTotalIncome');
         const globalTotalExpenseDisplay = document.getElementById('globalTotalExpense');
         const globalTotalBalanceDisplay = document.getElementById('globalTotalBalance');
         const globalFinanceProjectsDetails = document.getElementById('globalFinanceProjectsDetails');
+
+        const financeYearlyModal = document.getElementById('financeYearlyModal');
+        const yearlyReportContent = document.getElementById('yearlyReportContent');
+        const yearlyTotalIncomeDisplay = document.getElementById('yearlyTotalIncome');
+        const yearlyTotalExpenseDisplay = document.getElementById('yearlyTotalExpense');
+        const yearlyTotalBalanceDisplay = document.getElementById('yearlyTotalBalance');
+        const yearlyFinanceProjectsDetails = document.getElementById('yearlyFinanceProjectsDetails');
+
+        const inboxModal = document.getElementById('inboxModal');
+        const inboxList = document.getElementById('inboxList');
+
+        const remindersModal = document.getElementById('remindersModal');
+        const reminderTextInput = document.getElementById('reminderText');
+        const reminderDateTimeInput = document.getElementById('reminderDateTime');
+        const reminderPopupInput = document.getElementById('reminderPopup');
+        const remindersList = document.getElementById('remindersList');
 
         const instructionsModal = document.getElementById('instructionsModal');
         const timelineModal = document.getElementById('timelineModal');
@@ -2438,13 +3037,225 @@
         let datePickerCurrentYear = new Date().getFullYear();
         let datePickerCallback = null;
 
+        const projectSelectionModal = document.getElementById('projectSelectionModal');
+        const comparisonProjectList = document.getElementById('comparisonProjectList');
+
         let currentMetricTypeForModal = { sectionId: '', metricId: '' };
         let currentEditableDetailElement = null;
 
+        let graphComparisonMode = null;
+        let comparisonProjectId = null;
+
+        let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
+        let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+
+        function populateYearSelects() {
+            const currentYear = new Date().getFullYear();
+            for (let year = 2020; year <= 2100; year++) {
+                const option1 = document.createElement('option');
+                option1.value = year;
+                option1.textContent = year;
+                projectYearFilter.appendChild(option1);
+                const option2 = document.createElement('option');
+                option2.value = year;
+                option2.textContent = year;
+                yearSelect.appendChild(option2);
+            }
+            projectYearFilter.value = 'all';
+            yearSelect.value = currentYear;
+        }
+
+        function zoomIn() {
+            const root = document.documentElement;
+            const currentSize = parseInt(getComputedStyle(root).getPropertyValue('--font-size-base'));
+            root.style.setProperty('--font-size-base', (currentSize + 2) + 'px');
+        }
+
+        function zoomOut() {
+            const root = document.documentElement;
+            const currentSize = parseInt(getComputedStyle(root).getPropertyValue('--font-size-base'));
+            if (currentSize > 10) {
+                root.style.setProperty('--font-size-base', (currentSize - 2) + 'px');
+            }
+        }
+
+        function toggleGraphComparison(mode) {
+            graphComparisonMode = mode;
+            // Re-draw graph with comparison
+            const metricDisplayName = stagesConfig[currentMetricTypeForModal.sectionId]?.metrics[currentMetricTypeForModal.metricId]?.name || 'מדד';
+            openHistoryModal(currentMetricTypeForModal.sectionId, currentMetricTypeForModal.metricId, metricDisplayName);
+        }
+
+        function openProjectSelectionForComparison() {
+            closeSidebar();
+            document.querySelector('.container').style.display = 'none';
+            document.querySelector('.top-section-wrapper').style.display = 'none';
+            fixedDashboardSection.style.display = 'none';
+            projectSelectionModal.style.display = 'flex';
+            renderComparisonProjectList();
+        }
+
+        function closeProjectSelectionModal() {
+            projectSelectionModal.style.display = 'none';
+            showMainContent();
+        }
+
+        function renderComparisonProjectList() {
+            comparisonProjectList.innerHTML = '';
+            Object.keys(projects).forEach(projectId => {
+                if (projectId !== currentProjectId && !projects[projectId].isClosed) {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = projects[projectId].name;
+                    listItem.setAttribute('data-project-id', projectId);
+                    listItem.onclick = () => selectComparisonProject(projectId);
+                    comparisonProjectList.appendChild(listItem);
+                }
+            });
+        }
+
+        function selectComparisonProject(projectId) {
+            comparisonProjectId = projectId;
+            closeProjectSelectionModal();
+            const metricDisplayName = stagesConfig[currentMetricTypeForModal.sectionId]?.metrics[currentMetricTypeForModal.metricId]?.name || 'מדד';
+            openHistoryModal(currentMetricTypeForModal.sectionId, currentMetricTypeForModal.metricId, metricDisplayName);
+        }
+
+        function checkReminders() {
+            const now = new Date();
+            reminders.forEach(reminder => {
+                const reminderTime = new Date(reminder.datetime);
+                if (reminderTime <= now && !reminder.notified) {
+                    reminder.notified = true;
+                    if (reminder.popup && 'Notification' in window && Notification.permission === 'granted') {
+                        new Notification(reminder.text);
+                    }
+                    inbox.push(reminder);
+                    renderInboxList();
+                }
+            });
+            localStorage.setItem('reminders', JSON.stringify(reminders));
+            localStorage.setItem('inbox', JSON.stringify(inbox));
+            renderRemindersList();
+        }
+
+        function addReminder() {
+            const text = reminderTextInput.value.trim();
+            const datetime = reminderDateTimeInput.value;
+            const popup = reminderPopupInput.checked;
+            if (text && datetime) {
+                reminders.push({ id: Date.now(), text, datetime, popup, notified: false });
+                localStorage.setItem('reminders', JSON.stringify(reminders));
+                reminderTextInput.value = '';
+                reminderDateTimeInput.value = '';
+                reminderPopupInput.checked = false;
+                renderRemindersList();
+                checkReminders();
+            } else {
+                alert('אנא הזן טקסט ותאריך/שעה.');
+            }
+        }
+
+        function renderRemindersList() {
+            remindersList.innerHTML = '';
+            reminders.forEach(reminder => {
+                if (!reminder.notified) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div class="reminder-details">
+                            <div class="text">${reminder.text}</div>
+                            <div class="datetime">${new Date(reminder.datetime).toLocaleString('he-IL')}</div>
+                        </div>
+                        <div class="reminder-actions">
+                            <button onclick="deleteReminder(${reminder.id})">מחק</button>
+                        </div>
+                    `;
+                    remindersList.appendChild(li);
+                }
+            });
+        }
+
+        function deleteReminder(id) {
+            reminders = reminders.filter(r => r.id !== id);
+            localStorage.setItem('reminders', JSON.stringify(reminders));
+            renderRemindersList();
+        }
+
+        function openInboxModal() {
+            closeSidebar();
+            document.querySelector('.container').style.display = 'none';
+            document.querySelector('.top-section-wrapper').style.display = 'none';
+            fixedDashboardSection.style.display = 'none';
+            inboxModal.style.display = 'flex';
+            renderInboxList();
+        }
+
+        function closeInboxModal() {
+            inboxModal.style.display = 'none';
+            showMainContent();
+        }
+
+        function renderInboxList() {
+            inboxList.innerHTML = '';
+            inbox.forEach(reminder => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="reminder-details">
+                        <div class="text">${reminder.text}</div>
+                        <div class="datetime">${new Date(reminder.datetime).toLocaleString('he-IL')}</div>
+                    </div>
+                    <div class="reminder-actions">
+                        <button onclick="deleteInbox(${reminder.id})">מחק</button>
+                    </div>
+                `;
+                inboxList.appendChild(li);
+            });
+        }
+
+        function deleteInbox(id) {
+            inbox = inbox.filter(r => r.id !== id);
+            localStorage.setItem('inbox', JSON.stringify(inbox));
+            renderInboxList();
+        }
+
+        function openRemindersModal() {
+            closeSidebar();
+            document.querySelector('.container').style.display = 'none';
+            document.querySelector('.top-section-wrapper').style.display = 'none';
+            fixedDashboardSection.style.display = 'none';
+            remindersModal.style.display = 'flex';
+            renderRemindersList();
+        }
+
+        function closeRemindersModal() {
+            remindersModal.style.display = 'none';
+            showMainContent();
+        }
+
+        function requestNotificationPermission() {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        console.log('הודעות מאושרות.');
+                    }
+                });
+            }
+        }
+
         window.onload = () => {
             loadDarkModeState();
+            populateYearSelects();
+            setDefaultYearFilter();
             renderAllMainContent();
+            requestNotificationPermission();
+            setInterval(checkReminders, 60000); // Check every minute
+            checkReminders();
         };
+
+        function setDefaultYearFilter() {
+            const currentYear = new Date().getFullYear().toString();
+            projectYearFilter.value = 'all';
+            filterProjectsByYear();
+        }
 
         function renderAllMainContent() {
             updateProjectDisplay();
@@ -2472,6 +3283,8 @@
             }
         });
 
+        projectYearFilter.addEventListener('change', filterProjectsByYear);
+
         hamburgerBtn.addEventListener('click', toggleSidebar);
         sidebarOverlay.addEventListener('click', closeSidebar);
 
@@ -2493,9 +3306,13 @@
             financeModal.style.display = 'none';
             currentProjectFinanceReportModal.style.display = 'none';
             globalFinanceReportModal.style.display = 'none';
+            financeYearlyModal.style.display = 'none';
+            inboxModal.style.display = 'none';
+            remindersModal.style.display = 'none';
             instructionsModal.style.display = 'none';
             timelineModal.style.display = 'none';
             datePickerModal.style.display = 'none';
+            projectSelectionModal.style.display = 'none';
 
             document.querySelector('.container').style.display = 'block';
             document.querySelector('.top-section-wrapper').style.display = 'block';
@@ -2516,6 +3333,7 @@
         function createNewProjectData(name) {
             const newProject = {
                 name: name,
+                isClosed: false,
                 wineDetails: {
                     customProperties: []
                 },
@@ -2543,6 +3361,7 @@
             }
             for (const projectId in loaded) {
                 const project = loaded[projectId];
+                if (project.isClosed === undefined) project.isClosed = false;
                 if (!project.wineDetails) {
                     project.wineDetails = {};
                     const oldStage7 = project.stages && project.stages['stage7'];
@@ -2608,7 +3427,7 @@
             document.querySelector('.top-section-wrapper').style.display = 'none';
             fixedDashboardSection.style.display = 'none';
             projectManagementModal.style.display = 'flex';
-            renderProjectList();
+            filterProjectsByYear();
         }
 
         function closeProjectManagementModal() {
@@ -2616,37 +3435,97 @@
             showMainContent();
         }
 
-        function renderProjectList() {
+        function filterProjectsByYear() {
+            const selectedYear = projectYearFilter.value;
+            renderProjectList(selectedYear);
+        }
+
+        function renderProjectList(yearFilter = 'all') {
             projectList.innerHTML = '';
-            const sortedProjectIds = Object.keys(projects).sort((a, b) => projects[a].name.localeCompare(projects[b].name));
-            sortedProjectIds.forEach(id => {
-                const project = projects[id];
+            let projectsToDisplay = Object.keys(projects).map(id => ({ id, ...projects[id] }));
+            if (yearFilter !== 'all') {
+                projectsToDisplay = projectsToDisplay.filter(project => {
+                    const vintageYearEntries = project.wineDetails.vintageYear;
+                    if (vintageYearEntries && vintageYearEntries.length > 0) {
+                        const latestYear = vintageYearEntries[vintageYearEntries.length - 1].value;
+                        return latestYear == yearFilter;
+                    }
+                    return false;
+                });
+                // then display as before
+            } else {
+                // group by years
+                const yearGroups = {};
+                projectsToDisplay.forEach(project => {
+                    const vintageYearEntries = project.wineDetails.vintageYear;
+                    const year = vintageYearEntries && vintageYearEntries.length > 0 ? vintageYearEntries[vintageYearEntries.length - 1].value : 'לא צוין';
+                    if (!yearGroups[year]) yearGroups[year] = [];
+                    yearGroups[year].push(project);
+                });
+                const sortedYears = Object.keys(yearGroups).sort((a,b) => {
+                    if (a === 'לא צוין') return 1;
+                    if (b === 'לא צוין') return -1;
+                    return b - a; // descending
+                });
+                sortedYears.forEach(year => {
+                    const yearHeader = document.createElement('h3');
+                    yearHeader.textContent = year === 'לא צוין' ? 'שנים לא צוינו' : `שנה ${year}`;
+                    yearHeader.style.color = 'var(--primary-color)';
+                    yearHeader.style.borderBottom = '2px solid var(--border-color)';
+                    yearHeader.style.paddingBottom = '10px';
+                    yearHeader.style.marginBottom = '10px';
+                    projectList.appendChild(yearHeader);
+                    yearGroups[year].sort((a,b) => a.name.localeCompare(b.name)).forEach(project => {
+                        const listItem = document.createElement('li');
+                        listItem.setAttribute('data-project-id', project.id);
+                        if (project.id === currentProjectId) {
+                            listItem.classList.add('active-project');
+                        }
+                        if (project.isClosed) {
+                            listItem.classList.add('closed');
+                        }
+                        const vintageYearEntries = project.wineDetails.vintageYear;
+                        const year = vintageYearEntries && vintageYearEntries.length > 0 ? vintageYearEntries[vintageYearEntries.length - 1].value : 'לא צוין';
+                        listItem.innerHTML = `
+                            <span>${project.name} (${year})</span>
+                            <div class="project-actions">
+                                <button onclick="switchProject('${project.id}')">${project.id === currentProjectId ? 'נוכחי' : 'בחר'}</button>
+                                <button class="close-project" onclick="toggleProjectClosed('${project.id}')">${project.isClosed ? 'פתח' : 'סגור'}</button>
+                                ${project.id !== 'default_project' || Object.keys(projects).length > 1 ? `<button class="delete" onclick="deleteProject('${project.id}')">מחק</button>` : ''}
+                            </div>
+                        `;
+                        projectList.appendChild(listItem);
+                    });
+                });
+                return;
+            }
+            projectsToDisplay.sort((a, b) => a.name.localeCompare(b.name)).forEach(project => {
                 const listItem = document.createElement('li');
-                listItem.textContent = project.name;
-                listItem.setAttribute('data-project-id', id);
-                if (id === currentProjectId) {
+                listItem.setAttribute('data-project-id', project.id);
+                if (project.id === currentProjectId) {
                     listItem.classList.add('active-project');
                 }
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'project-actions';
-                const switchBtn = document.createElement('button');
-                switchBtn.textContent = (id === currentProjectId) ? 'נוכחי' : 'בחר';
-                switchBtn.onclick = () => switchProject(id);
-                switchBtn.disabled = (id === currentProjectId);
-                actionsDiv.appendChild(switchBtn);
-                if (id !== 'default_project' || Object.keys(projects).length > 1) {
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.textContent = 'מחק';
-                    deleteBtn.className = 'delete';
-                    deleteBtn.onclick = (e) => {
-                        e.stopPropagation();
-                        deleteProject(id);
-                    };
-                    actionsDiv.appendChild(deleteBtn);
+                if (project.isClosed) {
+                    listItem.classList.add('closed');
                 }
-                listItem.appendChild(actionsDiv);
+                const vintageYearEntries = project.wineDetails.vintageYear;
+                const year = vintageYearEntries && vintageYearEntries.length > 0 ? vintageYearEntries[vintageYearEntries.length - 1].value : 'לא צוין';
+                listItem.innerHTML = `
+                    <span>${project.name} (${year})</span>
+                    <div class="project-actions">
+                        <button onclick="switchProject('${project.id}')">${project.id === currentProjectId ? 'נוכחי' : 'בחר'}</button>
+                        <button class="close-project" onclick="toggleProjectClosed('${project.id}')">${project.isClosed ? 'פתח' : 'סגור'}</button>
+                        ${project.id !== 'default_project' || Object.keys(projects).length > 1 ? `<button class="delete" onclick="deleteProject('${project.id}')">מחק</button>` : ''}
+                    </div>
+                `;
                 projectList.appendChild(listItem);
             });
+        }
+
+        function toggleProjectClosed(projectId) {
+            projects[projectId].isClosed = !projects[projectId].isClosed;
+            saveAllProjects();
+            filterProjectsByYear();
         }
 
         function addNewProject() {
@@ -2657,11 +3536,15 @@
                 projects[newProjectId] = createNewProjectData(newProjectName);
                 saveAllProjects();
                 switchProject(newProjectId);
-                renderProjectList();
+                filterProjectsByYear();
             }
         }
 
         function switchProject(id) {
+            if (projects[id].isClosed) {
+                alert('לא ניתן לעבוד על פרויקט סגור. פתח אותו קודם.');
+                return;
+            }
             currentProjectId = id;
             localStorage.setItem('currentProjectId', currentProjectId);
             loadCurrentStageContent();
@@ -2673,16 +3556,21 @@
             if (confirm('האם אתה בטוח שברצונך למחוק את הפרויקט "${projects[id].name}"? כל הנתונים יימחקו לצמיתות.')) {
                 delete projects[id];
                 if (currentProjectId === id) {
-                    currentProjectId = Object.keys(projects)[0];
-                    if (!currentProjectId) {
-                         currentProjectId = 'default_project';
-                         projects[currentProjectId] = createNewProjectData('פרויקט ראשי');
+                    const remainingProjects = Object.keys(projects).filter(pid => !projects[pid].isClosed);
+                    if (remainingProjects.length > 0) {
+                        currentProjectId = remainingProjects[0];
+                    } else {
+                        currentProjectId = Object.keys(projects)[0];
+                        if (!currentProjectId) {
+                             currentProjectId = 'default_project';
+                             projects[currentProjectId] = createNewProjectData('פרויקט ראשי');
+                        }
                     }
                 }
                 saveAllProjects();
                 localStorage.setItem('currentProjectId', currentProjectId);
                 updateProjectDisplay();
-                renderProjectList();
+                filterProjectsByYear();
             }
         }
 
@@ -2707,7 +3595,7 @@
         function saveProjectName() {
             const newName = editProjectNameInput.value.trim();
             if (newName !== '' && newName !== projects[currentProjectId].name) {
-                projects[currentProjectId].name = newName;
+                projects[currentProjectId].name = newProjectName;
                 saveAllProjects();
                 updateProjectDisplay();
             }
@@ -2767,6 +3655,10 @@
         }
 
         function loadCurrentStageContent() {
+            if (projects[currentProjectId].isClosed) {
+                alert('הפרויקט סגור. פתח אותו כדי לעבוד עליו.');
+                return;
+            }
             const stageConfig = stagesConfig[currentStageId];
             if (!stageConfig || currentStageId === 'wineDetails') {
                 console.error("Invalid or special stage for main content:", currentStageId);
@@ -2982,7 +3874,7 @@
             const paddingRight = 10;
             const graphWidth = svgWidth - paddingLeft - paddingRight;
             const graphHeight = svgHeight - paddingTop - paddingBottom;
-            const values = entries.map(e => e.value);
+            let values = entries.map(e => e.value);
             let minValue = Math.min(...values);
             let maxValue = Math.max(...values);
             let averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
@@ -2993,6 +3885,23 @@
                 if (minValue === maxValue) {
                      minValue -= 0.5;
                      maxValue += 0.5;
+                }
+            }
+            let comparisonEntries = null;
+            if (comparisonProjectId && projects[comparisonProjectId]) {
+                let compHistoryEntries;
+                if (currentMetricTypeForModal.sectionId === 'wineDetails') {
+                    compHistoryEntries = projects[comparisonProjectId].wineDetails[currentMetricTypeForModal.metricId];
+                } else {
+                    compHistoryEntries = projects[comparisonProjectId].stages[currentMetricTypeForModal.sectionId][currentMetricTypeForModal.metricId];
+                }
+                if (compHistoryEntries && compHistoryEntries.length > 0) {
+                    comparisonEntries = compHistoryEntries;
+                    const compValues = compHistoryEntries.map(e => e.value);
+                    minValue = Math.min(minValue, ...compValues);
+                    maxValue = Math.max(maxValue, ...compValues);
+                    values = values.concat(compValues);
+                    averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
                 }
             }
             const valueRange = maxValue - minValue;
@@ -3074,6 +3983,42 @@
             setTimeout(() => {
                 path.style.strokeDashoffset = 0;
             }, 100);
+            if (comparisonEntries) {
+                let compLinePath = '';
+                let compAreaPath = `M ${paddingLeft} ${yScale(minValue)}`;
+                comparisonEntries.forEach((entry, i) => {
+                    const x = paddingLeft + (i / (comparisonEntries.length - 1 || 1)) * graphWidth;
+                    const y = yScale(entry.value);
+                    if (i === 0) {
+                        compLinePath += `M ${x} ${y}`;
+                    } else {
+                        compLinePath += `L ${x} ${y}`;
+                    }
+                    compAreaPath += `L ${x} ${y}`;
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', x);
+                    circle.setAttribute('cy', y);
+                    circle.setAttribute('r', 4);
+                    circle.setAttribute('fill', '#FF6347');
+                    circle.setAttribute('stroke', '#fff');
+                    circle.setAttribute('stroke-width', '2');
+                    circle.setAttribute('data-value', entry.value.toFixed(precision));
+                    circle.setAttribute('data-timestamp', entry.timestamp);
+                    modalGraphSvg.appendChild(circle);
+                });
+                compAreaPath += `L ${paddingLeft + ((comparisonEntries.length - 1) / (comparisonEntries.length - 1 || 1)) * graphWidth} ${yScale(minValue)} L ${paddingLeft} ${yScale(minValue)} Z`;
+                const compArea = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                compArea.setAttribute('d', compAreaPath);
+                compArea.setAttribute('fill', 'rgba(255, 99, 71, 0.2)');
+                compArea.setAttribute('opacity', '0.8');
+                modalGraphSvg.appendChild(compArea);
+                const compPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                compPath.setAttribute('d', compLinePath);
+                compPath.setAttribute('fill', 'none');
+                compPath.setAttribute('stroke', '#FF6347');
+                compPath.setAttribute('stroke-width', '3');
+                modalGraphSvg.appendChild(compPath);
+            }
             const avgY = yScale(averageValue);
             const avgLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             avgLine.setAttribute('x1', paddingLeft);
@@ -3088,10 +4033,17 @@
             avgLabel.classList.add('modal-graph-average-label');
             avgLabel.textContent = `ממוצע: ${averageValue.toFixed(precision)}`;
             modalGraphSvg.appendChild(avgLabel);
+            // Add zoom behavior
+            const zoom = d3.zoom().scaleExtent([0.5, 5]).on('zoom', (event) => {
+                const transform = event.transform;
+                modalGraphSvg.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`;
+            });
+            d3.select(modalGraphSvg).call(zoom);
         }
 
         function closeHistoryModal() {
             historyModal.style.display = 'none';
+            comparisonProjectId = null;
         }
 
         function undoUpdate(sectionId, metricId, indexToRemove) {
@@ -3100,11 +4052,17 @@
             }
             let metricDataArray;
             if (sectionId === 'wineDetails') {
-                const customProp = projects[currentProjectId].wineDetails.customProperties.find(prop => prop.id === metricId);
-                if (customProp) {
-                    metricDataArray = customProp.history;
-                } else {
+                const predefinedMetricConfig = stagesConfig.wineDetails.metrics[metricId];
+                if (predefinedMetricConfig) {
                     metricDataArray = projects[currentProjectId].wineDetails[metricId];
+                } else {
+                    const customProp = projects[currentProjectId].wineDetails.customProperties.find(prop => prop.id === metricId);
+                    if (customProp) {
+                        metricDataArray = customProp.history;
+                    } else {
+                        console.error("Attempted to undo for non-existent custom property or metric:", metricId);
+                        return;
+                    }
                 }
             } else {
                 metricDataArray = projects[currentProjectId].stages[sectionId][metricId];
@@ -3131,6 +4089,10 @@
         }
 
         function openFinanceModal() {
+            if (projects[currentProjectId].isClosed) {
+                alert('הפרויקט סגור. פתח אותו כדי לנהל כספים.');
+                return;
+            }
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
@@ -3220,10 +4182,6 @@
             }
         }
 
-        function resetFinanceFilters() {
-            // No filters to reset since they were removed
-        }
-
         function editFinanceEntry(id) {
             const entry = projects[currentProjectId].finance.find(e => e.id === id);
             if (!entry) return;
@@ -3271,7 +4229,36 @@
             let totalIncome = 0;
             let totalExpense = 0;
             let totalBalance = 0;
-            projects[currentProjectId].finance.forEach(entry => {
+            currentProjectFinanceReportTableBody.innerHTML = '';
+            const sortedEntries = projects[currentProjectId].finance.slice().sort((a, b) => {
+                const parseDateString = (ts) => {
+                    const parts = ts.match(/(\d{2})\/(\d{2})\/(\d{4})(?:, (\d{2}):(\d{2}):(\d{2}))?/);
+                    if (parts) {
+                        const year = parseInt(parts[3], 10);
+                        const month = parseInt(parts[2], 10) - 1;
+                        const day = parseInt(parts[1], 10);
+                        const hour = parseInt(parts[4] || 0, 10);
+                        const minute = parseInt(parts[5] || 0, 10);
+                        const second = parseInt(parts[6] || 0, 10);
+                        return new Date(year, month, day, hour, minute, second);
+                    }
+                    return new Date(ts);
+                };
+                const dateA = parseDateString(a.timestamp);
+                const dateB = parseDateString(b.timestamp);
+                return dateA.getTime() - dateB.getTime(); // Oldest first for table
+            });
+            sortedEntries.forEach(entry => {
+                const row = document.createElement('tr');
+                const typeText = entry.type === 'income' ? 'הכנסה' : 'הוצאה';
+                const amountText = entry.amount.toFixed(2) + ' ₪';
+                row.innerHTML = `
+                    <td>${entry.timestamp.split(',')[0]}</td>
+                    <td>${typeText}</td>
+                    <td>${amountText}</td>
+                    <td>${entry.notes || 'אין הערות'}</td>
+                `;
+                currentProjectFinanceReportTableBody.appendChild(row);
                 if (entry.type === 'income') {
                     totalIncome += entry.amount;
                 } else {
@@ -3344,6 +4331,84 @@
                 globalTotalBalanceDisplay.classList.add('positive');
             } else if (globalBalance < 0) {
                 globalTotalBalanceDisplay.classList.add('negative');
+            }
+        }
+
+        function openFinanceYearlyModal() {
+            closeSidebar();
+            document.querySelector('.container').style.display = 'none';
+            document.querySelector('.top-section-wrapper').style.display = 'none';
+            fixedDashboardSection.style.display = 'none';
+            financeYearlyModal.style.display = 'flex';
+            yearlyReportContent.style.display = 'none';
+        }
+
+        function closeFinanceYearlyModal() {
+            financeYearlyModal.style.display = 'none';
+            showMainContent();
+        }
+
+        function generateYearlyReport() {
+            const selectedYear = yearSelect.value;
+            if (!selectedYear) {
+                alert('אנא בחר שנה.');
+                return;
+            }
+            yearlyReportContent.style.display = 'block';
+            let yearlyTotalIncome = 0;
+            let yearlyTotalExpense = 0;
+            let yearlyBalance = 0;
+            yearlyFinanceProjectsDetails.innerHTML = '';
+            const filteredProjects = Object.keys(projects).filter(projectId => {
+                const project = projects[projectId];
+                const vintageYearEntries = project.wineDetails.vintageYear;
+                if (vintageYearEntries && vintageYearEntries.length > 0) {
+                    const latestYear = vintageYearEntries[vintageYearEntries.length - 1].value;
+                    return latestYear == selectedYear;
+                }
+                return false;
+            });
+            if (filteredProjects.length === 0) {
+                yearlyFinanceProjectsDetails.innerHTML = '<p>אין פרויקטים בשנה זו.</p>';
+                yearlyTotalIncomeDisplay.textContent = '0';
+                yearlyTotalExpenseDisplay.textContent = '0';
+                yearlyTotalBalanceDisplay.textContent = '0';
+                return;
+            }
+            filteredProjects.forEach(projectId => {
+                const project = projects[projectId];
+                let projectIncome = 0;
+                let projectExpense = 0;
+                let projectBalance = 0;
+                project.finance.forEach(entry => {
+                    if (entry.type === 'income') {
+                        projectIncome += entry.amount;
+                    } else {
+                        projectExpense += entry.amount;
+                    }
+                });
+                projectBalance = projectIncome - projectExpense;
+                yearlyTotalIncome += projectIncome;
+                yearlyTotalExpense += projectExpense;
+                yearlyBalance += projectBalance;
+                const projectSection = document.createElement('div');
+                projectSection.className = 'finance-yearly-project-section';
+                projectSection.innerHTML = `
+                    <h4>${project.name}</h4>
+                    <p>הכנסות: <span style="color:#4CAF50;">${projectIncome.toFixed(2)}</span> ₪</p>
+                    <p>הוצאות: <span style="color:#F44336;">${projectExpense.toFixed(2)}</span> ₪</p>
+                    <p>יתרה: <span class="project-balance ${projectBalance >= 0 ? 'positive' : 'negative'}">${projectBalance.toFixed(2)}</span> ₪</p>
+                `;
+                yearlyFinanceProjectsDetails.appendChild(projectSection);
+            });
+            yearlyTotalIncomeDisplay.textContent = yearlyTotalIncome.toFixed(2);
+            yearlyTotalExpenseDisplay.textContent = yearlyTotalExpense.toFixed(2);
+            yearlyTotalBalanceDisplay.textContent = yearlyBalance.toFixed(2);
+            yearlyTotalBalanceDisplay.classList.remove('positive', 'negative');
+            if (yearlyBalance > 0) {
+                yearlyTotalBalanceDisplay.classList.add('positive');
+            } else if (yearlyBalance < 0) {
+                yearlyTotalBalanceDisplay.classList.add('negative');
             }
         }
 
@@ -3450,6 +4515,10 @@
         }
 
         function addCustomProperty() {
+            if (projects[currentProjectId].isClosed) {
+                alert('הפרויקט סגור. פתח אותו כדי לערוך.');
+                return;
+            }
             const propName = prompt('הכנס שם לשדה המותאם אישית החדש:');
             if (propName && propName.trim() !== '') {
                 const propId = `customProp_${Date.now()}`;
@@ -3465,6 +4534,10 @@
         }
 
         function deleteCustomProperty(propId) {
+            if (projects[currentProjectId].isClosed) {
+                alert('הפרויקט סגור. פתח אותו כדי לערוך.');
+                return;
+            }
             if (confirm('האם אתה בטוח שברצונך למחוק שדה מותאם אישית זה?')) {
                 projects[currentProjectId].wineDetails.customProperties = projects[currentProjectId].wineDetails.customProperties.filter(prop => prop.id !== propId);
                 saveAllProjects();
@@ -3478,6 +4551,10 @@
                 displaySpan.removeEventListener('click', item._displaySpanClickHandler);
             }
             const newClickHandler = () => {
+                if (projects[currentProjectId].isClosed) {
+                    alert('הפרויקט סגור. פתח אותו כדי לערוך.');
+                    return;
+                }
                 if (currentEditableDetailElement && currentEditableDetailElement.displaySpan !== displaySpan) {
                     saveEditableDetail();
                 }
@@ -3789,7 +4866,8 @@
                             metricName: metricConfig.name,
                             value: entry.value,
                             timestamp: entry.timestamp,
-                            rawTimestamp: new Date(entry.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/, '$3-$2-$1T$4:$5:$6'))
+                            rawTimestamp: new Date(entry.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/, '$3-$2-$1T$4:$5:$6')),
+                            color: '#8B0000'
                         });
                     });
                 }
@@ -3803,7 +4881,8 @@
                                 metricName: prop.name,
                                 value: entry.value,
                                 timestamp: entry.timestamp,
-                                rawTimestamp: new Date(entry.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/, '$3-$2-$1T$4:$5:$6'))
+                                rawTimestamp: new Date(entry.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/, '$3-$2-$1T$4:$5:$6')),
+                                color: '#A52A2A'
                             });
                         });
                     }
@@ -3812,6 +4891,7 @@
             for (const stageId in currentProject.stages) {
                 const stageConfig = stagesConfig[stageId];
                 if (!stageConfig || stageId === 'wineDetails') continue;
+                const stageColor = stageConfig.emoji === '🟢' ? '#228B22' : stageConfig.emoji === '🍇' ? '#8B4513' : stageConfig.emoji === '🍷' ? '#B22222' : stageConfig.emoji === '🔁' ? '#FF6347' : stageConfig.emoji === '🛢' ? '#696969' : stageConfig.emoji === '🧪' ? '#4169E1' : '#8B0000';
                 for (const metricId in stageConfig.metrics) {
                     const metricConfig = stageConfig.metrics[metricId];
                     const entries = currentProject.stages[stageId][metricId];
@@ -3822,7 +4902,8 @@
                                 metricName: metricConfig.name,
                                 value: entry.value,
                                 timestamp: entry.timestamp,
-                                rawTimestamp: new Date(entry.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/, '$3-$2-$1T$4:$5:$6'))
+                                rawTimestamp: new Date(entry.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/, '$3-$2-$1T$4:$5:$6')),
+                                color: stageColor
                             });
                         });
                     }
@@ -3838,14 +4919,111 @@
                 eventDiv.className = 'timeline-event';
                 eventDiv.style.animationDelay = `${index * 0.1}s`;
                 eventDiv.innerHTML = `
-                    <div class="timeline-event-content">
-                        <h4>${entry.metricName} (${entry.sectionName})</h4>
+                    <div class="timeline-event-content" style="border-left: 5px solid ${entry.color};">
+                        <h4 style="color: ${entry.color};">${entry.metricName} (${entry.sectionName})</h4>
                         <p>ערך: <span class="event-value">${entry.value}</span></p>
                         <span class="event-timestamp">${entry.timestamp}</span>
                     </div>
                 `;
                 timelineContainer.appendChild(eventDiv);
             });
+        }
+
+        function downloadTimelinePDF() {
+            const entries = Array.from(timelineContainer.querySelectorAll('.timeline-event')).map((event, index) => {
+                const title = event.querySelector('h4').textContent;
+                const value = event.querySelector('.event-value').textContent;
+                const timestamp = event.querySelector('.event-timestamp').textContent;
+                return `${index + 1}. ${title}\nערך: ${value}\nתאריך: ${timestamp}`;
+            });
+            const docDefinition = {
+                content: [
+                    { text: 'ציר זמן - כל המדידות', style: 'header' },
+                    { text: entries.join('\n\n'), style: 'text' }
+                ],
+                styles: {
+                    header: { fontSize: 18, bold: true, alignment: 'right' },
+                    text: { fontSize: 12, alignment: 'right' }
+                }
+            };
+            pdfMake.createPdf(docDefinition).download('timeline.pdf');
+        }
+
+        function downloadCurrentProjectFinancePDF() {
+            const docDefinition = {
+                content: [
+                    { text: 'דוח כספי - פרויקט נוכחי', style: 'header' },
+                    { text: `סה"כ הכנסות: ${currentProjectTotalIncomeDisplay.textContent} ₪`, style: 'text' },
+                    { text: `סה"כ הוצאות: ${currentProjectTotalExpenseDisplay.textContent} ₪`, style: 'text' },
+                    { text: `יתרה נוכחית: ${currentProjectTotalBalanceDisplay.textContent} ₪`, style: 'text' },
+                    { text: 'תנועות:', style: 'subheader' },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['*', '*', '*', '*'],
+                            body: [
+                                ['תאריך', 'סוג', 'סכום', 'הערות'],
+                                ...Array.from(currentProjectFinanceReportTableBody.querySelectorAll('tr')).map(row => {
+                                    const cells = row.querySelectorAll('td');
+                                    return [cells[0].textContent, cells[1].textContent, cells[2].textContent, cells[3].textContent];
+                                })
+                            ]
+                        }
+                    }
+                ],
+                styles: {
+                    header: { fontSize: 18, bold: true, alignment: 'right' },
+                    subheader: { fontSize: 14, bold: true, alignment: 'right' },
+                    text: { fontSize: 12, alignment: 'right' }
+                }
+            };
+            pdfMake.createPdf(docDefinition).download('current_project_finance_report.pdf');
+        }
+
+        function downloadGlobalFinancePDF() {
+            const docDefinition = {
+                content: [
+                    { text: 'דוח כספי כולל (כל הפרויקטים)', style: 'header' },
+                    { text: `סה"כ הכנסות: ${globalTotalIncomeDisplay.textContent} ₪`, style: 'text' },
+                    { text: `סה"כ הוצאות: ${globalTotalExpenseDisplay.textContent} ₪`, style: 'text' },
+                    { text: `יתרה כוללת: ${globalTotalBalanceDisplay.textContent} ₪`, style: 'text' },
+                    { text: 'פרויקטים:', style: 'subheader' },
+                    ...Array.from(globalFinanceProjectsDetails.querySelectorAll('.global-finance-project-section')).map(section => {
+                        const title = section.querySelector('h4').textContent;
+                        const ps = Array.from(section.querySelectorAll('p')).map(p => p.textContent);
+                        return { text: `${title}\n${ps.join('\n')}`, style: 'text' };
+                    })
+                ],
+                styles: {
+                    header: { fontSize: 18, bold: true, alignment: 'right' },
+                    subheader: { fontSize: 14, bold: true, alignment: 'right' },
+                    text: { fontSize: 12, alignment: 'right' }
+                }
+            };
+            pdfMake.createPdf(docDefinition).download('global_finance_report.pdf');
+        }
+
+        function downloadYearlyFinancePDF() {
+            const docDefinition = {
+                content: [
+                    { text: `דוח כספי לפי שנה - ${yearSelect.value}`, style: 'header' },
+                    { text: `סה"כ הכנסות: ${yearlyTotalIncomeDisplay.textContent} ₪`, style: 'text' },
+                    { text: `סה"כ הוצאות: ${yearlyTotalExpenseDisplay.textContent} ₪`, style: 'text' },
+                    { text: `יתרה נוכחית: ${yearlyTotalBalanceDisplay.textContent} ₪`, style: 'text' },
+                    { text: 'פרויקטים:', style: 'subheader' },
+                    ...Array.from(yearlyFinanceProjectsDetails.querySelectorAll('.finance-yearly-project-section')).map(section => {
+                        const title = section.querySelector('h4').textContent;
+                        const ps = Array.from(section.querySelectorAll('p')).map(p => p.textContent);
+                        return { text: `${title}\n${ps.join('\n')}`, style: 'text' };
+                    })
+                ],
+                styles: {
+                    header: { fontSize: 18, bold: true, alignment: 'right' },
+                    subheader: { fontSize: 14, bold: true, alignment: 'right' },
+                    text: { fontSize: 12, alignment: 'right' }
+                }
+            };
+            pdfMake.createPdf(docDefinition).download(`yearly_finance_report_${yearSelect.value}.pdf`);
         }
 
         window.onclick = function(event) {
@@ -3864,6 +5042,15 @@
             if (event.target === globalFinanceReportModal) {
                 closeGlobalFinanceReportModal();
             }
+            if (event.target === financeYearlyModal) {
+                closeFinanceYearlyModal();
+            }
+            if (event.target === inboxModal) {
+                closeInboxModal();
+            }
+            if (event.target === remindersModal) {
+                closeRemindersModal();
+            }
             if (event.target === instructionsModal) {
                 closeInstructionsModal();
             }
@@ -3872,6 +5059,9 @@
             }
             if (event.target === datePickerModal && !event.target.closest('.date-picker-modal-content')) {
                 closeDatePickerModal();
+            }
+            if (event.target === projectSelectionModal) {
+                closeProjectSelectionModal();
             }
             if (event.target === sidebarOverlay) {
                 closeSidebar();
