@@ -11,6 +11,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script> <!-- For advanced graphs -->
+    <!-- Firebase compat SDKs -->
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --primary-color: #8B0000;
@@ -2548,6 +2552,14 @@
                 <button onclick="zoomIn()">+</button>
                 <button onclick="zoomOut()">-</button>
             </div>
+            <div id="authBar" style="position:fixed; top:70px; right:20px; z-index:1200; background:#fff; border:1px solid #ddd; border-radius:10px; padding:10px 12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); display:flex; gap:6px; align-items:center;">
+  <input id="authEmail" type="email" placeholder="אימייל" style="width:140px; padding:6px;">
+  <input id="authPass" type="password" placeholder="סיסמה" style="width:110px; padding:6px;">
+  <button onclick="authSignIn()">כניסה</button>
+  <button onclick="authSignUp()">הרשמה</button>
+  <button onclick="authSignOut()">יציאה</button>
+  <span id="authStatus" style="margin-right:6px; font-weight:700; color:#8B0000;"></span>
+</div>
             <span class="theme-switch">מצב כהה:
                 <label class="switch">
                     <input type="checkbox" id="darkModeToggle">
@@ -5068,28 +5080,21 @@
             }
         }
     </script>
-    <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyC8hWZ5XJGBQZx32m3VkL4JwPFe90qZAdQ",
-    authDomain: "wine-d0c2c.firebaseapp.com",
-    projectId: "wine-d0c2c",
-    storageBucket: "wine-d0c2c.firebasestorage.app",
-    messagingSenderId: "659709195708",
-    appId: "1:659709195708:web:cdf69fe7ffc06a154667b9",
-    measurementId: "G-RCM60HVW2B"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
+ <script>
+// ==== Firebase init (compat) ====
+const firebaseConfig = {
+  apiKey: "AIzaSyC8hWZ5XJGBQZx32m3VkL4JwPFe90qZAdQ",
+  authDomain: "wine-d0c2c.firebaseapp.com",
+  projectId: "wine-d0c2c",
+  storageBucket: "wine-d0c2c.firebasestorage.app",
+  messagingSenderId: "659709195708",
+  appId: "1:659709195708:web:cdf69fe7ffc06a154667b9",
+  measurementId: "G-RCM60HVW2B"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+// =================================
 </script>
 </body>
 </html>
