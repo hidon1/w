@@ -12,27 +12,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script> <!-- For advanced graphs -->
     <!-- Firebase compat SDKs -->
-<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
-     <script>
-      // TODO: להחליף לערכים האמיתיים שלך
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+
+    <!-- אתחול Firebase (פעם אחת בלבד) -->
+    <script>
       const firebaseConfig = {
         apiKey: "AIzaSyC8hWZ5XJGBQZx32m3VkL4JwPFe90qZAdQ",
-        authDomain: "wine-d0c2c.firebaseapp.com.firebaseapp.com",
+        authDomain: "wine-d0c2c.firebaseapp.com",
         projectId: "wine-d0c2c",
-        storageBucket: "wine-d0c2c.firebasestorage.app",
+        storageBucket: "wine-d0c2c.appspot.com", /* בדקי בקונסול, אבל בד"כ זה ככה */
         messagingSenderId: "659709195708",
-        appId: "1:659709195708:web:cdf69fe7ffc06a154667b9"
+        appId: "1:659709195708:web:cdf69fe7ffc06a154667b9",
+        measurementId: "G-RCM60HVW2B"
       };
 
-      // אתחול Firebase (Compat)
       firebase.initializeApp(firebaseConfig);
-
-      // שירותים
       const auth = firebase.auth();
       const db   = firebase.firestore();
     </script>
+
     <style>
         :root {
             --primary-color: #8B0000;
@@ -1003,7 +1003,6 @@
             background: linear-gradient(135deg, #FFD700, #FFA500);
             transform: scale(1.1);
         }
-
         .project-modal-content {
             padding: 30px;
             text-align: right;
@@ -5311,5 +5310,106 @@ function saveAllProjects() {
         });
       });
 </script>
+     <script>
+      // פונקציה שבונה מצב אפליקציה פשוט לשמירה (לדוגמה)
+      function getCurrentAppState() {
+        return {
+          currentProjectName: document.getElementById('currentProjectName')?.textContent || '',
+          selectedStageId: window.currentStageId || null,
+          savedAtLocal: new Date().toISOString()
+        };
+      }
+
+      // החלת מצב על ה-UI
+      function applyStateToUI(state) {
+        if (!state) return;
+        if (state.currentProjectName && document.getElementById('currentProjectName')) {
+          document.getElementById('currentProjectName').textContent = state.currentProjectName;
+        }
+        if (state.selectedStageId && typeof window.switchStage === 'function') {
+          window.switchStage(state.selectedStageId);
+        }
+      }
+
+      // שמירת מצב למשתמש מחובר
+      async function saveStateToFirebase() {
+        const user = auth.currentUser;
+        if (!user) {
+          // אין משתמש מחובר – אפשר לשמור רק ב-localStorage אם תרצי
+          return;
+        }
+        const state = getCurrentAppState();
+        try {
+          await db.collection('wineMonitoringStates')
+            .doc(user.uid)
+            .set({
+              state,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          console.log('מצב נשמר בהצלחה בפיירבייס');
+        } catch (err) {
+          console.error('שגיאה בשמירה לפיירבייס:', err);
+        }
+      }
+
+      // טעינת מצב מהענן
+      async function loadStateFromFirebase(user) {
+        try {
+          const docRef = db.collection('wineMonitoringStates').doc(user.uid);
+          const docSnap = await docRef.get();
+          if (!docSnap.exists) {
+            console.log('אין מצב שמור למשתמש הזה בפיירבייס');
+            return;
+          }
+          const data = docSnap.data();
+          applyStateToUI(data.state);
+        } catch (err) {
+          console.error('שגיאה בטעינת מצב מפיירבייס:', err);
+        }
+      }
+
+      // התחברות/התנתקות עם גוגל
+      window.addEventListener('load', () => {
+        const loginBtn   = document.getElementById('loginBtn');
+        const logoutBtn  = document.getElementById('logoutBtn');
+        const userStatus = document.getElementById('userStatus');
+
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+        if (loginBtn) {
+          loginBtn.addEventListener('click', async () => {
+            try {
+              await auth.signInWithPopup(googleProvider);
+            } catch (err) {
+              console.error(err);
+              alert('שגיאה בהתחברות: ' + err.message);
+            }
+          });
+        }
+
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', async () => {
+            await auth.signOut();
+          });
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+          if (user) {
+            userStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
+            if (loginBtn)  loginBtn.style.display  = 'none';
+            if (logoutBtn) logoutBtn.style.display = 'inline-block';
+            await loadStateFromFirebase(user);
+          } else {
+            userStatus.textContent = 'לא מחובר';
+            if (loginBtn)  loginBtn.style.display  = 'inline-block';
+            if (logoutBtn) logoutBtn.style.display = 'none';
+          }
+        });
+      });
+
+      // דוגמה – אפשר לקרוא ל-saveStateToFirebase אחרי פעולות חשובות:
+      // אחרי עדכון מדד, שינוי שלב, שינוי שם פרויקט וכו':
+      // saveStateToFirebase();
+    </script>
 </body>
 </html>
