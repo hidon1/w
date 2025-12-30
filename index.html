@@ -5095,6 +5095,80 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 // =================================
+     /* === הוסף את זה אחרי initFirebase === */
+
+let db; // Firestore reference
+
+function initFirebase() {
+    app = firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore(); // הוסף שורה זו! 
+
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            document.getElementById('authStatus').textContent = user.email;
+            document. getElementById('authStatus').style.color = '#2e7d32';
+            // טען נתונים מהענן כשמשתמש מתחבר
+            loadProjectsFromFirestore(user.uid);
+        } else {
+            document.getElementById('authStatus').textContent = 'לא מחובר';
+            document.getElementById('authStatus').style.color = '#8B0000';
+            // טען מ-localStorage אם לא מחובר
+            projects = loadProjects();
+            renderAllMainContent();
+        }
+    });
+}
+
+// שמירה ל-Firestore
+async function saveProjectsToFirestore() {
+    const user = auth.currentUser;
+    if (! user) {
+        saveAllProjects(); // fallback ל-localStorage
+        return;
+    }
+    
+    try {
+        await db.collection('users').doc(user.uid).set({
+            projects: projects,
+            lastUpdated: firebase.firestore. FieldValue.serverTimestamp()
+        });
+        console.log('נשמר בהצלחה לענן');
+    } catch (error) {
+        console.error('שגיאה בשמירה:', error);
+        saveAllProjects(); // fallback ל-localStorage
+    }
+}
+
+// טעינה מ-Firestore
+async function loadProjectsFromFirestore(userId) {
+    try {
+        const doc = await db.collection('users').doc(userId).get();
+        if (doc. exists && doc.data().projects) {
+            projects = doc.data().projects;
+            // וודא מבנה נכון
+            for (const projectId in projects) {
+                // אותה לוגיקה כמו ב-loadProjects הקיים
+            }
+        } else {
+            projects = loadProjects(); // fallback ל-localStorage
+        }
+        renderAllMainContent();
+    } catch (error) {
+        console.error('שגיאה בטעינה:', error);
+        projects = loadProjects();
+        renderAllMainContent();
+    }
+}
+
+// עדכן את saveAllProjects הקיימת
+function saveAllProjects() {
+    localStorage.setItem('projects', JSON.stringify(projects));
+    // הוסף סנכרון לענן
+    if (auth.currentUser) {
+        saveProjectsToFirestore();
+    }
+}
 </script>
 </body>
 </html>
