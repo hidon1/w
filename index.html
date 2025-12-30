@@ -825,7 +825,6 @@
             display: flex;
             flex-direction: column;
             border-left: 1px solid var(--border-color);
-            overflow-y: auto; /* הוספתי גלילה אנכית כדי לאפשר גישה לכל הפריטים */
         }
 
         body.dark-mode .sidebar {
@@ -1810,13 +1809,12 @@
             background-color: #4a4a7a;
         }
 
-        .date-picker-day.selected {
-            background-color: var(--secondary-color);
-            color: white;
-        }
-
         body.dark-mode .date-picker-day.selected {
             background-color: var(--dark-secondary-color);
+        }
+
+        body.dark-mode .date-picker-day.header {
+            background-color: var(--dark-primary-color);
         }
 
         body.dark-mode .date-picker-header button {
@@ -3576,7 +3574,7 @@
                 listItem.setAttribute('data-project-id', project.id);
                 if (project.id === currentProjectId) {
                     listItem.classList.add('active-project');
-                }
+                        }
                 if (project.isClosed) {
                     listItem.classList.add('closed');
                 }
