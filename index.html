@@ -5254,28 +5254,12 @@
             if (loginBtn) {
                 loginBtn.addEventListener('click', async () => {
                     try {
-                       // הקוד החדש (שעובד מעולה באפליקציות)
-import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-const auth = getAuth();
-const provider = new GoogleAuthProvider();
-
-// פונקציה להתחברות
-function startSignIn() {
-    signInWithRedirect(auth, provider);
-}
-
-// בדיקה אם המשתמש חזר מהתחברות (חובה להוסיף את זה בטעינת הדף)
-getRedirectResult(auth)
-  .then((result) => {
-    if (result) {
-        const user = result.user;
-        console.log("מחובר בהצלחה!", user);
-        // כאן תמשיך למה שקורה אחרי שהמשתמש התחבר
-    }
-  }).catch((error) => {
-    console.error("שגיאה בהתחברות", error);
-  });
+                        await auth.signInWithPopup(googleProvider);
+                    } catch (err) {
+                        console.error(err);
+                        alert('שגיאה בהתחברות: ' + err.message);
+                    }
+                });
             }
 
             if (logoutBtn) {
