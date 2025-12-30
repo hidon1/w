@@ -825,6 +825,7 @@
             display: flex;
             flex-direction: column;
             border-left: 1px solid var(--border-color);
+            overflow-y: auto; /* הוספתי גלילה אנכית כדי לאפשר גישה לכל הפריטים */
         }
 
         body.dark-mode .sidebar {
@@ -1809,12 +1810,13 @@
             background-color: #4a4a7a;
         }
 
-        body.dark-mode .date-picker-day.selected {
-            background-color: var(--dark-secondary-color);
+        .date-picker-day.selected {
+            background-color: var(--secondary-color);
+            color: white;
         }
 
-        body.dark-mode .date-picker-day.header {
-            background-color: var(--dark-primary-color);
+        body.dark-mode .date-picker-day.selected {
+            background-color: var(--dark-secondary-color);
         }
 
         body.dark-mode .date-picker-header button {
@@ -2579,6 +2581,46 @@
         .auth-section .logout-btn:hover {
             background: linear-gradient(135deg, #d32f2f, #b71c1c);
         }
+
+        /* Login Banner */
+        .login-banner {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+            text-align: center;
+            font-size: calc(var(--font-size-base) * 0.9);
+            display: none;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+
+        .login-banner button {
+            background: white;
+            color: var(--primary-color);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 700;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .login-banner button:hover {
+            background: var(--accent-color);
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -2624,6 +2666,13 @@
         </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Login Banner -->
+    <div class="login-banner" id="loginBanner">
+        <p>כדי ליצור פרויקטים חדשים ולשמור נתונים בענן, יש להתחבר עם Google.</p>
+        <button onclick="loginWithGoogle()">התחבר</button>
+        <button onclick="dismissBanner()">דחות</button>
+    </div>
 
     <div class="top-section-wrapper">
         <div class="container">
@@ -3574,7 +3623,7 @@
                 listItem.setAttribute('data-project-id', project.id);
                 if (project.id === currentProjectId) {
                     listItem.classList.add('active-project');
-                        }
+                }
                 if (project.isClosed) {
                     listItem.classList.add('closed');
                 }
@@ -3600,7 +3649,7 @@
 
         function addNewProject() {
             if (!auth.currentUser) {
-                alert('כדי ליצור פרויקט חדש, יש להתחבר עם Google.');
+                showLoginBanner();
                 return;
             }
             let newProjectName = prompt('הכנס שם לפרויקט החדש:');
@@ -5249,10 +5298,20 @@
 
             const googleProvider = new firebase.auth.GoogleAuthProvider();
 
+            // Handle redirect result on page load
+            auth.getRedirectResult().then((result) => {
+                if (result.user) {
+                    console.log('User signed in via redirect');
+                    // The onAuthStateChanged will handle UI updates
+                }
+            }).catch((error) => {
+                console.error('Redirect sign-in error:', error);
+            });
+
             if (loginBtn) {
                 loginBtn.addEventListener('click', async () => {
                     try {
-                        await auth.signInWithPopup(googleProvider);
+                        await auth.signInWithRedirect(googleProvider);
                     } catch (err) {
                         console.error(err);
                         alert('שגיאה בהתחברות: ' + err.message);
@@ -5273,13 +5332,43 @@
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
 
                     await loadStateFromFirebase(user);
+                    hideLoginBanner();
                 } else {
                     if (authStatus) authStatus.textContent = 'לא מחובר';
                     if (loginBtn) loginBtn.style.display = 'inline-block';
                     if (logoutBtn) logoutBtn.style.display = 'none';
+
+                    showLoginBanner();
                 }
             });
         });
+
+        // Login Banner Functions
+        function showLoginBanner() {
+            const banner = document.getElementById('loginBanner');
+            if (banner) {
+                banner.style.display = 'block';
+            }
+        }
+
+        function hideLoginBanner() {
+            const banner = document.getElementById('loginBanner');
+            if (banner) {
+                banner.style.display = 'none';
+            }
+        }
+
+        function dismissBanner() {
+            hideLoginBanner();
+        }
+
+        function loginWithGoogle() {
+            const googleProvider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithRedirect(googleProvider).catch((error) => {
+                console.error('Error signing in with redirect:', error);
+                alert('שגיאה בהתחברות: ' + error.message);
+            });
+        }
     </script>
 </body>
 </html>
