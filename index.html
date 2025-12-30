@@ -2649,6 +2649,7 @@
             gap: 10px;
             transition: all 0.3s ease, transform 0.2s ease;
             box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+            margin-bottom: 15px;
         }
 
         .login-modal-content .google-btn:hover {
@@ -2660,6 +2661,66 @@
         .login-modal-content .google-btn img {
             width: 20px;
             height: 20px;
+        }
+
+        .login-modal-content .email-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .login-modal-content .email-form input {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: calc(var(--font-size-base) * 1);
+            background-color: var(--card-background);
+            color: var(--text-color);
+            transition: all var(--animation-speed);
+        }
+
+        body.dark-mode .login-modal-content .email-form input {
+            background-color: var(--dark-card-background);
+            color: var(--dark-text-color);
+            border-color: var(--dark-border-color);
+        }
+
+        .login-modal-content .email-form .buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .login-modal-content .email-form .buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: calc(var(--font-size-base) * 1);
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .login-modal-content .email-form .buttons .register-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .login-modal-content .email-form .buttons .register-btn:hover {
+            background: linear-gradient(135deg, var(--secondary-color), #8B0000);
+            transform: translateY(-2px);
+        }
+
+        .login-modal-content .email-form .buttons .login-btn {
+            background: linear-gradient(135deg, var(--accent-color), #FFD700);
+            color: black;
+        }
+
+        .login-modal-content .email-form .buttons .login-btn:hover {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            transform: translateY(-2px);
         }
 
         .login-modal-content .close-login-btn {
@@ -2743,11 +2804,19 @@
         <div class="login-modal-content">
             <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
             <h2>ברוכים הבאים!</h2>
-            <p>כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
+            <p>כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמא. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
             <button class="google-btn" onclick="loginWithGoogle()">
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
                 התחבר עם Google
             </button>
+            <div class="email-form">
+                <input type="email" id="emailInput" placeholder="אימייל" required>
+                <input type="password" id="passwordInput" placeholder="סיסמא" required>
+                <div class="buttons">
+                    <button class="register-btn" onclick="registerWithEmail()">רישום</button>
+                    <button class="login-btn" onclick="loginWithEmail()">התחבר</button>
+                </div>
+            </div>
             <button class="skip-btn" onclick="skipLogin()">המשך ללא התחברות</button>
         </div>
     </div>
@@ -5386,9 +5455,12 @@
                 if (result.user) {
                     console.log('User signed in via redirect');
                     // The onAuthStateChanged will handle UI updates
+                } else {
+                    console.log('No user from redirect');
                 }
             }).catch((error) => {
                 console.error('Redirect sign-in error:', error);
+                alert('שגיאה בהתחברות: ' + error.message);
             });
 
             if (loginBtn) {
@@ -5453,6 +5525,42 @@
                 console.error('Error signing in with redirect:', error);
                 alert('שגיאה בהתחברות: ' + error.message);
             });
+        }
+
+        function registerWithEmail() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            if (!email || !password) {
+                alert('אנא מלא את כל השדות.');
+                return;
+            }
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    console.log('User registered:', userCredential.user);
+                    // The onAuthStateChanged will handle UI updates
+                })
+                .catch((error) => {
+                    console.error('Error registering:', error);
+                    alert('שגיאה ברישום: ' + error.message);
+                });
+        }
+
+        function loginWithEmail() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            if (!email || !password) {
+                alert('אנא מלא את כל השדות.');
+                return;
+            }
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    console.log('User signed in:', userCredential.user);
+                    // The onAuthStateChanged will handle UI updates
+                })
+                .catch((error) => {
+                    console.error('Error signing in:', error);
+                    alert('שגיאה בהתחברות: ' + error.message);
+                });
         }
     </script>
 </body>
