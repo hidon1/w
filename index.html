@@ -5394,5 +5394,144 @@ function saveAllProjects() {
       // אחרי עדכון מדד, שינוי שלב, שינוי שם פרויקט וכו':
       // saveStateToFirebase();
     </script>
+    <script>
+  // --- 1. בניית מצב האפליקציה לשמירה ---
+  function getCurrentAppState() {
+    return {
+      projects: typeof projects !== 'undefined' ? projects : {},
+      currentProjectId: typeof currentProjectId !== 'undefined' ? currentProjectId : null,
+      currentStageId: typeof currentStageId !== 'undefined' ? currentStageId : null,
+      darkMode: document.body.classList.contains('dark-mode'),
+      savedAt: new Date().toISOString()
+    };
+  }
+
+  // --- 2. החלת מצב שהגיע מהענן על האפליקציה ---
+  function applyStateToUI(state) {
+    if (!state) return;
+
+    // שחזור אובייקט projects וה‑IDs
+    if (state.projects) {
+      projects = state.projects;
+    }
+    if (state.currentProjectId && projects[state.currentProjectId]) {
+      currentProjectId = state.currentProjectId;
+      localStorage.setItem('currentProjectId', currentProjectId);
+    }
+    if (state.currentStageId && stagesConfig[state.currentStageId]) {
+      currentStageId = state.currentStageId;
+      localStorage.setItem('currentStageId', currentStageId);
+    }
+
+    // מצב כהה
+    if (state.darkMode) {
+      document.body.classList.add('dark-mode');
+      localStorage.setItem('darkMode', 'true');
+    } else {
+      document.body.classList.remove('dark-mode');
+      localStorage.setItem('darkMode', 'false');
+    }
+
+    // רענון ה‑UI לפי המצב החדש
+    if (typeof renderAllMainContent === 'function') {
+      renderAllMainContent();
+    } else if (typeof updateProjectDisplay === 'function') {
+      updateProjectDisplay();
+    }
+  }
+
+  // --- 3. שמירת מצב לענן (נקרא אחרי כל שינוי) ---
+  async function saveStateToFirebase() {
+    const user = auth.currentUser;
+    if (!user) {
+      // אם אין משתמש מחובר – נשארים רק עם localStorage
+      console.log('לא מחובר – שומר רק בלוקאלי');
+      localStorage.setItem('projects', JSON.stringify(projects));
+      return;
+    }
+
+    const state = getCurrentAppState();
+
+    try {
+      await db.collection('wineMonitoringStates')
+        .doc(user.uid)
+        .set({
+          state,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+      console.log('מצב נשמר בהצלחה בענן וגם ב‑localStorage');
+      localStorage.setItem('projects', JSON.stringify(projects));
+    } catch (err) {
+      console.error('שגיאה בשמירה לפיירבייס:', err);
+    }
+  }
+
+  // --- 4. טעינת מצב מהענן כשמשתמש נכנס ---
+  async function loadStateFromFirebase(user) {
+    try {
+      const docRef = db.collection('wineMonitoringStates').doc(user.uid);
+      const docSnap = await docRef.get();
+
+      if (!docSnap.exists) {
+        console.log('אין מצב שמור למשתמש – נשתמש ב‑localStorage');
+        // אם יש מצב בלוקאלי, נטען אותו
+        const localProjects = localStorage.getItem('projects');
+        if (localProjects) {
+          projects = JSON.parse(localProjects);
+          if (typeof renderAllMainContent === 'function') {
+            renderAllMainContent();
+          }
+        }
+        return;
+      }
+
+      const data = docSnap.data();
+      applyStateToUI(data.state);
+    } catch (err) {
+      console.error('שגיאה בטעינת מצב מפיירבייס:', err);
+    }
+  }
+
+  // --- 5. עדכון auth.onAuthStateChanged ---
+  window.addEventListener('load', () => {
+    const loginBtn   = document.getElementById('loginBtn');
+    const logoutBtn  = document.getElementById('logoutBtn');
+    const userStatus = document.getElementById('userStatus');
+
+    const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+    if (loginBtn) {
+      loginBtn.addEventListener('click', async () => {
+        try {
+          await auth.signInWithPopup(googleProvider);
+        } catch (err) {
+          console.error(err);
+          alert('שגיאה בהתחברות: ' + err.message);
+        }
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        await auth.signOut();
+      });
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        if (userStatus) userStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
+        if (loginBtn)  loginBtn.style.display  = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+
+        await loadStateFromFirebase(user);
+      } else {
+        if (userStatus) userStatus.textContent = 'לא מחובר';
+        if (loginBtn)  loginBtn.style.display  = 'inline-block';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+      }
+    });
+  });
+</script>
 </body>
 </html>
