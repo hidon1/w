@@ -2581,6 +2581,117 @@
         .auth-section .logout-btn:hover {
             background: linear-gradient(135deg, #d32f2f, #b71c1c);
         }
+
+        /* Login Modal */
+        .login-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            animation: fadeInModal 0.3s ease-out;
+        }
+
+        .login-modal-content {
+            background: linear-gradient(135deg, var(--card-background), #f9f9f9);
+            margin: auto;
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 90%;
+            max-width: 400px;
+            animation: slideInModal 0.4s ease-out;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all var(--animation-speed);
+        }
+
+        body.dark-mode .login-modal-content {
+            background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
+        }
+
+        .login-modal-content h2 {
+            color: var(--primary-color);
+            font-family: 'Playfair Display', serif;
+            font-size: calc(var(--font-size-base) * 1.5);
+            margin-bottom: 20px;
+            transition: color var(--animation-speed);
+        }
+
+        .login-modal-content p {
+            font-size: calc(var(--font-size-base) * 1);
+            color: var(--text-color);
+            margin-bottom: 30px;
+            line-height: 1.5;
+            transition: color var(--animation-speed);
+        }
+
+        .login-modal-content .google-btn {
+            background: linear-gradient(135deg, #4285f4, #34a853);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: calc(var(--font-size-base) * 1);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+        }
+
+        .login-modal-content .google-btn:hover {
+            background: linear-gradient(135deg, #3367d6, #2e7d32);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(66, 133, 244, 0.4);
+        }
+
+        .login-modal-content .google-btn img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .login-modal-content .close-login-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: calc(var(--font-size-base) * 1.5);
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .login-modal-content .close-login-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .login-modal-content .skip-btn {
+            background: none;
+            border: none;
+            color: var(--light-text-color);
+            cursor: pointer;
+            font-size: calc(var(--font-size-base) * 0.9);
+            margin-top: 20px;
+            transition: color 0.2s ease;
+        }
+
+        .login-modal-content .skip-btn:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -2626,6 +2737,20 @@
         </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Login Modal -->
+    <div class="login-modal" id="loginModal">
+        <div class="login-modal-content">
+            <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
+            <h2>ברוכים הבאים!</h2>
+            <p>כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
+            <button class="google-btn" onclick="loginWithGoogle()">
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
+                התחבר עם Google
+            </button>
+            <button class="skip-btn" onclick="skipLogin()">המשך ללא התחברות</button>
+        </div>
+    </div>
 
     <div class="top-section-wrapper">
         <div class="container">
@@ -3318,6 +3443,11 @@
             requestNotificationPermission();
             setInterval(checkReminders, 60000); // Check every minute
             checkReminders();
+            // Show login modal if not logged in and no projects exist beyond default
+            const user = auth.currentUser;
+            if (!user && Object.keys(projects).length <= 1) {
+                openLoginModal();
+            }
         };
 
         function setDefaultYearFilter() {
@@ -3602,7 +3732,7 @@
 
         function addNewProject() {
             if (!auth.currentUser) {
-                alert('כדי ליצור פרויקט חדש, יש להתחבר עם Google.');
+                openLoginModal();
                 return;
             }
             let newProjectName = prompt('הכנס שם לפרויקט החדש:');
@@ -5251,10 +5381,20 @@
 
             const googleProvider = new firebase.auth.GoogleAuthProvider();
 
+            // Handle redirect result on page load
+            auth.getRedirectResult().then((result) => {
+                if (result.user) {
+                    console.log('User signed in via redirect');
+                    // The onAuthStateChanged will handle UI updates
+                }
+            }).catch((error) => {
+                console.error('Redirect sign-in error:', error);
+            });
+
             if (loginBtn) {
                 loginBtn.addEventListener('click', async () => {
                     try {
-                        await auth.signInWithPopup(googleProvider);
+                        await auth.signInWithRedirect(googleProvider);
                     } catch (err) {
                         console.error(err);
                         alert('שגיאה בהתחברות: ' + err.message);
@@ -5275,13 +5415,45 @@
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
 
                     await loadStateFromFirebase(user);
+                    closeLoginModal();
                 } else {
                     if (authStatus) authStatus.textContent = 'לא מחובר';
                     if (loginBtn) loginBtn.style.display = 'inline-block';
                     if (logoutBtn) logoutBtn.style.display = 'none';
+
+                    // Show login modal if needed
+                    openLoginModal();
                 }
             });
         });
+
+        // Login Modal Functions
+        function openLoginModal() {
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        function closeLoginModal() {
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function skipLogin() {
+            closeLoginModal();
+            // Continue without login
+        }
+
+        function loginWithGoogle() {
+            const googleProvider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithRedirect(googleProvider).catch((error) => {
+                console.error('Error signing in with redirect:', error);
+                alert('שגיאה בהתחברות: ' + error.message);
+            });
+        }
     </script>
 </body>
 </html>
