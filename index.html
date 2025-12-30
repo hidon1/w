@@ -15,6 +15,24 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+     <script>
+      // TODO: להחליף לערכים האמיתיים שלך
+      const firebaseConfig = {
+        apiKey: "AIzaSyC8hWZ5XJGBQZx32m3VkL4JwPFe90qZAdQ",
+        authDomain: "wine-d0c2c.firebaseapp.com.firebaseapp.com",
+        projectId: "wine-d0c2c",
+        storageBucket: "wine-d0c2c.firebasestorage.appspot.com",
+        messagingSenderId: "659709195708",
+        appId: "1:659709195708:web:cdf69fe7ffc06a154667b9"
+      };
+
+      // אתחול Firebase (Compat)
+      firebase.initializeApp(firebaseConfig);
+
+      // שירותים
+      const auth = firebase.auth();
+      const db   = firebase.firestore();
+    </script>
     <style>
         :root {
             --primary-color: #8B0000;
@@ -2527,6 +2545,13 @@
     </style>
 </head>
 <body>
+    
+    <!-- 🔹 אזור התחברות / התנתקות עם גוגל -->
+    <div id="authArea" style="position: fixed; top: 10px; left: 10px; z-index: 1200; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 10px; font-size: 14px;">
+      <span id="userStatus">לא מחובר</span>
+      <button id="loginBtn">התחבר עם Google</button>
+      <button id="logoutBtn" style="display:none;">התנתק</button>
+    </div>
     <div class="hamburger-menu-btn" id="hamburgerBtn">
         <span></span>
         <span></span>
@@ -5169,6 +5194,122 @@ function saveAllProjects() {
         saveProjectsToFirestore();
     }
 }
+      // 🔹 פונקציה שבונה את מצב האפליקציה לשמירה בפיירבייס
+      function getCurrentAppState() {
+        return {
+          currentProjectName: document.getElementById('currentProjectName')?.textContent || '',
+          selectedStageId: window.currentStageId || null,
+          // אם יש לך אובייקטים גלובליים להיסטוריה/מדידות – תוסיפי פה:
+          // history: window.historyData || [],
+          // measurements: window.measurements || [],
+          savedAtLocal: new Date().toISOString()
+        };
+      }
+
+      // 🔹 החלת מצב על הממשק אחרי טעינה מפיירבייס
+      function applyStateToUI(state) {
+        if (!state) return;
+
+        if (state.currentProjectName && document.getElementById('currentProjectName')) {
+          document.getElementById('currentProjectName').textContent = state.currentProjectName;
+        }
+
+        if (state.selectedStageId && typeof window.selectStageById === 'function') {
+          window.selectStageById(state.selectedStageId);
+        }
+
+        // אם יש לך היסטוריה / מדידות – תשחזרי כאן:
+        // if (state.history) { window.historyData = state.history; updateHistoryList(); }
+        // אם יש נתוני גרפים – לעדכן את המשתנים ואז לקרוא לפונקציה שמציירת מחדש.
+      }
+
+      // 🔹 שמירת מצב למשתמש מחובר ב-Firestore
+      async function saveStateToFirebase() {
+        const user = auth.currentUser;
+        if (!user) {
+          alert('כדי לשמור לפיירבייס צריך להתחבר קודם עם גוגל');
+          return;
+        }
+
+        const state = getCurrentAppState();
+
+        try {
+          await db.collection('wineMonitoringStates')
+            .doc(user.uid)
+            .set({
+              state,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+          console.log('מצב נשמר בהצלחה בפיירבייס');
+        } catch (err) {
+          console.error('שגיאה בשמירה לפיירבייס:', err);
+          alert('שגיאה בשמירה לפיירבייס: ' + err.message);
+        }
+      }
+
+      // 🔹 טעינת מצב מה-Firestore כשמשתמש מתחבר
+      async function loadStateFromFirebase(user) {
+        try {
+          const docRef = db.collection('wineMonitoringStates').doc(user.uid);
+          const docSnap = await docRef.get();
+
+          if (!docSnap.exists) {
+            console.log('אין מצב שמור למשתמש הזה בפיירבייס');
+            return;
+          }
+
+          const data = docSnap.data();
+          const state = data.state;
+          console.log('נטען מצב מפיירבייס:', state);
+
+          applyStateToUI(state);
+        } catch (err) {
+          console.error('שגיאה בטעינת מצב מפיירבייס:', err);
+        }
+      }
+
+      // 🔹 התחברות / התנתקות עם גוגל + שינוי סטטוס
+      window.addEventListener('load', () => {
+        const loginBtn   = document.getElementById('loginBtn');
+        const logoutBtn  = document.getElementById('logoutBtn');
+        const userStatus = document.getElementById('userStatus');
+
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+        if (loginBtn) {
+          loginBtn.addEventListener('click', async () => {
+            try {
+              await auth.signInWithPopup(googleProvider);
+            } catch (err) {
+              console.error(err);
+              alert('שגיאה בהתחברות: ' + err.message);
+            }
+          });
+        }
+
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', async () => {
+            await auth.signOut();
+          });
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+          if (user) {
+            userStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
+            if (loginBtn)  loginBtn.style.display  = 'none';
+            if (logoutBtn) logoutBtn.style.display = 'inline-block';
+
+            // כשמשתמש נכנס – נטען לו את המצב אם קיים
+            await loadStateFromFirebase(user);
+          } else {
+            userStatus.textContent = 'לא מחובר';
+            if (loginBtn)  loginBtn.style.display  = 'inline-block';
+            if (logoutBtn) logoutBtn.style.display = 'none';
+            // כאן אפשר לעשות reset מקומי אם תרצי
+          }
+        });
+      });
 </script>
 </body>
 </html>
