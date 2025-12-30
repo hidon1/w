@@ -30,7 +30,7 @@
 
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
-      const db   = firebase.firestore();
+      const db = firebase.firestore();
     </script>
 
     <style>
@@ -825,6 +825,7 @@
             display: flex;
             flex-direction: column;
             border-left: 1px solid var(--border-color);
+            overflow-y: auto; /* הוספתי גלילה אנכית כדי לאפשר גישה לכל הפריטים */
         }
 
         body.dark-mode .sidebar {
@@ -907,8 +908,10 @@
             padding: 20px 25px;
             border-top: 1px solid var(--border-color);
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+            gap: 10px;
             transition: border-color var(--animation-speed);
         }
 
@@ -1807,12 +1810,13 @@
             background-color: #4a4a7a;
         }
 
-        body.dark-mode .date-picker-day.selected {
-            background-color: var(--dark-secondary-color);
+        .date-picker-day.selected {
+            background-color: var(--secondary-color);
+            color: white;
         }
 
-        body.dark-mode .date-picker-day.header {
-            background-color: var(--dark-primary-color);
+        body.dark-mode .date-picker-day.selected {
+            background-color: var(--dark-secondary-color);
         }
 
         body.dark-mode .date-picker-header button {
@@ -2541,16 +2545,46 @@
                 transform: none;
             }
         }
+
+        .auth-section {
+            width: 100%;
+            text-align: center;
+        }
+
+        .auth-section .auth-status {
+            font-size: calc(var(--font-size-base) * 0.9);
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        .auth-section button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: calc(var(--font-size-base) * 0.9);
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .auth-section button:hover {
+            background: linear-gradient(135deg, var(--secondary-color), #8B0000);
+            transform: translateY(-2px);
+        }
+
+        .auth-section .logout-btn {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+        }
+
+        .auth-section .logout-btn:hover {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+        }
     </style>
 </head>
 <body>
     
-    <!-- 🔹 אזור התחברות / התנתקות עם גוגל -->
-    <div id="authArea" style="position: fixed; top: 10px; left: 10px; z-index: 1200; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 10px; font-size: 14px;">
-      <span id="userStatus">לא מחובר</span>
-      <button id="loginBtn">התחבר עם Google</button>
-      <button id="logoutBtn" style="display:none;">התנתק</button>
-    </div>
     <div class="hamburger-menu-btn" id="hamburgerBtn">
         <span></span>
         <span></span>
@@ -2572,24 +2606,23 @@
             <li><button onclick="openTimelineModal()">ציר זמן</button></li>
         </ul>
         <div class="sidebar-footer">
+            <div class="auth-section">
+                <div class="auth-status" id="authStatus">לא מחובר</div>
+                <button id="loginBtn">התחבר עם Google</button>
+                <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
+            </div>
+            <div class="divider"></div>
             <div class="zoom-controls">
                 <button onclick="zoomIn()">+</button>
                 <button onclick="zoomOut()">-</button>
             </div>
-            <div id="authBar" style="position:fixed; top:70px; right:20px; z-index:1200; background:#fff; border:1px solid #ddd; border-radius:10px; padding:10px 12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); display:flex; gap:6px; align-items:center;">
-  <input id="authEmail" type="email" placeholder="אימייל" style="width:140px; padding:6px;">
-  <input id="authPass" type="password" placeholder="סיסמה" style="width:110px; padding:6px;">
-  <button onclick="authSignIn()">כניסה</button>
-  <button onclick="authSignUp()">הרשמה</button>
-  <button onclick="authSignOut()">יציאה</button>
-  <span id="authStatus" style="margin-right:6px; font-weight:700; color:#8B0000;"></span>
-</div>
-            <span class="theme-switch">מצב כהה:
+            <div class="theme-switch">
+                מצב כהה:
                 <label class="switch">
                     <input type="checkbox" id="darkModeToggle">
                     <span class="slider"></span>
                 </label>
-            </span>
+            </div>
         </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -3448,6 +3481,9 @@
 
         function saveAllProjects() {
             localStorage.setItem('projects', JSON.stringify(projects));
+            if (auth.currentUser) {
+                saveStateToFirebase();
+            }
         }
 
         function updateProjectDisplay() {
@@ -3565,6 +3601,10 @@
         }
 
         function addNewProject() {
+            if (!auth.currentUser) {
+                alert('כדי ליצור פרויקט חדש, יש להתחבר עם Google.');
+                return;
+            }
             let newProjectName = prompt('הכנס שם לפרויקט החדש:');
             if (newProjectName && newProjectName.trim() !== '') {
                 newProjectName = newProjectName.trim();
@@ -5104,434 +5144,144 @@
             }
         }
     </script>
- <script>
-
-function initFirebase() {
-    app = firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.firestore(); // הוסף שורה זו! 
-
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            document.getElementById('authStatus').textContent = user.email;
-            document. getElementById('authStatus').style.color = '#2e7d32';
-            // טען נתונים מהענן כשמשתמש מתחבר
-            loadProjectsFromFirestore(user.uid);
-        } else {
-            document.getElementById('authStatus').textContent = 'לא מחובר';
-            document.getElementById('authStatus').style.color = '#8B0000';
-            // טען מ-localStorage אם לא מחובר
-            projects = loadProjects();
-            renderAllMainContent();
-        }
-    });
-}
-
-// שמירה ל-Firestore
-async function saveProjectsToFirestore() {
-    const user = auth.currentUser;
-    if (! user) {
-        saveAllProjects(); // fallback ל-localStorage
-        return;
-    }
-    
-    try {
-        await db.collection('users').doc(user.uid).set({
-            projects: projects,
-            lastUpdated: firebase.firestore. FieldValue.serverTimestamp()
-        });
-        console.log('נשמר בהצלחה לענן');
-    } catch (error) {
-        console.error('שגיאה בשמירה:', error);
-        saveAllProjects(); // fallback ל-localStorage
-    }
-}
-
-// טעינה מ-Firestore
-async function loadProjectsFromFirestore(userId) {
-    try {
-        const doc = await db.collection('users').doc(userId).get();
-        if (doc. exists && doc.data().projects) {
-            projects = doc.data().projects;
-            // וודא מבנה נכון
-            for (const projectId in projects) {
-                // אותה לוגיקה כמו ב-loadProjects הקיים
-            }
-        } else {
-            projects = loadProjects(); // fallback ל-localStorage
-        }
-        renderAllMainContent();
-    } catch (error) {
-        console.error('שגיאה בטעינה:', error);
-        projects = loadProjects();
-        renderAllMainContent();
-    }
-}
-
-// עדכן את saveAllProjects הקיימת
-function saveAllProjects() {
-    localStorage.setItem('projects', JSON.stringify(projects));
-    // הוסף סנכרון לענן
-    if (auth.currentUser) {
-        saveProjectsToFirestore();
-    }
-}
-      // 🔹 פונקציה שבונה את מצב האפליקציה לשמירה בפיירבייס
-      function getCurrentAppState() {
-        return {
-          currentProjectName: document.getElementById('currentProjectName')?.textContent || '',
-          selectedStageId: window.currentStageId || null,
-          // אם יש לך אובייקטים גלובליים להיסטוריה/מדידות – תוסיפי פה:
-          // history: window.historyData || [],
-          // measurements: window.measurements || [],
-          savedAtLocal: new Date().toISOString()
-        };
-      }
-
-      // 🔹 החלת מצב על הממשק אחרי טעינה מפיירבייס
-      function applyStateToUI(state) {
-        if (!state) return;
-
-        if (state.currentProjectName && document.getElementById('currentProjectName')) {
-          document.getElementById('currentProjectName').textContent = state.currentProjectName;
-        }
-
-        if (state.selectedStageId && typeof window.selectStageById === 'function') {
-          window.selectStageById(state.selectedStageId);
-        }
-
-        // אם יש לך היסטוריה / מדידות – תשחזרי כאן:
-        // if (state.history) { window.historyData = state.history; updateHistoryList(); }
-        // אם יש נתוני גרפים – לעדכן את המשתנים ואז לקרוא לפונקציה שמציירת מחדש.
-      }
-
-      // 🔹 שמירת מצב למשתמש מחובר ב-Firestore
-      async function saveStateToFirebase() {
-        const user = auth.currentUser;
-        if (!user) {
-          alert('כדי לשמור לפיירבייס צריך להתחבר קודם עם גוגל');
-          return;
-        }
-
-        const state = getCurrentAppState();
-
-        try {
-          await db.collection('wineMonitoringStates')
-            .doc(user.uid)
-            .set({
-              state,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-          console.log('מצב נשמר בהצלחה בפיירבייס');
-        } catch (err) {
-          console.error('שגיאה בשמירה לפיירבייס:', err);
-          alert('שגיאה בשמירה לפיירבייס: ' + err.message);
-        }
-      }
-
-      // 🔹 טעינת מצב מה-Firestore כשמשתמש מתחבר
-      async function loadStateFromFirebase(user) {
-        try {
-          const docRef = db.collection('wineMonitoringStates').doc(user.uid);
-          const docSnap = await docRef.get();
-
-          if (!docSnap.exists) {
-            console.log('אין מצב שמור למשתמש הזה בפיירבייס');
-            return;
-          }
-
-          const data = docSnap.data();
-          const state = data.state;
-          console.log('נטען מצב מפיירבייס:', state);
-
-          applyStateToUI(state);
-        } catch (err) {
-          console.error('שגיאה בטעינת מצב מפיירבייס:', err);
-        }
-      }
-
-      // 🔹 התחברות / התנתקות עם גוגל + שינוי סטטוס
-      window.addEventListener('load', () => {
-        const loginBtn   = document.getElementById('loginBtn');
-        const logoutBtn  = document.getElementById('logoutBtn');
-        const userStatus = document.getElementById('userStatus');
-
-        const googleProvider = new firebase.auth.GoogleAuthProvider();
-
-        if (loginBtn) {
-          loginBtn.addEventListener('click', async () => {
-            try {
-              await auth.signInWithPopup(googleProvider);
-            } catch (err) {
-              console.error(err);
-              alert('שגיאה בהתחברות: ' + err.message);
-            }
-          });
-        }
-
-        if (logoutBtn) {
-          logoutBtn.addEventListener('click', async () => {
-            await auth.signOut();
-          });
-        }
-
-        auth.onAuthStateChanged(async (user) => {
-          if (user) {
-            userStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
-            if (loginBtn)  loginBtn.style.display  = 'none';
-            if (logoutBtn) logoutBtn.style.display = 'inline-block';
-
-            // כשמשתמש נכנס – נטען לו את המצב אם קיים
-            await loadStateFromFirebase(user);
-          } else {
-            userStatus.textContent = 'לא מחובר';
-            if (loginBtn)  loginBtn.style.display  = 'inline-block';
-            if (logoutBtn) logoutBtn.style.display = 'none';
-            // כאן אפשר לעשות reset מקומי אם תרצי
-          }
-        });
-      });
-</script>
-     <script>
-      // פונקציה שבונה מצב אפליקציה פשוט לשמירה (לדוגמה)
-      function getCurrentAppState() {
-        return {
-          currentProjectName: document.getElementById('currentProjectName')?.textContent || '',
-          selectedStageId: window.currentStageId || null,
-          savedAtLocal: new Date().toISOString()
-        };
-      }
-
-      // החלת מצב על ה-UI
-      function applyStateToUI(state) {
-        if (!state) return;
-        if (state.currentProjectName && document.getElementById('currentProjectName')) {
-          document.getElementById('currentProjectName').textContent = state.currentProjectName;
-        }
-        if (state.selectedStageId && typeof window.switchStage === 'function') {
-          window.switchStage(state.selectedStageId);
-        }
-      }
-
-      // שמירת מצב למשתמש מחובר
-      async function saveStateToFirebase() {
-        const user = auth.currentUser;
-        if (!user) {
-          // אין משתמש מחובר – אפשר לשמור רק ב-localStorage אם תרצי
-          return;
-        }
-        const state = getCurrentAppState();
-        try {
-          await db.collection('wineMonitoringStates')
-            .doc(user.uid)
-            .set({
-              state,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-          console.log('מצב נשמר בהצלחה בפיירבייס');
-        } catch (err) {
-          console.error('שגיאה בשמירה לפיירבייס:', err);
-        }
-      }
-
-      // טעינת מצב מהענן
-      async function loadStateFromFirebase(user) {
-        try {
-          const docRef = db.collection('wineMonitoringStates').doc(user.uid);
-          const docSnap = await docRef.get();
-          if (!docSnap.exists) {
-            console.log('אין מצב שמור למשתמש הזה בפיירבייס');
-            return;
-          }
-          const data = docSnap.data();
-          applyStateToUI(data.state);
-        } catch (err) {
-          console.error('שגיאה בטעינת מצב מפיירבייס:', err);
-        }
-      }
-
-      // התחברות/התנתקות עם גוגל
-      window.addEventListener('load', () => {
-        const loginBtn   = document.getElementById('loginBtn');
-        const logoutBtn  = document.getElementById('logoutBtn');
-        const userStatus = document.getElementById('userStatus');
-
-        const googleProvider = new firebase.auth.GoogleAuthProvider();
-
-        if (loginBtn) {
-          loginBtn.addEventListener('click', async () => {
-            try {
-              await auth.signInWithPopup(googleProvider);
-            } catch (err) {
-              console.error(err);
-              alert('שגיאה בהתחברות: ' + err.message);
-            }
-          });
-        }
-
-        if (logoutBtn) {
-          logoutBtn.addEventListener('click', async () => {
-            await auth.signOut();
-          });
-        }
-
-        auth.onAuthStateChanged(async (user) => {
-          if (user) {
-            userStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
-            if (loginBtn)  loginBtn.style.display  = 'none';
-            if (logoutBtn) logoutBtn.style.display = 'inline-block';
-            await loadStateFromFirebase(user);
-          } else {
-            userStatus.textContent = 'לא מחובר';
-            if (loginBtn)  loginBtn.style.display  = 'inline-block';
-            if (logoutBtn) logoutBtn.style.display = 'none';
-          }
-        });
-      });
-
-      // דוגמה – אפשר לקרוא ל-saveStateToFirebase אחרי פעולות חשובות:
-      // אחרי עדכון מדד, שינוי שלב, שינוי שם פרויקט וכו':
-      // saveStateToFirebase();
-    </script>
     <script>
-  // --- 1. בניית מצב האפליקציה לשמירה ---
-  function getCurrentAppState() {
-    return {
-      projects: typeof projects !== 'undefined' ? projects : {},
-      currentProjectId: typeof currentProjectId !== 'undefined' ? currentProjectId : null,
-      currentStageId: typeof currentStageId !== 'undefined' ? currentStageId : null,
-      darkMode: document.body.classList.contains('dark-mode'),
-      savedAt: new Date().toISOString()
-    };
-  }
+        // בניית מצב האפליקציה לשמירה
+        function getCurrentAppState() {
+            return {
+                projects: projects,
+                currentProjectId: currentProjectId,
+                currentStageId: currentStageId,
+                darkMode: document.body.classList.contains('dark-mode'),
+                savedAt: new Date().toISOString()
+            };
+        }
 
-  // --- 2. החלת מצב שהגיע מהענן על האפליקציה ---
-  function applyStateToUI(state) {
-    if (!state) return;
+        // החלת מצב שהגיע מהענן על האפליקציה
+        function applyStateToUI(state) {
+            if (!state) return;
 
-    // שחזור אובייקט projects וה‑IDs
-    if (state.projects) {
-      projects = state.projects;
-    }
-    if (state.currentProjectId && projects[state.currentProjectId]) {
-      currentProjectId = state.currentProjectId;
-      localStorage.setItem('currentProjectId', currentProjectId);
-    }
-    if (state.currentStageId && stagesConfig[state.currentStageId]) {
-      currentStageId = state.currentStageId;
-      localStorage.setItem('currentStageId', currentStageId);
-    }
+            // שחזור אובייקט projects וה‑IDs
+            if (state.projects) {
+                projects = state.projects;
+            }
+            if (state.currentProjectId && projects[state.currentProjectId]) {
+                currentProjectId = state.currentProjectId;
+                localStorage.setItem('currentProjectId', currentProjectId);
+            }
+            if (state.currentStageId && stagesConfig[state.currentStageId]) {
+                currentStageId = state.currentStageId;
+                localStorage.setItem('currentStageId', currentStageId);
+            }
 
-    // מצב כהה
-    if (state.darkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('darkMode', 'true');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('darkMode', 'false');
-    }
+            // מצב כהה
+            if (state.darkMode) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'true');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'false');
+            }
 
-    // רענון ה‑UI לפי המצב החדש
-    if (typeof renderAllMainContent === 'function') {
-      renderAllMainContent();
-    } else if (typeof updateProjectDisplay === 'function') {
-      updateProjectDisplay();
-    }
-  }
+            // רענון ה‑UI לפי המצב החדש
+            if (typeof renderAllMainContent === 'function') {
+                renderAllMainContent();
+            } else if (typeof updateProjectDisplay === 'function') {
+                updateProjectDisplay();
+            }
+        }
 
-  // --- 3. שמירת מצב לענן (נקרא אחרי כל שינוי) ---
-  async function saveStateToFirebase() {
-    const user = auth.currentUser;
-    if (!user) {
-      // אם אין משתמש מחובר – נשארים רק עם localStorage
-      console.log('לא מחובר – שומר רק בלוקאלי');
-      localStorage.setItem('projects', JSON.stringify(projects));
-      return;
-    }
+        // שמירת מצב לענן (נקרא אחרי כל שינוי)
+        async function saveStateToFirebase() {
+            const user = auth.currentUser;
+            if (!user) {
+                // אם אין משתמש מחובר – נשארים רק עם localStorage
+                console.log('לא מחובר – שומר רק בלוקאלי');
+                localStorage.setItem('projects', JSON.stringify(projects));
+                return;
+            }
 
-    const state = getCurrentAppState();
+            const state = getCurrentAppState();
 
-    try {
-      await db.collection('wineMonitoringStates')
-        .doc(user.uid)
-        .set({
-          state,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            try {
+                await db.collection('wineMonitoringStates')
+                    .doc(user.uid)
+                    .set({
+                        state,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                console.log('מצב נשמר בהצלחה בענן וגם ב‑localStorage');
+                localStorage.setItem('projects', JSON.stringify(projects));
+            } catch (err) {
+                console.error('שגיאה בשמירה לפיירבייס:', err);
+            }
+        }
+
+        // טעינת מצב מהענן כשמשתמש נכנס
+        async function loadStateFromFirebase(user) {
+            try {
+                const docRef = db.collection('wineMonitoringStates').doc(user.uid);
+                const docSnap = await docRef.get();
+
+                if (!docSnap.exists) {
+                    console.log('אין מצב שמור למשתמש – נשתמש ב‑localStorage');
+                    // אם יש מצב בלוקאלי, נטען אותו
+                    const localProjects = localStorage.getItem('projects');
+                    if (localProjects) {
+                        projects = JSON.parse(localProjects);
+                        if (typeof renderAllMainContent === 'function') {
+                            renderAllMainContent();
+                        }
+                    }
+                    return;
+                }
+
+                const data = docSnap.data();
+                applyStateToUI(data.state);
+            } catch (err) {
+                console.error('שגיאה בטעינת מצב מפיירבייס:', err);
+            }
+        }
+
+        // התחברות/התנתקות עם גוגל
+        window.addEventListener('load', () => {
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const authStatus = document.getElementById('authStatus');
+
+            const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+            if (loginBtn) {
+                loginBtn.addEventListener('click', async () => {
+                    try {
+                        await auth.signInWithPopup(googleProvider);
+                    } catch (err) {
+                        console.error(err);
+                        alert('שגיאה בהתחברות: ' + err.message);
+                    }
+                });
+            }
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    await auth.signOut();
+                });
+            }
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
+                    if (loginBtn) loginBtn.style.display = 'none';
+                    if (logoutBtn) logoutBtn.style.display = 'inline-block';
+
+                    await loadStateFromFirebase(user);
+                } else {
+                    if (authStatus) authStatus.textContent = 'לא מחובר';
+                    if (loginBtn) loginBtn.style.display = 'inline-block';
+                    if (logoutBtn) logoutBtn.style.display = 'none';
+                }
+            });
         });
-
-      console.log('מצב נשמר בהצלחה בענן וגם ב‑localStorage');
-      localStorage.setItem('projects', JSON.stringify(projects));
-    } catch (err) {
-      console.error('שגיאה בשמירה לפיירבייס:', err);
-    }
-  }
-
-  // --- 4. טעינת מצב מהענן כשמשתמש נכנס ---
-  async function loadStateFromFirebase(user) {
-    try {
-      const docRef = db.collection('wineMonitoringStates').doc(user.uid);
-      const docSnap = await docRef.get();
-
-      if (!docSnap.exists) {
-        console.log('אין מצב שמור למשתמש – נשתמש ב‑localStorage');
-        // אם יש מצב בלוקאלי, נטען אותו
-        const localProjects = localStorage.getItem('projects');
-        if (localProjects) {
-          projects = JSON.parse(localProjects);
-          if (typeof renderAllMainContent === 'function') {
-            renderAllMainContent();
-          }
-        }
-        return;
-      }
-
-      const data = docSnap.data();
-      applyStateToUI(data.state);
-    } catch (err) {
-      console.error('שגיאה בטעינת מצב מפיירבייס:', err);
-    }
-  }
-
-  // --- 5. עדכון auth.onAuthStateChanged ---
-  window.addEventListener('load', () => {
-    const loginBtn   = document.getElementById('loginBtn');
-    const logoutBtn  = document.getElementById('logoutBtn');
-    const userStatus = document.getElementById('userStatus');
-
-    const googleProvider = new firebase.auth.GoogleAuthProvider();
-
-    if (loginBtn) {
-      loginBtn.addEventListener('click', async () => {
-        try {
-          await auth.signInWithPopup(googleProvider);
-        } catch (err) {
-          console.error(err);
-          alert('שגיאה בהתחברות: ' + err.message);
-        }
-      });
-    }
-
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', async () => {
-        await auth.signOut();
-      });
-    }
-
-    auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        if (userStatus) userStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
-        if (loginBtn)  loginBtn.style.display  = 'none';
-        if (logoutBtn) logoutBtn.style.display = 'inline-block';
-
-        await loadStateFromFirebase(user);
-      } else {
-        if (userStatus) userStatus.textContent = 'לא מחובר';
-        if (loginBtn)  loginBtn.style.display  = 'inline-block';
-        if (logoutBtn) logoutBtn.style.display = 'none';
-      }
-    });
-  });
-</script>
+    </script>
 </body>
 </html>
