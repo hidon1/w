@@ -526,6 +526,11 @@
         let comparisonProjectId = null;
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+        // משתני הזזה לכרטיסיה
+        let isDragging = false;
+        let startX = 0;
+        let currentX = 0;
+        let cardOpen = false; // מצב הכרטיסיה: פתוח או סגור
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
             for (let year = 2020; year <= 2100; year++) {
@@ -710,6 +715,10 @@
             if (!user && Object.keys(projects).length <= 1) {
                 openLoginModal();
             }
+            // הוספת event listeners להזזה
+            projectDetailsCard.addEventListener('touchstart', handleTouchStart);
+            projectDetailsCard.addEventListener('touchmove', handleTouchMove);
+            projectDetailsCard.addEventListener('touchend', handleTouchEnd);
         };
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
@@ -2655,6 +2664,52 @@
                     console.error('Error signing in:', error);
                     alert('שגיאה בהתחברות: ' + error.message);
                 });
+        }
+        // פונקציות הזזה לכרטיסיה במובייל
+        function handleTouchStart(e) {
+            if (window.innerWidth > 768) return; // רק במובייל
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            currentX = startX;
+            projectDetailsCard.style.transition = 'none'; // ביטול אנימציה במהלך הזזה
+        }
+        function handleTouchMove(e) {
+            if (!isDragging || window.innerWidth > 768) return;
+            e.preventDefault();
+            currentX = e.touches[0].clientX;
+            const deltaX = currentX - startX;
+            const newLeft = Math.min(15, Math.max(-250, 15 + deltaX)); // מגביל בין 15px ל- -250px
+            projectDetailsCard.style.left = newLeft + 'px';
+        }
+        function handleTouchEnd(e) {
+            if (!isDragging || window.innerWidth > 768) return;
+            isDragging = false;
+            projectDetailsCard.style.transition = 'left 0.3s ease'; // הוספת אנימציה חזרה
+            const deltaX = currentX - startX;
+            if (deltaX > 50) {
+                // פתח לגמרי אם הזיז ימינה מספיק
+                projectDetailsCard.style.left = '15px';
+                cardOpen = true;
+            } else if (deltaX < -50) {
+                // סגור אם הזיז שמאלה מספיק
+                projectDetailsCard.style.left = '-200px';
+                cardOpen = false;
+            } else {
+                // חזור למצב הקודם
+                projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
+            }
+        }
+        function toggleCard() {
+            if (window.innerWidth > 768) return; // רק במובייל
+            cardOpen = !cardOpen;
+            projectDetailsCard.style.transition = 'left 0.3s ease';
+            projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
+        }
+        function closeCard() {
+            if (window.innerWidth > 768) return;
+            cardOpen = false;
+            projectDetailsCard.style.transition = 'left 0.3s ease';
+            projectDetailsCard.style.left = '-200px';
         }
     </script>
 </body>
