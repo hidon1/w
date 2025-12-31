@@ -59,17 +59,17 @@
         display: none;
     }
     
-    /* שינויים בשורת הזנת נתונים - 4 קוביות בשורה */
+    /* Input section: 4 data cubes per row instead of 2 */
     .input-section {
         grid-template-columns: repeat(4, 1fr);
         gap: 15px;
     }
     
     .input-group {
-        min-width: 0;
+        min-width: 0; /* Prevent grid overflow */
     }
     
-    /* שינויים בדשבורד - נמוך יותר ופריסה אופקית */
+    /* Dashboard: lower height and horizontal layout (button next to cubes) */
     .dashboard-section {
         flex-direction: row;
         padding: 8px 15px;
@@ -79,7 +79,7 @@
     }
     
     .dashboard-section h2 {
-        width: 100%;
+        flex-basis: 100%; /* Full width for title */
         margin-bottom: 5px;
     }
     
