@@ -1,3 +1,66 @@
+/* קוד CSS המלא עם עדכונים להזזה במובייל */
+/* שינויים במובייל: .project-details-card עכשיו עם left: -200px; כדי שתציץ קצת */
+
+@media (max-width: 768px) {
+    .hamburger-menu-btn {
+        top: 35px;
+        right: 20px;
+    }
+    .project-details-card {
+        width: 250px;
+        left: -200px; /* שינוי: ציצה קצת (50px גלויים) */
+        height: 300px;
+        transition: left 0.3s ease; /* הוספת transition להזזה חלקה */
+    }
+    .pull-handle {
+        right: -20px;
+        display: flex; /* מוצג במובייל */
+    }
+    .close-card-btn {
+        top: 5px;
+        left: 5px;
+        font-size: calc(var(--font-size-base) * 1);
+    }
+    .stage-nav-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .stage-nav-container > div {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .wine-icon-container {
+        order: -1;
+        margin-bottom: 10px;
+    }
+    .stage-nav-button {
+        min-width: 90px;
+        padding: 8px 10px;
+        font-size: calc(var(--font-size-base) * 0.8);
+    }
+    .close-button {
+        top: 20px;
+        left: 20px;
+    }
+}
+
+/* דסקטופ: נשאר כפי שהיה */
+@media (min-width: 769px) {
+    .project-details-card {
+        left: 15px;
+    }
+    .pull-handle {
+        display: none;
+    }
+    .close-card-btn {
+        display: none;
+    }
+}
+
+/* שאר הקוד CSS כפי שהיה */
 :root {
     --primary-color: #8B0000;
     --secondary-color: #A52A2A;
@@ -2525,63 +2588,4 @@ body.dark-mode .add-metric-modal-content input {
 .add-metric-modal-content button:hover {
     background: linear-gradient(135deg, var(--secondary-color), #8B0000);
     transform: translateY(-2px);
-}
-
-/* Mobile styles */
-@media (max-width: 768px) {
-    .hamburger-menu-btn {
-        top: 35px;
-        right: 20px;
-    }
-    .project-details-card {
-        width: 200px;
-        left: -250px; /* Initially hidden */
-        height: 300px;
-    }
-    .pull-handle {
-        right: -20px;
-        display: flex; /* Show on mobile */
-    }
-    .close-card-btn {
-        top: 5px;
-        left: 5px;
-        font-size: calc(var(--font-size-base) * 1);
-    }
-    .stage-nav-container {
-        flex-direction: column;
-        gap: 10px;
-    }
-    .stage-nav-container > div {
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-    .wine-icon-container {
-        order: -1;
-        margin-bottom: 10px;
-    }
-    .stage-nav-button {
-        min-width: 90px;
-        padding: 8px 10px;
-        font-size: calc(var(--font-size-base) * 0.8);
-    }
-    .close-button {
-        top: 20px;
-        left: 20px;
-    }
-}
-
-/* Desktop styles */
-@media (min-width: 769px) {
-    .project-details-card {
-        left: 15px; /* Always visible */
-    }
-    .pull-handle {
-        display: none; /* Hide on desktop */
-    }
-    .close-card-btn {
-        display: none; /* Hide on desktop */
-    }
 }
