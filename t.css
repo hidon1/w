@@ -47,7 +47,7 @@
     }
 }
 
-/* שאר הקוד CSS כפי שהיה */
+/* Base styles for all screen sizes */
 :root {
     --primary-color: #8B0000;
     --secondary-color: #A52A2A;
