@@ -367,7 +367,8 @@
                     'ta': { name: 'חומצה כוללת', type: 'number', step: 0.01, precision: 2, placeholder: '6.8' },
                     'grapeTemp': { name: 'טמפרטורת ענבים', type: 'number', step: 0.1, precision: 1, placeholder: '25.0' },
                 },
-                summaryMetrics: ['brix', 'ph', 'ta']
+                summaryMetrics: ['brix', 'ph', 'ta'],
+                customMetrics: {}
             },
             'stage2': {
                 name: 'ריסוק',
@@ -381,7 +382,8 @@
                     'brixStart': { name: 'בריקס התחלה', type: 'number', step: 0.1, precision: 1, placeholder: '23.0' },
                     'fermentationSync': { name: 'מצב סנכרון', type: 'text', placeholder: 'אושר' }
                 },
-                summaryMetrics: ['so2Added', 'mixTemp', 'brixStart']
+                summaryMetrics: ['so2Added', 'mixTemp', 'brixStart'],
+                customMetrics: {}
             },
             'stage3': {
                 name: 'תסיסה אלכוהולית',
@@ -398,7 +400,8 @@
                     'fermentStartDate': { name: 'תאריך התחלה', type: 'date', placeholder: '20/08/2024' },
                     'fermentEndDate': { name: 'תאריך סיום', type: 'date', placeholder: '30/08/2024' }
                 },
-                summaryMetrics: ['brixDaily', 'phFerment', 'fermentTemp', 'density']
+                summaryMetrics: ['brixDaily', 'phFerment', 'fermentTemp', 'density'],
+                customMetrics: {}
             },
             'stage4': {
                 name: 'תסיסה מלולקטית',
@@ -412,7 +415,8 @@
                     'bacteriaAdded': { name: 'חיידקים', type: 'text', placeholder: 'Oenococcus oeni' },
                     'tasteNotesMLF': { name: 'טעמים (רישום ידני)', type: 'text', placeholder: 'חמאתיות עדינה' }
                 },
-                summaryMetrics: ['phMLF', 'roomTempMLF', 'mlfStatus']
+                summaryMetrics: ['phMLF', 'roomTempMLF', 'mlfStatus'],
+                customMetrics: {}
             },
             'stage5': {
                 name: 'יישון',
@@ -427,7 +431,8 @@
                     'rackingDate': { name: 'תאריך שקיעה', type: 'date', placeholder: '01/03/2025' },
                     'rackingFrequency': { name: 'תדירות שקיעות', type: 'text', placeholder: 'כל חודשיים' }
                 },
-                summaryMetrics: ['containerType', 'agingTime', 'agingRoomTemp']
+                summaryMetrics: ['containerType', 'agingTime', 'agingRoomTemp'],
+                customMetrics: {}
             },
             'stage6': {
                 name: 'הכנה לבקבוק',
@@ -442,7 +447,8 @@
                     'alcoholLevel': { name: 'רמת אלכוהול (%)', type: 'number', step: 0.1, precision: 1, placeholder: '14.2' },
                     'batchNumber': { name: 'מספר אצווה / תווית', type: 'text', placeholder: 'יין אדום 2024A' }
                 },
-                summaryMetrics: ['phFinal', 'bottleCount', 'alcoholLevel']
+                summaryMetrics: ['phFinal', 'bottleCount', 'alcoholLevel'],
+                customMetrics: {}
             },
         };
         let projects = loadProjects();
@@ -1121,6 +1127,8 @@
             }
             fixedDashboardStageName.textContent = `${stageConfig.longName}`;
             currentStageInputSection.innerHTML = '';
+            
+            // Render predefined metrics
             for (const metricId in stageConfig.metrics) {
                 const metric = stageConfig.metrics[metricId];
                 const inputGroup = document.createElement('div');
@@ -1172,13 +1180,49 @@
                     }
                 }
             }
+            
+            // Render custom metrics with the same styling
+            for (const metricId in stageConfig.customMetrics) {
+                const metric = stageConfig.customMetrics[metricId];
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+                let inputElementHTML = '';
+                if (metric.type === 'date') {
+                    inputElementHTML = `<input type="text" id="${metricId}Input" placeholder="${metric.placeholder || ''}" readonly>`;
+                } else {
+                    inputElementHTML = `<input type="${metric.type}" id="${metricId}Input" ${metric.type === 'number' ? `step="${metric.step}"` : ''} placeholder="${metric.placeholder || ''}">`;
+                }
+                inputGroup.innerHTML = `
+                    <label for="${metricId}Input">${metric.name}:</label>
+                    ${inputElementHTML}
+                    <button onclick="updateMetricValue('${currentStageId}', '${metricId}')">עדכן</button>
+                `;
+                currentStageInputSection.appendChild(inputGroup);
+                if (metric.type === 'date') {
+                    const dateInput = document.getElementById(`${metricId}Input`);
+                    if (dateInput) {
+                        dateInput.addEventListener('click', () => {
+                            showDatePicker(dateInput.value, (selectedDate) => {
+                                dateInput.value = selectedDate;
+                            });
+                        });
+                    }
+                }
+            }
             updateDashboardForCurrentStage();
             renderPreviousStageOverview();
         }
         function updateMetricValue(stageId, metricId) {
             let inputElement;
             let value;
-            const metricConfig = stagesConfig[stageId].metrics[metricId];
+            // Check if it's a custom metric or predefined metric
+            const metricConfig = stagesConfig[stageId].metrics[metricId] || stagesConfig[stageId].customMetrics[metricId];
+            
+            if (!metricConfig) {
+                console.error('Metric not found:', metricId);
+                return;
+            }
+            
             if (metricConfig.type === 'select') {
                 inputElement = document.getElementById(`${metricId}Input`);
                 if (inputElement.value === 'other_input_field') {
@@ -1229,11 +1273,31 @@
         function updateDashboardForCurrentStage() {
             fixedDashboardGrid.innerHTML = '';
             const stageMetrics = stagesConfig[currentStageId].metrics;
+            const customMetrics = stagesConfig[currentStageId].customMetrics;
+            
+            // Render predefined metrics
             for (const metricId in stageMetrics) {
                 const metricConfig = stageMetrics[metricId];
                 const currentEntries = projects[currentProjectId].stages[currentStageId][metricId];
                 const displayValue = currentEntries && currentEntries.length > 0
                     ? (metricConfig.type === 'number' ? currentEntries[currentEntries.length - 1].value.toFixed(metricConfig.precision) : currentEntries[currentEntries.length - 1].value)
+                    : '--';
+                const dashboardItem = document.createElement('div');
+                dashboardItem.className = 'dashboard-item';
+                dashboardItem.setAttribute('onclick', `openHistoryModal('${currentStageId}', '${metricId}', '${metricConfig.name}')`);
+                dashboardItem.innerHTML = `
+                    <h3>${metricConfig.name}</h3>
+                    <p>${displayValue}</p>
+                `;
+                fixedDashboardGrid.appendChild(dashboardItem);
+            }
+            
+            // Render custom metrics with the same styling
+            for (const metricId in customMetrics) {
+                const metricConfig = customMetrics[metricId];
+                const currentEntries = projects[currentProjectId].stages[currentStageId][metricId];
+                const displayValue = currentEntries && currentEntries.length > 0
+                    ? (metricConfig.type === 'number' ? currentEntries[currentEntries.length - 1].value.toFixed(metricConfig.precision || 2) : currentEntries[currentEntries.length - 1].value)
                     : '--';
                 const dashboardItem = document.createElement('div');
                 dashboardItem.className = 'dashboard-item';
@@ -1268,7 +1332,8 @@
                     }
                 }
             } else {
-                metricConfig = stagesConfig[sectionId].metrics[metricId];
+                // Check predefined metrics first, then custom metrics
+                metricConfig = stagesConfig[sectionId].metrics[metricId] || stagesConfig[sectionId].customMetrics[metricId];
                 historyEntries = projects[currentProjectId].stages[sectionId][metricId];
             }
             const precision = metricConfig ? metricConfig.precision : null;
@@ -2481,8 +2546,36 @@
         function addNewMetric() {
             const name = document.getElementById('addMetricName').value.trim();
             if (name) {
-                alert('מדד חדש נוסף: ' + name);
+                // Generate unique metric ID
+                const metricId = `customMetric_${Date.now()}`;
+                
+                // Add to stagesConfig customMetrics
+                if (!stagesConfig[currentStageId].customMetrics) {
+                    stagesConfig[currentStageId].customMetrics = {};
+                }
+                stagesConfig[currentStageId].customMetrics[metricId] = {
+                    name: name,
+                    type: 'text',
+                    placeholder: 'הכנס ערך'
+                };
+                
+                // Initialize data array in project
+                if (!projects[currentProjectId].stages[currentStageId]) {
+                    projects[currentProjectId].stages[currentStageId] = {};
+                }
+                projects[currentProjectId].stages[currentStageId][metricId] = [];
+                
+                // Save to localStorage
+                saveAllProjects();
+                
+                // Clear input and close modal
+                document.getElementById('addMetricName').value = '';
                 closeAddMetricModal();
+                
+                // Re-render the current stage to show the new metric
+                loadCurrentStageContent();
+            } else {
+                alert('אנא הזן שם למדד.');
             }
         }
         function getCurrentAppState() {
