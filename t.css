@@ -151,6 +151,12 @@ button, a, input[type="submit"], input[type="button"], .clickable {
     touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
+    cursor: pointer;
+}
+
+/* Ensure buttons are always clickable */
+button:not(:disabled) {
+    pointer-events: auto;
 }
 
 body {
@@ -772,6 +778,72 @@ body.dark-mode .modal-graph-container {
     font-weight: bold;
     text-anchor: start;
 }
+
+.timeline-bar-container {
+    width: 100%;
+    padding: 15px 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    transition: background-color var(--animation-speed);
+}
+
+body.dark-mode .timeline-bar-container {
+    background-color: #2a2a2a;
+}
+
+.timeline-bar {
+    position: relative;
+    height: 40px;
+    background: linear-gradient(to left, #e0e0e0, #f0f0f0);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+body.dark-mode .timeline-bar {
+    background: linear-gradient(to left, #3a3a3a, #2a2a2a);
+}
+
+.timeline-marker {
+    position: absolute;
+    width: 2px;
+    height: 100%;
+    background-color: var(--primary-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.timeline-marker:hover {
+    width: 4px;
+    background-color: var(--secondary-color);
+}
+
+.timeline-marker::before {
+    content: attr(data-time);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--primary-color);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: calc(var(--font-size-base) * 0.7);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.timeline-marker:hover::before {
+    opacity: 1;
+}
+
 
 .graph-controls {
     display: flex;

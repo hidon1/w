@@ -163,9 +163,13 @@
             <h3 id="modalTitle"></h3>
             <div class="graph-controls">
                 <button onclick="openProjectSelectionForComparison()">השווה לפרויקט אחר</button>
+                <button onclick="deleteMetric()" style="background: linear-gradient(135deg, #f44336, #d32f2f);">מחק מדד</button>
             </div>
             <div class="modal-graph-container">
                 <svg class="modal-graph-svg" id="modalGraphSvg"></svg>
+            </div>
+            <div class="timeline-bar-container" id="timelineBarContainer" style="display:none;">
+                <div class="timeline-bar" id="timelineBar"></div>
             </div>
             <ul id="historyList" class="history-list"></ul>
         </div>
@@ -1150,7 +1154,8 @@
                 } else if (metric.type === 'date') {
                     inputElementHTML = `<input type="text" id="${metricId}Input" placeholder="${metric.placeholder || ''}" readonly>`;
                 } else {
-                    inputElementHTML = `<input type="${metric.type}" id="${metricId}Input" ${metric.type === 'number' ? `step="${metric.step}"` : ''} placeholder="${metric.placeholder || ''}">`;
+                    // Use text input for all types to allow both text and numbers
+                    inputElementHTML = `<input type="text" id="${metricId}Input" placeholder="${metric.placeholder || ''}" ${metric.type === 'number' ? `data-number-type="true" data-step="${metric.step}"` : ''}>`;
                 }
                 inputGroup.innerHTML = `
                     <label for="${metricId}Input">${metric.name}:</label>
@@ -1194,7 +1199,8 @@
                 if (metric.type === 'date') {
                     inputElementHTML = `<input type="text" id="${metricId}Input" placeholder="${metric.placeholder || ''}" readonly>`;
                 } else {
-                    inputElementHTML = `<input type="${metric.type}" id="${metricId}Input" ${metric.type === 'number' ? `step="${metric.step}"` : ''} placeholder="${metric.placeholder || ''}">`;
+                    // Use text input for all types to allow both text and numbers
+                    inputElementHTML = `<input type="text" id="${metricId}Input" placeholder="${metric.placeholder || ''}" ${metric.type === 'number' ? `data-number-type="true" data-step="${metric.step}"` : ''}>`;
                 }
                 inputGroup.innerHTML = `
                     <label for="${metricId}Input">${metric.name}:</label>
@@ -1341,14 +1347,31 @@
                 historyEntries = projects[currentProjectId].stages[sectionId][metricId];
             }
             const precision = metricConfig ? metricConfig.precision : null;
-            if (metricConfig && metricConfig.type === 'number' && historyEntries && historyEntries.length > 0) {
+            
+            // Check if we should display a graph
+            // Show graph if: 1) metric is type 'number', OR 2) all values in history are numbers
+            let shouldShowGraph = false;
+            if (metricConfig && historyEntries && historyEntries.length > 0) {
+                if (metricConfig.type === 'number') {
+                    shouldShowGraph = true;
+                } else {
+                    // Check if all values are numeric
+                    shouldShowGraph = historyEntries.every(entry => typeof entry.value === 'number');
+                }
+            }
+            
+            if (shouldShowGraph) {
                 modalGraphSvg.style.display = 'block';
                 historyModal.style.display = 'flex';
+                document.getElementById('timelineBarContainer').style.display = 'block';
                 setTimeout(() => {
-                    drawModalGraph(historyEntries, precision);
+                    const graphPrecision = precision !== null ? precision : 2;
+                    drawModalGraph(historyEntries, graphPrecision);
+                    drawTimelineBar(historyEntries);
                 }, 50);
             } else {
                 modalGraphSvg.style.display = 'none';
+                document.getElementById('timelineBarContainer').style.display = 'none';
                 historyModal.style.display = 'flex';
             }
             if (historyEntries && historyEntries.length > 0) {
@@ -1552,9 +1575,93 @@
             });
             d3.select(modalGraphSvg).call(zoom);
         }
+        function drawTimelineBar(entries) {
+            const timelineBar = document.getElementById('timelineBar');
+            timelineBar.innerHTML = '';
+            
+            if (!entries || entries.length === 0) {
+                return;
+            }
+            
+            // Parse timestamps and get min/max
+            const timestamps = entries.map(e => {
+                const ts = e.timestamp;
+                const parts = ts.match(/(\d{2})\/(\d{2})\/(\d{4})(?:, (\d{2}):(\d{2}):(\d{2}))?/);
+                if (parts) {
+                    const year = parseInt(parts[3], 10);
+                    const month = parseInt(parts[2], 10) - 1;
+                    const day = parseInt(parts[1], 10);
+                    const hour = parseInt(parts[4] || 0, 10);
+                    const minute = parseInt(parts[5] || 0, 10);
+                    const second = parseInt(parts[6] || 0, 10);
+                    return new Date(year, month, day, hour, minute, second);
+                }
+                return new Date(ts);
+            });
+            
+            const minTime = Math.min(...timestamps.map(t => t.getTime()));
+            const maxTime = Math.max(...timestamps.map(t => t.getTime()));
+            const timeRange = maxTime - minTime || 1;
+            
+            // Create markers for each entry
+            entries.forEach((entry, index) => {
+                const marker = document.createElement('div');
+                marker.className = 'timeline-marker';
+                const position = ((timestamps[index].getTime() - minTime) / timeRange) * 100;
+                marker.style.left = position + '%';
+                
+                const timeStr = entry.timestamp.split(',')[1] ? entry.timestamp.split(',')[1].trim() : '';
+                marker.setAttribute('data-time', timeStr || entry.timestamp.split(',')[0]);
+                marker.setAttribute('data-value', entry.value);
+                
+                timelineBar.appendChild(marker);
+            });
+        }
         function closeHistoryModal() {
             historyModal.style.display = 'none';
             comparisonProjectId = null;
+        }
+        function deleteMetric() {
+            if (!confirm('האם אתה בטוח שברצונך למחוק את המדד הזה? כל הנתונים ההיסטוריים שלו יימחקו לצמיתות.')) {
+                return;
+            }
+            const sectionId = currentMetricTypeForModal.sectionId;
+            const metricId = currentMetricTypeForModal.metricId;
+            
+            // Check if it's a predefined or custom metric
+            if (sectionId === 'wineDetails') {
+                // Check if it's a predefined metric (can't be deleted)
+                if (stagesConfig.wineDetails.metrics[metricId]) {
+                    alert('לא ניתן למחוק מדד מוגדר מראש. ניתן למחוק רק מדדים מותאמים אישית.');
+                    return;
+                }
+                // It's a custom property - delete it
+                const customPropIndex = projects[currentProjectId].wineDetails.customProperties.findIndex(prop => prop.id === metricId);
+                if (customPropIndex !== -1) {
+                    projects[currentProjectId].wineDetails.customProperties.splice(customPropIndex, 1);
+                    saveAllProjects();
+                    updateProjectDetailsCard();
+                    closeHistoryModal();
+                    alert('המדד נמחק בהצלחה.');
+                }
+            } else {
+                // It's a stage metric - check if custom or predefined
+                if (stagesConfig[sectionId].metrics[metricId]) {
+                    alert('לא ניתן למחוק מדד מוגדר מראש. ניתן למחוק רק מדדים מותאמים אישית.');
+                    return;
+                }
+                // It's a custom metric - delete from config and data
+                if (stagesConfig[sectionId].customMetrics && stagesConfig[sectionId].customMetrics[metricId]) {
+                    delete stagesConfig[sectionId].customMetrics[metricId];
+                    delete projects[currentProjectId].stages[sectionId][metricId];
+                    saveAllProjects();
+                    updateDashboardForCurrentStage();
+                    renderPreviousStageOverview();
+                    loadCurrentStageContent();
+                    closeHistoryModal();
+                    alert('המדד נמחק בהצלחה.');
+                }
+            }
         }
         function undoUpdate(sectionId, metricId, indexToRemove) {
             if (!confirm('האם אתה בטוח שברצונך לבטל את העדכון הזה?')) {
@@ -2784,6 +2891,10 @@
         
         function handleTouchStart(e) {
             if (window.innerWidth > 768) return; // רק במובייל
+            // Don't start dragging if touching a button or input
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'A') {
+                return;
+            }
             isDragging = true;
             startX = e.touches[0].clientX;
             currentX = startX;
