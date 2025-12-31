@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת ניטור יין</title>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Playfair+Display:wght@400;700&family=Noto+Sans+Hebrew:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/pdfmake.min.js"></script>
@@ -101,6 +102,8 @@
     </div>
     <div class="container">
         <div class="project-details-card" id="projectDetailsCard">
+            <div class="pull-handle" onclick="toggleCard()"><i class="fas fa-chevron-left"></i></div>
+            <div class="close-card-btn" onclick="closeCard()">&times;</div>
             <h4>פרטי פרויקט</h4>
             <div class="project-details-item" data-metric-id="wineName" data-section="wineDetails">
                 <span class="detail-label">שם היין:</span>
@@ -139,17 +142,18 @@
     <div class="dashboard-section" id="fixedDashboardSection">
         <h2 id="fixedDashboardStageName"></h2>
         <div class="dashboard-grid" id="fixedDashboardGrid"></div>
-        <div class="add-data-cube" onclick="openAddDataModal()">הוסף נתון</div>
+        <div class="add-data-cube" onclick="openAddMetricModal()">
+            <i class="fas fa-plus-circle"></i>
+            <span>הוסף מדד</span>
+        </div>
     </div>
-    <div id="addDataModal" class="modal">
-        <div class="modal-content add-data-modal-content">
-            <span class="close-button" onclick="closeAddDataModal()">&times;</span>
-            <h3>הוסף נתון חדש</h3>
-            <label for="addDataMetric">בחר מדד:</label>
-            <select id="addDataMetric"></select>
-            <label for="addDataValue">ערך:</label>
-            <input type="text" id="addDataValue" placeholder="ערך או מספר">
-            <button onclick="addNewData()">הוסף</button>
+    <div id="addMetricModal" class="modal">
+        <div class="modal-content add-metric-modal-content">
+            <span class="close-button" onclick="closeAddMetricModal()">&times;</span>
+            <h3><i class="fas fa-chart-line"></i> הוסף מדד חדש לשלב הנוכחי</h3>
+            <label for="addMetricName"><i class="fas fa-tag"></i> שם המדד:</label>
+            <input type="text" id="addMetricName" placeholder="למשל: בריקס נוסף">
+            <button onclick="addNewMetric()"><i class="fas fa-plus"></i> הוסף</button>
         </div>
     </div>
     <div id="historyModal" class="modal">
@@ -291,7 +295,7 @@
             </ul>
             <h4>כיצד להשתמש:</h4>
             <ul>
-                <li>**תפריט המבורגר (מימין למעלה):** לחצו על האייקון (שלושה קווים) כדי לפתוח את תפריט הניווט.</li>
+                <li>**תפריט המבורגר (מימין למעלה):** לחצו על האייקון (שלוש קווים) כדי לפתוח את תפריט הניווט.</li>
                 <li>**מעבר בין שלבים:** השתמשו בכפתורי השלבים (לדוגמה, "בציר") כדי לעבור בין שלבי הייצור של הפרויקט הנוכחי.</li>
                 <li>**ציר זמן:** צפו בכל המדידות של הפרויקט הנוכחי על גבי ציר זמן כרונולוגי אחד.</li>
                 <li>**ניהול כספים:** עקבו אחר הכנסות והוצאות לכל פרויקט, וצפו ביתרה הנוכחית. ניתן לסנן לפי סוג תנועה ותאריך.</li>
@@ -440,11 +444,9 @@
                 summaryMetrics: ['phFinal', 'bottleCount', 'alcoholLevel']
             },
         };
-
         let projects = loadProjects();
         let currentProjectId = localStorage.getItem('currentProjectId') || Object.keys(projects)[0];
         let currentStageId = localStorage.getItem('currentStageId') || 'stage1';
-
         if (!currentProjectId || !projects[currentProjectId]) {
             currentProjectId = 'default_project';
             if (!projects[currentProjectId]) {
@@ -452,76 +454,61 @@
             }
             localStorage.setItem('currentProjectId', currentProjectId);
         }
-
         if (!stagesConfig[currentStageId] || currentStageId === 'wineDetails') {
             currentStageId = 'stage1';
             localStorage.setItem('currentStageId', currentStageId);
         }
-
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         const sidebar = document.getElementById('sidebar');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
         const darkModeToggle = document.getElementById('darkModeToggle');
         const projectYearFilter = document.getElementById('projectYearFilter');
         const yearSelect = document.getElementById('yearSelect');
-
         const currentProjectNameDisplay = document.getElementById('currentProjectName');
         const editProjectNameInput = document.getElementById('editProjectNameInput');
-
         const projectDetailsCard = document.getElementById('projectDetailsCard');
-
         const stageNavContainer = document.getElementById('stageNavContainer');
         const stageOverviewContainer = document.getElementById('stageOverviewContainer');
         const stepCardsGrid = document.getElementById('stepCardsGrid');
         const currentStageContent = document.getElementById('currentStageContent');
         const currentStageInputSection = document.getElementById('currentStageInputSection');
-
         const fixedDashboardSection = document.getElementById('fixedDashboardSection');
         const fixedDashboardStageName = document.getElementById('fixedDashboardStageName');
         const fixedDashboardGrid = document.getElementById('fixedDashboardGrid');
-
         const historyModal = document.getElementById('historyModal');
         const modalTitle = document.getElementById('modalTitle');
         const historyList = document.getElementById('historyList');
         const modalGraphSvg = document.getElementById('modalGraphSvg');
-
         const projectManagementModal = document.getElementById('projectManagementModal');
         const projectList = document.getElementById('projectList');
-
         const financeModal = document.getElementById('financeModal');
         const financeAmountInput = document.getElementById('financeAmount');
         const financeNotesInput = document.getElementById('financeNotes');
         const financeList = document.getElementById('financeList');
         const currentBalanceDisplay = document.getElementById('currentBalance');
-
         const currentProjectFinanceReportModal = document.getElementById('currentProjectFinanceReportModal');
         const currentProjectTotalIncomeDisplay = document.getElementById('currentProjectTotalIncome');
         const currentProjectTotalExpenseDisplay = document.getElementById('currentProjectTotalExpense');
         const currentProjectTotalBalanceDisplay = document.getElementById('currentProjectTotalBalance');
         const currentProjectFinanceReportTableBody = document.getElementById('currentProjectFinanceReportTableBody');
-
         const globalFinanceReportModal = document.getElementById('globalFinanceReportModal');
         const globalTotalIncomeDisplay = document.getElementById('globalTotalIncome');
         const globalTotalExpenseDisplay = document.getElementById('globalTotalExpense');
         const globalTotalBalanceDisplay = document.getElementById('globalTotalBalance');
         const globalFinanceProjectsDetails = document.getElementById('globalFinanceProjectsDetails');
-
         const financeYearlyModal = document.getElementById('financeYearlyModal');
         const yearlyReportContent = document.getElementById('yearlyReportContent');
         const yearlyTotalIncomeDisplay = document.getElementById('yearlyTotalIncome');
         const yearlyTotalExpenseDisplay = document.getElementById('yearlyTotalExpense');
         const yearlyTotalBalanceDisplay = document.getElementById('yearlyTotalBalance');
         const yearlyFinanceProjectsDetails = document.getElementById('yearlyFinanceProjectsDetails');
-
         const inboxModal = document.getElementById('inboxModal');
         const inboxList = document.getElementById('inboxList');
-
         const remindersModal = document.getElementById('remindersModal');
         const reminderTextInput = document.getElementById('reminderText');
         const reminderDateTimeInput = document.getElementById('reminderDateTime');
         const reminderPopupInput = document.getElementById('reminderPopup');
         const remindersList = document.getElementById('remindersList');
-
         const instructionsModal = document.getElementById('instructionsModal');
         const timelineModal = document.getElementById('timelineModal');
         const timelineContainer = document.getElementById('timelineContainer');
@@ -531,23 +518,14 @@
         let datePickerCurrentMonth = new Date().getMonth();
         let datePickerCurrentYear = new Date().getFullYear();
         let datePickerCallback = null;
-
         const projectSelectionModal = document.getElementById('projectSelectionModal');
         const comparisonProjectList = document.getElementById('comparisonProjectList');
-
-        const addDataModal = document.getElementById('addDataModal');
-        const addDataMetricSelect = document.getElementById('addDataMetric');
-        const addDataValueInput = document.getElementById('addDataValue');
-
         let currentMetricTypeForModal = { sectionId: '', metricId: '' };
         let currentEditableDetailElement = null;
-
         let graphComparisonMode = null;
         let comparisonProjectId = null;
-
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
-
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
             for (let year = 2020; year <= 2100; year++) {
@@ -563,13 +541,11 @@
             projectYearFilter.value = 'all';
             yearSelect.value = currentYear;
         }
-
         function zoomIn() {
             const root = document.documentElement;
             const currentSize = parseInt(getComputedStyle(root).getPropertyValue('--font-size-base'));
             root.style.setProperty('--font-size-base', (currentSize + 2) + 'px');
         }
-
         function zoomOut() {
             const root = document.documentElement;
             const currentSize = parseInt(getComputedStyle(root).getPropertyValue('--font-size-base'));
@@ -577,13 +553,11 @@
                 root.style.setProperty('--font-size-base', (currentSize - 2) + 'px');
             }
         }
-
         function toggleGraphComparison(mode) {
             graphComparisonMode = mode;
             const metricDisplayName = stagesConfig[currentMetricTypeForModal.sectionId]?.metrics[currentMetricTypeForModal.metricId]?.name || 'מדד';
             openHistoryModal(currentMetricTypeForModal.sectionId, currentMetricTypeForModal.metricId, metricDisplayName);
         }
-
         function openProjectSelectionForComparison() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -592,12 +566,10 @@
             projectSelectionModal.style.display = 'flex';
             renderComparisonProjectList();
         }
-
         function closeProjectSelectionModal() {
             projectSelectionModal.style.display = 'none';
             showMainContent();
         }
-
         function renderComparisonProjectList() {
             comparisonProjectList.innerHTML = '';
             Object.keys(projects).forEach(projectId => {
@@ -610,14 +582,12 @@
                 }
             });
         }
-
         function selectComparisonProject(projectId) {
             comparisonProjectId = projectId;
             closeProjectSelectionModal();
             const metricDisplayName = stagesConfig[currentMetricTypeForModal.sectionId]?.metrics[currentMetricTypeForModal.metricId]?.name || 'מדד';
             openHistoryModal(currentMetricTypeForModal.sectionId, currentMetricTypeForModal.metricId, metricDisplayName);
         }
-
         function checkReminders() {
             const now = new Date();
             reminders.forEach(reminder => {
@@ -635,7 +605,6 @@
             localStorage.setItem('inbox', JSON.stringify(inbox));
             renderRemindersList();
         }
-
         function addReminder() {
             const text = reminderTextInput.value.trim();
             const datetime = reminderDateTimeInput.value;
@@ -652,7 +621,6 @@
                 alert('אנא הזן טקסט ותאריך/שעה.');
             }
         }
-
         function renderRemindersList() {
             remindersList.innerHTML = '';
             reminders.forEach(reminder => {
@@ -671,13 +639,11 @@
                 }
             });
         }
-
         function deleteReminder(id) {
             reminders = reminders.filter(r => r.id !== id);
             localStorage.setItem('reminders', JSON.stringify(reminders));
             renderRemindersList();
         }
-
         function openInboxModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -686,12 +652,10 @@
             inboxModal.style.display = 'flex';
             renderInboxList();
         }
-
         function closeInboxModal() {
             inboxModal.style.display = 'none';
             showMainContent();
         }
-
         function renderInboxList() {
             inboxList.innerHTML = '';
             inbox.forEach(reminder => {
@@ -708,13 +672,11 @@
                 inboxList.appendChild(li);
             });
         }
-
         function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
             localStorage.setItem('inbox', JSON.stringify(inbox));
             renderInboxList();
         }
-
         function openRemindersModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -723,12 +685,10 @@
             remindersModal.style.display = 'flex';
             renderRemindersList();
         }
-
         function closeRemindersModal() {
             remindersModal.style.display = 'none';
             showMainContent();
         }
-
         function requestNotificationPermission() {
             if ('Notification' in window) {
                 Notification.requestPermission().then(permission => {
@@ -738,7 +698,6 @@
                 });
             }
         }
-
         window.onload = () => {
             loadDarkModeState();
             populateYearSelects();
@@ -752,18 +711,15 @@
                 openLoginModal();
             }
         };
-
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
             projectYearFilter.value = 'all';
             filterProjectsByYear();
         }
-
         function renderAllMainContent() {
             updateProjectDisplay();
             renderStageNavigation();
         }
-
         function loadDarkModeState() {
             const isDarkMode = localStorage.getItem('darkMode') === 'true';
             if (isDarkMode) {
@@ -774,7 +730,6 @@
                 localStorage.setItem('darkMode', 'false');
             }
         }
-
         darkModeToggle.addEventListener('change', () => {
             if (darkModeToggle.checked) {
                 document.body.classList.add('dark-mode');
@@ -784,24 +739,19 @@
                 localStorage.setItem('darkMode', 'false');
             }
         });
-
         projectYearFilter.addEventListener('change', filterProjectsByYear);
-
         hamburgerBtn.addEventListener('click', toggleSidebar);
         sidebarOverlay.addEventListener('click', closeSidebar);
-
         function toggleSidebar() {
             hamburgerBtn.classList.toggle('open');
             sidebar.classList.toggle('open');
             sidebarOverlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
         }
-
         function closeSidebar() {
             hamburgerBtn.classList.remove('open');
             sidebar.classList.remove('open');
             sidebarOverlay.style.display = 'none';
         }
-
         function showMainContent() {
             historyModal.style.display = 'none';
             projectManagementModal.style.display = 'none';
@@ -815,15 +765,12 @@
             timelineModal.style.display = 'none';
             datePickerModal.style.display = 'none';
             projectSelectionModal.style.display = 'none';
-            addDataModal.style.display = 'none';
-
             document.querySelector('.container').style.display = 'block';
             document.querySelector('.top-section-wrapper').style.display = 'block';
             currentStageContent.style.display = 'block';
             stageNavContainer.style.display = 'flex';
             projectDetailsCard.style.display = 'block';
             fixedDashboardSection.style.display = 'flex';
-
             const stageOrder = Object.keys(stagesConfig);
             const currentStageIndex = stageOrder.indexOf(currentStageId);
             if (currentStageIndex > 0) {
@@ -832,7 +779,6 @@
                 stageOverviewContainer.style.display = 'none';
             }
         }
-
         function createNewProjectData(name) {
             const newProject = {
                 name: name,
@@ -855,7 +801,6 @@
             }
             return newProject;
         }
-
         function loadProjects() {
             const storedProjects = localStorage.getItem('projects');
             let loaded = storedProjects ? JSON.parse(storedProjects) : {};
@@ -912,21 +857,18 @@
             }
             return loaded;
         }
-
         function saveAllProjects() {
             localStorage.setItem('projects', JSON.stringify(projects));
             if (auth.currentUser) {
                 saveStateToFirebase();
             }
         }
-
         function updateProjectDisplay() {
             currentProjectNameDisplay.textContent = projects[currentProjectId].name;
             editProjectNameInput.value = projects[currentProjectId].name;
             loadCurrentStageContent();
             updateProjectDetailsCard();
         }
-
         function openProjectManagementModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -935,17 +877,14 @@
             projectManagementModal.style.display = 'flex';
             filterProjectsByYear();
         }
-
         function closeProjectManagementModal() {
             projectManagementModal.style.display = 'none';
             showMainContent();
         }
-
         function filterProjectsByYear() {
             const selectedYear = projectYearFilter.value;
             renderProjectList(selectedYear);
         }
-
         function renderProjectList(yearFilter = 'all') {
             projectList.innerHTML = '';
             let projectsToDisplay = Object.keys(projects).map(id => ({ id, ...projects[id] }));
@@ -958,6 +897,7 @@
                     }
                     return false;
                 });
+                // then display as before
             } else {
                 const yearGroups = {};
                 projectsToDisplay.forEach(project => {
@@ -1025,13 +965,11 @@
                 projectList.appendChild(listItem);
             });
         }
-
         function toggleProjectClosed(projectId) {
             projects[projectId].isClosed = !projects[projectId].isClosed;
             saveAllProjects();
             filterProjectsByYear();
         }
-
         function addNewProject() {
             if (!auth.currentUser) {
                 openLoginModal();
@@ -1047,7 +985,6 @@
                 filterProjectsByYear();
             }
         }
-
         function switchProject(id) {
             if (projects[id].isClosed) {
                 alert('לא ניתן לעבוד על פרויקט סגור. פתח אותו קודם.');
@@ -1059,7 +996,6 @@
             updateProjectDisplay();
             closeProjectManagementModal();
         }
-
         function deleteProject(id) {
             if (confirm('האם אתה בטוח שברצונך למחוק את הפרויקט "${projects[id].name}"? כל הנתונים יימחקו לצמיתות.')) {
                 delete projects[id];
@@ -1081,9 +1017,7 @@
                 filterProjectsByYear();
             }
         }
-
         currentProjectNameDisplay.addEventListener('click', editProjectName);
-
         function editProjectName() {
             currentProjectNameDisplay.style.display = 'none';
             editProjectNameInput.style.display = 'inline-block';
@@ -1099,18 +1033,16 @@
                 editProjectNameInput._eventListenersAdded = true;
             }
         }
-
         function saveProjectName() {
             const newName = editProjectNameInput.value.trim();
             if (newName !== '' && newName !== projects[currentProjectId].name) {
-                projects[currentProjectId].name = newProjectName;
+                projects[currentProjectId].name = newName;
                 saveAllProjects();
                 updateProjectDisplay();
             }
             currentProjectNameDisplay.style.display = 'inline-block';
             editProjectNameInput.style.display = 'none';
         }
-
         function renderStageNavigation() {
             stageNavContainer.innerHTML = '';
             const stageOrder = Object.keys(stagesConfig).filter(id => id !== 'wineDetails');
@@ -1154,14 +1086,12 @@
             stageNavContainer.appendChild(wineIconContainer);
             stageNavContainer.appendChild(rightDiv);
         }
-
         function switchStage(stageId) {
             currentStageId = stageId;
             localStorage.setItem('currentStageId', currentStageId);
             renderStageNavigation();
             loadCurrentStageContent();
         }
-
         function loadCurrentStageContent() {
             if (projects[currentProjectId].isClosed) {
                 alert('הפרויקט סגור. פתח אותו כדי לעבוד עליו.');
@@ -1235,7 +1165,6 @@
             updateDashboardForCurrentStage();
             renderPreviousStageOverview();
         }
-
         function updateMetricValue(stageId, metricId) {
             let inputElement;
             let value;
@@ -1287,7 +1216,6 @@
             updateDashboardForCurrentStage();
             renderPreviousStageOverview();
         }
-
         function updateDashboardForCurrentStage() {
             fixedDashboardGrid.innerHTML = '';
             const stageMetrics = stagesConfig[currentStageId].metrics;
@@ -1307,7 +1235,6 @@
                 fixedDashboardGrid.appendChild(dashboardItem);
             }
         }
-
         function openHistoryModal(sectionId, metricId, metricName) {
             currentMetricTypeForModal = { sectionId, metricId };
             modalTitle.textContent = `היסטוריית ${metricName} (${stagesConfig[sectionId].name})`;
@@ -1368,7 +1295,6 @@
                 historyList.appendChild(listItem);
             }
         }
-
         function drawModalGraph(entries, precision) {
             modalGraphSvg.innerHTML = '';
             if (entries.length < 1) {
@@ -1547,12 +1473,10 @@
             });
             d3.select(modalGraphSvg).call(zoom);
         }
-
         function closeHistoryModal() {
             historyModal.style.display = 'none';
             comparisonProjectId = null;
         }
-
         function undoUpdate(sectionId, metricId, indexToRemove) {
             if (!confirm('האם אתה בטוח שברצונך לבטל את העדכון הזה?')) {
                 return;
@@ -1594,7 +1518,6 @@
                 alert("שגיאה: לא ניתן לבטל. ייתכן שהנתונים אינם קיימים.");
             }
         }
-
         function openFinanceModal() {
             if (projects[currentProjectId].isClosed) {
                 alert('הפרויקט סגור. פתח אותו כדי לנהל כספים.');
@@ -1607,12 +1530,10 @@
             financeModal.style.display = 'flex';
             renderFinanceList();
         }
-
         function closeFinanceModal() {
             financeModal.style.display = 'none';
             showMainContent();
         }
-
         function addFinanceEntry(type) {
             const amount = parseFloat(financeAmountInput.value);
             const notes = financeNotesInput.value.trim();
@@ -1630,7 +1551,6 @@
             financeNotesInput.value = '';
             renderFinanceList();
         }
-
         function renderFinanceList() {
             financeList.innerHTML = '';
             let balance = 0;
@@ -1688,7 +1608,6 @@
                 currentBalanceDisplay.classList.add('negative');
             }
         }
-
         function editFinanceEntry(id) {
             const entry = projects[currentProjectId].finance.find(e => e.id === id);
             if (!entry) return;
@@ -1706,7 +1625,6 @@
                 alert('הסכום שהוזן אינו חוקי.');
             }
         }
-
         function deleteFinanceEntry(id) {
             if (confirm('האם אתה בטוח שברצונך למחוק תנועה כספית זו?')) {
                 const initialLength = projects[currentProjectId].finance.length;
@@ -1717,7 +1635,6 @@
                 }
             }
         }
-
         function openCurrentProjectFinanceReportModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -1726,12 +1643,10 @@
             currentProjectFinanceReportModal.style.display = 'flex';
             renderCurrentProjectFinanceReport();
         }
-
         function closeCurrentProjectFinanceReportModal() {
             currentProjectFinanceReportModal.style.display = 'none';
             showMainContent();
         }
-
         function renderCurrentProjectFinanceReport() {
             let totalIncome = 0;
             let totalExpense = 0;
@@ -1783,7 +1698,6 @@
                 currentProjectTotalBalanceDisplay.classList.add('negative');
             }
         }
-
         function openGlobalFinanceReportModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -1792,12 +1706,10 @@
             globalFinanceReportModal.style.display = 'flex';
             renderGlobalFinanceReport();
         }
-
         function closeGlobalFinanceReportModal() {
             globalFinanceReportModal.style.display = 'none';
             showMainContent();
         }
-
         function renderGlobalFinanceReport() {
             let globalTotalIncome = 0;
             let globalTotalExpense = 0;
@@ -1840,7 +1752,6 @@
                 globalTotalBalanceDisplay.classList.add('negative');
             }
         }
-
         function openFinanceYearlyModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -1849,12 +1760,10 @@
             financeYearlyModal.style.display = 'flex';
             yearlyReportContent.style.display = 'none';
         }
-
         function closeFinanceYearlyModal() {
             financeYearlyModal.style.display = 'none';
             showMainContent();
         }
-
         function generateYearlyReport() {
             const selectedYear = yearSelect.value;
             if (!selectedYear) {
@@ -1918,7 +1827,6 @@
                 yearlyTotalBalanceDisplay.classList.add('negative');
             }
         }
-
         function renderPreviousStageOverview() {
             stepCardsGrid.innerHTML = '';
             const stageOrder = Object.keys(stagesConfig).filter(id => id !== 'wineDetails');
@@ -1928,18 +1836,6 @@
                 return;
             } else {
                 stageOverviewContainer.style.display = 'block';
-            }
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                const mobileButton = document.createElement('button');
-                mobileButton.className = 'mobile-stage-overview-btn';
-                mobileButton.textContent = 'הצג שלבים קודמים';
-                mobileButton.onclick = () => {
-                    stageOverviewContainer.classList.add('mobile-open');
-                    mobileButton.style.display = 'none';
-                };
-                stepCardsGrid.appendChild(mobileButton);
-                return;
             }
             for (let i = 0; i < currentStageIndex; i++) {
                 const prevStageId = stageOrder[i];
@@ -1967,7 +1863,6 @@
                 stepCardsGrid.appendChild(card);
             }
         }
-
         function updateProjectDetailsCard() {
             const projectData = projects[currentProjectId];
             const wineDetailsData = projectData.wineDetails || {};
@@ -2032,7 +1927,6 @@
                 });
             }
         }
-
         function addCustomProperty() {
             if (projects[currentProjectId].isClosed) {
                 alert('הפרויקט סגור. פתח אותו כדי לערוך.');
@@ -2051,7 +1945,6 @@
                 updateProjectDetailsCard();
             }
         }
-
         function deleteCustomProperty(propId) {
             if (projects[currentProjectId].isClosed) {
                 alert('הפרויקט סגור. פתח אותו כדי לערוך.');
@@ -2063,7 +1956,6 @@
                 updateProjectDetailsCard();
             }
         }
-
         function attachEditListenerToDetailItem(item) {
             const displaySpan = item.querySelector('.detail-value');
             if (item._displaySpanClickHandler) {
@@ -2173,7 +2065,6 @@
             displaySpan.addEventListener('click', newClickHandler);
             item._displaySpanClickHandler = newClickHandler;
         }
-
         function saveEditableDetail() {
             if (!currentEditableDetailElement) return;
             const { item, metricId, section, metricConfig, displaySpan, inputElement, otherInput } = currentEditableDetailElement;
@@ -2208,7 +2099,6 @@
             }
             renderPreviousStageOverview();
         }
-
         function updateProjectDetailValue(section, metricId, newValue) {
             let metricDataArray;
             if (section === 'wineDetails') {
@@ -2258,7 +2148,6 @@
             }
             renderPreviousStageOverview();
         }
-
         function showDatePicker(initialDate, callback) {
             datePickerCallback = callback;
             datePickerModal.style.display = 'flex';
@@ -2292,7 +2181,6 @@
                 renderCalendar(datePickerCurrentMonth, datePickerCurrentYear);
             };
         }
-
         function closeDatePickerModal() {
             datePickerModal.style.display = 'none';
             if (currentEditableDetailElement) {
@@ -2307,7 +2195,6 @@
             currentEditableDetailElement = null;
             datePickerCallback = null;
         }
-
         function renderCalendar(month, year) {
             datePickerGrid.innerHTML = `
                 <div class="date-picker-day header">א</div>
@@ -2335,7 +2222,6 @@
                 datePickerGrid.appendChild(dayDiv);
             }
         }
-
         function selectDate(day, month, year) {
             const selectedDate = `${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
             if (datePickerCallback) {
@@ -2343,7 +2229,6 @@
             }
             closeDatePickerModal();
         }
-
         function openInstructionsModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -2351,12 +2236,10 @@
             fixedDashboardSection.style.display = 'none';
             instructionsModal.style.display = 'flex';
         }
-
         function closeInstructionsModal() {
             instructionsModal.style.display = 'none';
             showMainContent();
         }
-
         function openTimelineModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -2365,12 +2248,10 @@
             timelineModal.style.display = 'flex';
             renderTimeline();
         }
-
         function closeTimelineModal() {
             timelineModal.style.display = 'none';
             showMainContent();
         }
-
         function renderTimeline() {
             timelineContainer.innerHTML = '';
             let allEntries = [];
@@ -2447,34 +2328,26 @@
                 timelineContainer.appendChild(eventDiv);
             });
         }
-
         function downloadTimelinePDF() {
-            pdfMake.fonts = {
-                NotoSansHebrew: {
-                    normal: 'https://fonts.gstatic.com/s/notosanshebrew/v28/or3HQ7v33eiDgq2pK7G5bQ.woff2',
-                    bold: 'https://fonts.gstatic.com/s/notosanshebrew/v28/or3IQ7v33eiDgq2pK7G5bQ.woff2'
-                }
-            };
+            const entries = Array.from(timelineContainer.querySelectorAll('.timeline-event')).map((event, index) => {
+                const title = event.querySelector('h4').textContent;
+                const value = event.querySelector('.event-value').textContent;
+                const timestamp = event.querySelector('.event-timestamp').textContent;
+                return `${index + 1}. ${title}\nערך: ${value}\nתאריך: ${timestamp}`;
+            });
             const docDefinition = {
                 content: [
                     { text: 'ציר זמן - כל המדידות', style: 'header' },
-                    // Add content
+                    { text: entries.join('\n\n'), style: 'text' }
                 ],
                 styles: {
-                    header: { fontSize: 18, bold: true, alignment: 'right', font: 'NotoSansHebrew' },
-                    text: { fontSize: 12, alignment: 'right', font: 'NotoSansHebrew' }
+                    header: { fontSize: 18, bold: true, alignment: 'right' },
+                    text: { fontSize: 12, alignment: 'right' }
                 }
             };
             pdfMake.createPdf(docDefinition).download('timeline.pdf');
         }
-
         function downloadCurrentProjectFinancePDF() {
-            pdfMake.fonts = {
-                NotoSansHebrew: {
-                    normal: 'https://fonts.gstatic.com/s/notosanshebrew/v28/or3HQ7v33eiDgq2pK7G5bQ.woff2',
-                    bold: 'https://fonts.gstatic.com/s/notosanshebrew/v28/or3IQ7v33eiDgq2pK7G5bQ.woff2'
-                }
-            };
             const docDefinition = {
                 content: [
                     { text: 'דוח כספי - פרויקט נוכחי', style: 'header' },
@@ -2497,21 +2370,14 @@
                     }
                 ],
                 styles: {
-                    header: { fontSize: 18, bold: true, alignment: 'right', font: 'NotoSansHebrew' },
-                    subheader: { fontSize: 14, bold: true, alignment: 'right', font: 'NotoSansHebrew' },
-                    text: { fontSize: 12, alignment: 'right', font: 'NotoSansHebrew' }
+                    header: { fontSize: 18, bold: true, alignment: 'right' },
+                    subheader: { fontSize: 14, bold: true, alignment: 'right' },
+                    text: { fontSize: 12, alignment: 'right' }
                 }
             };
             pdfMake.createPdf(docDefinition).download('current_project_finance_report.pdf');
         }
-
         function downloadGlobalFinancePDF() {
-            pdfMake.fonts = {
-                NotoSansHebrew: {
-                    normal: 'https://fonts.gstatic.com/s/notosanshebrew/v28/or3HQ7v33eiDgq2pK7G5bQ.woff2',
-                    bold: 'https://fonts.gstatic.com/s/notosanshebrew/v28/or3IQ7v33eiDgq2pK7G5bQ.woff2'
-                }
-            };
             const docDefinition = {
                 content: [
                     { text: 'דוח כספי כולל (כל הפרויקטים)', style: 'header' },
@@ -2526,21 +2392,14 @@
                     })
                 ],
                 styles: {
-                    header: { fontSize: 18, bold: true, alignment: 'right', font: 'NotoSansHebrew' },
-                    subheader: { fontSize: 14, bold: true, alignment: 'right', font: 'NotoSansHebrew' },
-                    text: { fontSize: 12, alignment: 'right', font: 'NotoSansHebrew' }
+                    header: { fontSize: 18, bold: true, alignment: 'right' },
+                    subheader: { fontSize: 14, bold: true, alignment: 'right' },
+                    text: { fontSize: 12, alignment: 'right' }
                 }
             };
             pdfMake.createPdf(docDefinition).download('global_finance_report.pdf');
         }
-
         function downloadYearlyFinancePDF() {
-            pdfMake.fonts = {
-                NotoSansHebrew: {
-                    normal: 'https://fonts.gstatic.com/s/notosanshebrew/v28/or3HQ7v33eiDgq2pK7G5bQ.woff2',
-                    bold: 'https://fonts.gstatic.com/s/notosanshebrew/v28/or3IQ7v33eiDgq2pK7G5bQ.woff2'
-                }
-            };
             const docDefinition = {
                 content: [
                     { text: `דוח כספי לפי שנה - ${yearSelect.value}`, style: 'header' },
@@ -2555,255 +2414,13 @@
                     })
                 ],
                 styles: {
-                    header: { fontSize: 18, bold: true, alignment: 'right', font: 'NotoSansHebrew' },
-                    subheader: { fontSize: 14, bold: true, alignment: 'right', font: 'NotoSansHebrew' },
-                    text: { fontSize: 12, alignment: 'right', font: 'NotoSansHebrew' }
+                    header: { fontSize: 18, bold: true, alignment: 'right' },
+                    subheader: { fontSize: 14, bold: true, alignment: 'right' },
+                    text: { fontSize: 12, alignment: 'right' }
                 }
             };
             pdfMake.createPdf(docDefinition).download(`yearly_finance_report_${yearSelect.value}.pdf`);
         }
-
-        function openAddDataModal() {
-            addDataModal.style.display = 'flex';
-            addDataMetricSelect.innerHTML = '<option value="">בחר מדד</option>';
-            const stageMetrics = stagesConfig[currentStageId].metrics;
-            for (const metricId in stageMetrics) {
-                const option = document.createElement('option');
-                option.value = metricId;
-                option.textContent = stageMetrics[metricId].name;
-                addDataMetricSelect.appendChild(option);
-            }
-            const customProps = projects[currentProjectId].wineDetails.customProperties || [];
-            customProps.forEach(prop => {
-                const option = document.createElement('option');
-                option.value = prop.id;
-                option.textContent = prop.name;
-                addDataMetricSelect.appendChild(option);
-            });
-        }
-
-        function closeAddDataModal() {
-            addDataModal.style.display = 'none';
-        }
-
-        function addNewData() {
-            const metricId = addDataMetricSelect.value;
-            const value = addDataValueInput.value.trim();
-            if (!metricId || value === '') {
-                alert('אנא בחר מדד והכנס ערך.');
-                return;
-            }
-            const section = stagesConfig[currentStageId] ? currentStageId : 'wineDetails';
-            updateMetricValue(section, metricId, value);
-            closeAddDataModal();
-        }
-
-        function getCurrentAppState() {
-            return {
-                projects: projects,
-                currentProjectId: currentProjectId,
-                currentStageId: currentStageId,
-                darkMode: document.body.classList.contains('dark-mode'),
-                savedAt: new Date().toISOString()
-            };
-        }
-
-        function applyStateToUI(state) {
-            if (!state) return;
-            if (state.projects) {
-                projects = state.projects;
-            }
-            if (state.currentProjectId && projects[state.currentProjectId]) {
-                currentProjectId = state.currentProjectId;
-                localStorage.setItem('currentProjectId', currentProjectId);
-            }
-            if (state.currentStageId && stagesConfig[state.currentStageId]) {
-                currentStageId = state.currentStageId;
-                localStorage.setItem('currentStageId', currentStageId);
-            }
-            if (state.darkMode) {
-                document.body.classList.add('dark-mode');
-                localStorage.setItem('darkMode', 'true');
-            } else {
-                document.body.classList.remove('dark-mode');
-                localStorage.setItem('darkMode', 'false');
-            }
-            if (typeof renderAllMainContent === 'function') {
-                renderAllMainContent();
-            } else if (typeof updateProjectDisplay === 'function') {
-                updateProjectDisplay();
-            }
-        }
-
-        function saveStateToFirebase() {
-            const user = auth.currentUser;
-            if (!user) {
-                console.log('לא מחובר – שומר רק בלוקאלי');
-                localStorage.setItem('projects', JSON.stringify(projects));
-                return;
-            }
-            const state = getCurrentAppState();
-            try {
-                db.collection('wineMonitoringStates')
-                    .doc(user.uid)
-                    .set({
-                        state,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                console.log('מצב נשמר בהצלחה בענן וגם ב‑localStorage');
-                localStorage.setItem('projects', JSON.stringify(projects));
-            } catch (err) {
-                console.error('שגיאה בשמירה לפיירבייס:', err);
-            }
-        }
-
-        function loadStateFromFirebase(user) {
-            try {
-                const docRef = db.collection('wineMonitoringStates').doc(user.uid);
-                const docSnap = docRef.get().then(docSnap => {
-                    if (!docSnap.exists) {
-                        console.log('אין מצב שמור למשתמש – נשתמש ב‑localStorage');
-                        const localProjects = localStorage.getItem('projects');
-                        if (localProjects) {
-                            projects = JSON.parse(localProjects);
-                            if (typeof renderAllMainContent === 'function') {
-                                renderAllMainContent();
-                            }
-                        }
-                        return;
-                    }
-                    const data = docSnap.data();
-                    applyStateToUI(data.state);
-                });
-            } catch (err) {
-                console.error('שגיאה בטעינת מצב מפיירבייס:', err);
-            }
-        }
-
-        window.addEventListener('load', () => {
-            const loginBtn = document.getElementById('loginBtn');
-            const logoutBtn = document.getElementById('logoutBtn');
-            const authStatus = document.getElementById('authStatus');
-
-            const googleProvider = new firebase.auth.GoogleAuthProvider();
-
-            auth.getRedirectResult().then((result) => {
-                if (result.user) {
-                    console.log('User signed in via redirect');
-                } else {
-                    console.log('No user from redirect');
-                }
-            }).catch((error) => {
-                console.error('Redirect sign-in error:', error);
-                alert('שגיאה בהתחברות: ' + error.message);
-            });
-
-            if (loginBtn) {
-                loginBtn.addEventListener('click', async () => {
-                    try {
-                        await auth.signInWithPopup(googleProvider);
-                    } catch (err) {
-                        console.error(err);
-                        alert('שגיאה בהתחברות: ' + err.message);
-                    }
-                });
-            }
-
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', async () => {
-                    await auth.signOut();
-                });
-            }
-
-            auth.onAuthStateChanged(async (user) => {
-                if (user) {
-                    if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
-                    if (loginBtn) loginBtn.style.display = 'none';
-                    if (logoutBtn) logoutBtn.style.display = 'inline-block';
-                    await loadStateFromFirebase(user);
-                    closeLoginModal();
-                } else {
-                    if (authStatus) authStatus.textContent = 'לא מחובר';
-                    if (loginBtn) loginBtn.style.display = 'inline-block';
-                    if (logoutBtn) logoutBtn.style.display = 'none';
-                    openLoginModal();
-                }
-            });
-        });
-
-        function openLoginModal() {
-            const modal = document.getElementById('loginModal');
-            if (modal) {
-                modal.style.display = 'flex';
-            }
-        }
-
-        function closeLoginModal() {
-            const modal = document.getElementById('loginModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        function skipLogin() {
-            closeLoginModal();
-        }
-
-        function loginWithGoogle() {
-            const googleProvider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(googleProvider)
-                .then((result) => {
-                    console.log('User signed in with Google:', result.user);
-                })
-                .catch((error) => {
-                    console.error('Error signing in with Google:', error);
-                    alert('שגיאה בהתחברות עם גוגל: ' + error.message);
-                });
-        }
-
-        function registerWithEmail() {
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
-            if (!email || !password) {
-                alert('אנא מלא את כל השדות.');
-                return;
-            }
-            auth.fetchSignInMethodsForEmail(email)
-                .then((methods) => {
-                    if (methods.length > 0) {
-                        alert('האימייל כבר רשום. נסה להיכנס במקום.');
-                        return;
-                    }
-                    return auth.createUserWithEmailAndPassword(email, password);
-                })
-                .then((userCredential) => {
-                    if (userCredential) {
-                        console.log('User registered:', userCredential.user);
-                    }
-                })
-                .catch((error) => {
-                    console.error('Error registering:', error);
-                    alert('שגיאה ברישום: ' + error.message);
-                });
-        }
-
-        function loginWithEmail() {
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
-            if (!email || !password) {
-                alert('אנא מלא את כל השדות.');
-                return;
-            }
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    console.log('User signed in:', userCredential.user);
-                })
-                .catch((error) => {
-                    console.error('Error signing in:', error);
-                    alert('שגיאה בהתחברות: ' + error.message);
-                });
-        }
-
         window.onclick = function(event) {
             if (event.target === historyModal) {
                 closeHistoryModal();
@@ -2841,12 +2458,203 @@
             if (event.target === projectSelectionModal) {
                 closeProjectSelectionModal();
             }
-            if (event.target === addDataModal) {
-                closeAddDataModal();
-            }
             if (event.target === sidebarOverlay) {
                 closeSidebar();
             }
+        }
+        function openAddMetricModal() {
+            document.getElementById('addMetricModal').style.display = 'flex';
+        }
+        function closeAddMetricModal() {
+            document.getElementById('addMetricModal').style.display = 'none';
+        }
+        function addNewMetric() {
+            const name = document.getElementById('addMetricName').value.trim();
+            if (name) {
+                alert('מדד חדש נוסף: ' + name);
+                closeAddMetricModal();
+            }
+        }
+        function getCurrentAppState() {
+            return {
+                projects: projects,
+                currentProjectId: currentProjectId,
+                currentStageId: currentStageId,
+                darkMode: document.body.classList.contains('dark-mode'),
+                savedAt: new Date().toISOString()
+            };
+        }
+        function applyStateToUI(state) {
+            if (!state) return;
+            if (state.projects) {
+                projects = state.projects;
+            }
+            if (state.currentProjectId && projects[state.currentProjectId]) {
+                currentProjectId = state.currentProjectId;
+                localStorage.setItem('currentProjectId', currentProjectId);
+            }
+            if (state.currentStageId && stagesConfig[state.currentStageId]) {
+                currentStageId = state.currentStageId;
+                localStorage.setItem('currentStageId', currentStageId);
+            }
+            if (state.darkMode) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'true');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'false');
+            }
+            if (typeof renderAllMainContent === 'function') {
+                renderAllMainContent();
+            } else if (typeof updateProjectDisplay === 'function') {
+                updateProjectDisplay();
+            }
+        }
+        async function saveStateToFirebase() {
+            const user = auth.currentUser;
+            if (!user) {
+                console.log('לא מחובר – שומר רק בלוקאלי');
+                localStorage.setItem('projects', JSON.stringify(projects));
+                return;
+            }
+            const state = getCurrentAppState();
+            try {
+                await db.collection('wineMonitoringStates')
+                    .doc(user.uid)
+                    .set({
+                        state,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                console.log('מצב נשמר בהצלחה בענן וגם ב‑localStorage');
+                localStorage.setItem('projects', JSON.stringify(projects));
+            } catch (err) {
+                console.error('שגיאה בשמירה לפיירבייס:', err);
+            }
+        }
+        async function loadStateFromFirebase(user) {
+            try {
+                const docRef = db.collection('wineMonitoringStates').doc(user.uid);
+                const docSnap = await docRef.get();
+                if (!docSnap.exists) {
+                    console.log('אין מצב שמור למשתמש – נשתמש ב‑localStorage');
+                    const localProjects = localStorage.getItem('projects');
+                    if (localProjects) {
+                        projects = JSON.parse(localProjects);
+                        if (typeof renderAllMainContent === 'function') {
+                            renderAllMainContent();
+                        }
+                    }
+                    return;
+                }
+                const data = docSnap.data();
+                applyStateToUI(data.state);
+            } catch (err) {
+                console.error('שגיאה בטעינת מצב מפיירבייס:', err);
+            }
+        }
+        window.addEventListener('load', () => {
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const authStatus = document.getElementById('authStatus');
+            const googleProvider = new firebase.auth.GoogleAuthProvider();
+            auth.getRedirectResult().then((result) => {
+                if (result.user) {
+                    console.log('User signed in via redirect');
+                } else {
+                    console.log('No user from redirect');
+                }
+            }).catch((error) => {
+                console.error('Redirect sign-in error:', error);
+                alert('שגיאה בהתחברות: ' + error.message);
+            });
+            if (loginBtn) {
+                loginBtn.addEventListener('click', async () => {
+                    try {
+                        await auth.signInWithPopup(googleProvider);
+                    } catch (err) {
+                        console.error(err);
+                        alert('שגיאה בהתחברות: ' + err.message);
+                    }
+                });
+            }
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    await auth.signOut();
+                });
+            }
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
+                    if (loginBtn) loginBtn.style.display = 'none';
+                    if (logoutBtn) logoutBtn.style.display = 'inline-block';
+                    await loadStateFromFirebase(user);
+                    closeLoginModal();
+                } else {
+                    if (authStatus) authStatus.textContent = 'לא מחובר';
+                    if (loginBtn) loginBtn.style.display = 'inline-block';
+                    if (logoutBtn) logoutBtn.style.display = 'none';
+                    openLoginModal();
+                }
+            });
+        });
+        function openLoginModal() {
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+        function closeLoginModal() {
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        function skipLogin() {
+            closeLoginModal();
+        }
+        function loginWithGoogle() {
+            const googleProvider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(googleProvider)
+                .then((result) => {
+                    console.log('User signed in with Google:', result.user);
+                    closeLoginModal();
+                })
+                .catch((error) => {
+                    console.error('Popup failed, trying redirect:', error);
+                    auth.signInWithRedirect(googleProvider);
+                });
+        }
+        function registerWithEmail() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            if (!email || !password) {
+                alert('אנא מלא את כל השדות.');
+                return;
+            }
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    console.log('User registered:', userCredential.user);
+                })
+                .catch((error) => {
+                    console.error('Error registering:', error);
+                    alert('שגיאה ברישום: ' + error.message);
+                });
+        }
+        function loginWithEmail() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            if (!email || !password) {
+                alert('אנא מלא את כל השדות.');
+                return;
+            }
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    console.log('User signed in:', userCredential.user);
+                })
+                .catch((error) => {
+                    console.error('Error signing in:', error);
+                    alert('שגיאה בהתחברות: ' + error.message);
+                });
         }
     </script>
 </body>
