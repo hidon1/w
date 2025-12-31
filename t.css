@@ -47,53 +47,6 @@
     }
 }
 
-/* דסקטופ: נשאר כפי שהיה */
-@media (min-width: 769px) {
-    .project-details-card {
-        left: 15px;
-    }
-    .pull-handle {
-        display: none;
-    }
-    .close-card-btn {
-        display: none;
-    }
-    
-    /* Input section: 4 data cubes per row instead of 2 */
-    .input-section {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 15px;
-    }
-    
-    .input-group {
-        min-width: 0; /* Prevent grid overflow */
-    }
-    
-    /* Dashboard: lower height and horizontal layout (button next to cubes) */
-    .dashboard-section {
-        flex-direction: row;
-        padding: 8px 15px;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-    
-    .dashboard-section h2 {
-        flex-basis: 100%; /* Full width for title */
-        margin-bottom: 5px;
-    }
-    
-    .dashboard-grid {
-        flex: 1;
-        justify-content: flex-start;
-    }
-    
-    .add-data-cube {
-        margin: 0 10px;
-        flex-shrink: 0;
-    }
-}
-
 /* שאר הקוד CSS כפי שהיה */
 :root {
     --primary-color: #8B0000;
@@ -2622,4 +2575,51 @@ body.dark-mode .add-metric-modal-content input {
 .add-metric-modal-content button:hover {
     background: linear-gradient(135deg, var(--secondary-color), #8B0000);
     transform: translateY(-2px);
+}
+
+/* Desktop media query - MUST be at the end to override base styles */
+@media (min-width: 769px) {
+    .project-details-card {
+        left: 15px;
+    }
+    .pull-handle {
+        display: none;
+    }
+    .close-card-btn {
+        display: none;
+    }
+    
+    /* Input section: 4 data cubes per row instead of 2 */
+    .input-section {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+    }
+    
+    .input-group {
+        min-width: 0; /* Prevent grid overflow */
+    }
+    
+    /* Dashboard: lower height and horizontal layout (button next to cubes) */
+    .dashboard-section {
+        flex-direction: row;
+        padding: 8px 15px;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .dashboard-section h2 {
+        flex-basis: 100%; /* Full width for title */
+        margin-bottom: 5px;
+    }
+    
+    .dashboard-grid {
+        flex: 1;
+        justify-content: flex-start;
+    }
+    
+    .add-data-cube {
+        margin: 0 10px;
+        flex-shrink: 0;
+    }
 }
