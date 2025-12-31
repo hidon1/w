@@ -85,16 +85,15 @@ p, span, div {
 
 .top-section-wrapper {
     background: var(--top-section-background);
-    padding-top: 2px; /* תיקון: צר מאוד */
-    padding-left: 10px; /* תיקון: צר מאוד */
-    padding-right: 10px; /* תיקון: צר מאוד */
+    padding-top: 5px;
+    padding-left: 25px;
+    padding-right: 25px;
     border-bottom-left-radius: var(--border-radius);
     border-bottom-right-radius: var(--border-radius);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02); /* תיקון: צל קטן */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     transition: all var(--animation-speed);
-    border-bottom: 1px solid white; /* תיקון: מסגרת לבנה */
-    animation: slideInDown 0.3s ease-out; /* תיקון: זמן קצר */
-    min-height: 40px; /* תיקון: גובה מינימלי קטן */
+    border-bottom: 1px solid var(--top-section-border);
+    animation: slideInDown 0.5s ease-out;
 }
 
 @keyframes slideInDown {
@@ -133,9 +132,9 @@ body.dark-mode .container {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin-bottom: 5px; /* תיקון: קטן */
+    margin-bottom: 10px;
     gap: 5px;
-    padding-top: 2px; /* תיקון: קטן */
+    padding-top: 5px;
 }
 
 #currentProjectName {
@@ -172,14 +171,14 @@ body.dark-mode .container {
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
-    gap: 4px; /* תיקון: קטן */
-    margin-top: 5px; /* תיקון: קטן */
-    margin-bottom: 10px; /* תיקון: קטן */
-    padding: 5px; /* תיקון: קטן */
+    gap: 8px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    padding: 10px;
     background: linear-gradient(135deg, #F8F0E3, #E6D7C3);
     border-radius: var(--border-radius);
     transition: all var(--animation-speed);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* תיקון: צל קטן */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 body.dark-mode .stage-nav-container {
@@ -296,8 +295,9 @@ body.dark-mode .stage-nav-button:hover {
 }
 
 .dashboard-grid {
-    display: grid; /* תיקון: 4 מדדים בשורה */
-    grid-template-columns: repeat(4, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 10px;
     width: 100%;
     max-width: 1000px;
@@ -308,18 +308,19 @@ body.dark-mode .stage-nav-button:hover {
     backdrop-filter: blur(5px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: var(--border-radius);
-    padding: 6px 8px; /* תיקון: צר יותר */
+    padding: 8px 10px;
     text-align: center;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
-    min-width: 50px; /* תיקון: צר יותר */
-    max-width: 80px; /* תיקון: צר יותר */
+    flex: 1;
+    min-width: 70px;
+    max-width: 100px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    min-height: 50px; /* תיקון: נמוך יותר */
+    min-height: 60px;
 }
 
 .dashboard-item:hover {
@@ -355,8 +356,8 @@ body.dark-mode .dashboard-item h3 {
 
 .input-section {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* תיקון: 4 עמודות צרות */
-    gap: 15px; /* תיקון: קטן יותר */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
     margin-bottom: 40px;
     padding-top: 20px;
 }
@@ -365,7 +366,7 @@ body.dark-mode .dashboard-item h3 {
     background: linear-gradient(135deg, #fdfdfd, #f0f0f0);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: 10px; /* תיקון: צר יותר */
+    padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
@@ -1541,7 +1542,7 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
     top: 15px;
     left: 15px;
     width: 250px;
-    height: 500px; /* תיקון: ארוך יותר */
+    height: 250px;
     background: linear-gradient(135deg, var(--card-background), #f9f9f9);
     border-radius: var(--border-radius);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 0 10px var(--primary-color);
@@ -2526,21 +2527,20 @@ body.dark-mode .add-metric-modal-content input {
     transform: translateY(-2px);
 }
 
-/* מובייל/טאבלט - בסיסי, בלי תיקונים חדשים */
+/* Mobile styles */
 @media (max-width: 768px) {
     .hamburger-menu-btn {
         top: 35px;
         right: 20px;
     }
     .project-details-card {
-        width: 250px;
-        left: -170px; /* ציצה כמו שעשית */
-        height: 600px; /* ארוך כמו שעשית */
-        transition: left 0.3s ease;
+        width: 200px;
+        left: -250px; /* Initially hidden */
+        height: 300px;
     }
     .pull-handle {
         right: -20px;
-        display: flex;
+        display: flex; /* Show on mobile */
     }
     .close-card-btn {
         top: 5px;
@@ -2570,5 +2570,18 @@ body.dark-mode .add-metric-modal-content input {
     .close-button {
         top: 20px;
         left: 20px;
+    }
+}
+
+/* Desktop styles */
+@media (min-width: 769px) {
+    .project-details-card {
+        left: 15px; /* Always visible */
+    }
+    .pull-handle {
+        display: none; /* Hide on desktop */
+    }
+    .close-card-btn {
+        display: none; /* Hide on desktop */
     }
 }
