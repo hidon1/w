@@ -358,9 +358,7 @@ body.dark-mode .stage-nav-button:hover {
 }
 
 .dashboard-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: grid;
     gap: 10px;
     width: 100%;
     max-width: 1000px;
