@@ -8,7 +8,7 @@
     }
     .project-details-card {
         width: 250px;
-        left: -200px; /* שינוי: ציצה קצת (50px גלויים) */
+        left: -100px; /* שינוי: ציצה קצת (50px גלויים) */
         height: 300px;
         transition: left 0.3s ease; /* הוספת transition להזזה חלקה */
     }
