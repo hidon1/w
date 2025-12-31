@@ -1868,11 +1868,18 @@ body.dark-mode .project-details-card:hover::-webkit-scrollbar-track {
     padding: 20px;
 }
 
+#datePickerModal .close-button {
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 .date-picker-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    margin-top: 25px;
     font-size: calc(var(--font-size-base) * 1);
     font-weight: bold;
     color: var(--primary-color);
@@ -2717,12 +2724,33 @@ body.dark-mode .add-metric-modal-content input {
 @media (min-width: 769px) {
     .project-details-card {
         left: 15px;
+        width: 220px;
+        height: 320px;
     }
     .pull-handle {
         display: none;
     }
     .close-card-btn {
         display: none;
+    }
+    
+    /* Stage navigation: narrower container and smaller buttons */
+    .stage-nav-container {
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 8px;
+        gap: 5px;
+    }
+    
+    .stage-nav-button {
+        min-width: 80px;
+        padding: 8px 10px;
+        font-size: calc(var(--font-size-base) * 0.75);
+    }
+    
+    .wine-icon-container img {
+        width: 50px;
     }
     
     /* Input section: 4 data cubes per row instead of 2 */
