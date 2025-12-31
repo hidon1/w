@@ -2721,15 +2721,29 @@
         }
         function loginWithGoogle() {
             const googleProvider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(googleProvider)
-                .then((result) => {
-                    console.log('User signed in with Google:', result.user);
-                    closeLoginModal();
-                })
-                .catch((error) => {
-                    console.error('Popup failed, trying redirect:', error);
-                    auth.signInWithRedirect(googleProvider);
-                });
+            
+            // Check if mobile device
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+            
+            if (isMobile) {
+                // Use redirect on mobile devices as popups are often blocked
+                auth.signInWithRedirect(googleProvider)
+                    .catch((error) => {
+                        console.error('Redirect sign-in error:', error);
+                        alert('שגיאה בהתחברות: ' + error.message);
+                    });
+            } else {
+                // Use popup on desktop
+                auth.signInWithPopup(googleProvider)
+                    .then((result) => {
+                        console.log('User signed in with Google:', result.user);
+                        closeLoginModal();
+                    })
+                    .catch((error) => {
+                        console.error('Popup failed, trying redirect:', error);
+                        auth.signInWithRedirect(googleProvider);
+                    });
+            }
         }
         function registerWithEmail() {
             const email = document.getElementById('emailInput').value;
@@ -2764,6 +2778,10 @@
                 });
         }
         // פונקציות הזזה לכרטיסיה במובייל
+        let isSidebarTouching = false;
+        let sidebarStartX = 0;
+        let sidebarCurrentX = 0;
+        
         function handleTouchStart(e) {
             if (window.innerWidth > 768) return; // רק במובייל
             isDragging = true;
@@ -2776,7 +2794,13 @@
             e.preventDefault();
             currentX = e.touches[0].clientX;
             const deltaX = currentX - startX;
-            const newLeft = Math.min(15, Math.max(-250, 15 + deltaX)); // מגביל בין 15px ל- -250px
+            
+            // For RTL: positive deltaX = drag right (open), negative = drag left (close)
+            const currentLeft = cardOpen ? 15 : -200;
+            let newLeft = currentLeft + deltaX;
+            
+            // Limit movement between -200px and 15px
+            newLeft = Math.min(15, Math.max(-200, newLeft));
             projectDetailsCard.style.left = newLeft + 'px';
         }
         function handleTouchEnd(e) {
@@ -2784,16 +2808,19 @@
             isDragging = false;
             projectDetailsCard.style.transition = 'left 0.3s ease'; // הוספת אנימציה חזרה
             const deltaX = currentX - startX;
+            
+            // If dragged right more than 50px, open it
             if (deltaX > 50) {
-                // פתח לגמרי אם הזיז ימינה מספיק
                 projectDetailsCard.style.left = '15px';
                 cardOpen = true;
-            } else if (deltaX < -50) {
-                // סגור אם הזיז שמאלה מספיק
+            } 
+            // If dragged left more than 50px, close it
+            else if (deltaX < -50) {
                 projectDetailsCard.style.left = '-200px';
                 cardOpen = false;
-            } else {
-                // חזור למצב הקודם
+            } 
+            // Otherwise, return to previous state
+            else {
                 projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
             }
         }
@@ -2809,6 +2836,37 @@
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = '-200px';
         }
+        
+        // Improved sidebar behavior for mobile: click to open, swipe to close
+        function handleSidebarTouchStart(e) {
+            if (window.innerWidth > 768) return;
+            if (!sidebar.classList.contains('open')) return; // Only handle when sidebar is open
+            isSidebarTouching = true;
+            sidebarStartX = e.touches[0].clientX;
+            sidebarCurrentX = sidebarStartX;
+        }
+        
+        function handleSidebarTouchMove(e) {
+            if (!isSidebarTouching || window.innerWidth > 768) return;
+            sidebarCurrentX = e.touches[0].clientX;
+        }
+        
+        function handleSidebarTouchEnd(e) {
+            if (!isSidebarTouching || window.innerWidth > 768) return;
+            isSidebarTouching = false;
+            
+            const deltaX = sidebarCurrentX - sidebarStartX;
+            
+            // For RTL sidebar on the right: swipe right to close (positive deltaX > 100)
+            if (deltaX > 100) {
+                closeSidebar();
+            }
+        }
+        
+        // Add sidebar touch listeners
+        sidebar.addEventListener('touchstart', handleSidebarTouchStart);
+        sidebar.addEventListener('touchmove', handleSidebarTouchMove);
+        sidebar.addEventListener('touchend', handleSidebarTouchEnd);
     </script>
 </body>
 </html>
