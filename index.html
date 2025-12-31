@@ -875,8 +875,12 @@
         }
         function saveAllProjects() {
             localStorage.setItem('projects', JSON.stringify(projects));
-            if (auth.currentUser) {
-                saveStateToFirebase();
+            try {
+                if (auth && auth.currentUser) {
+                    saveStateToFirebase();
+                }
+            } catch (e) {
+                // Firebase not available, skip cloud save
             }
         }
         function updateProjectDisplay() {
