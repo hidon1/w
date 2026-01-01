@@ -11,11 +11,14 @@
         left: -200px; /* Hidden by default, shows 50px handle */
         height: 300px;
         max-height: 70vh; /* Don't exceed viewport height */
-        transition: left 0.3s ease;
         overflow-y: auto; /* Make scrollable */
         overflow-x: hidden; /* Prevent horizontal scroll */
         -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         touch-action: pan-y; /* Allow vertical scrolling */
+    }
+    
+    .project-details-card.loaded {
+        transition: left 0.3s ease;
     }
     .pull-handle {
         right: -20px;
@@ -1844,7 +1847,7 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
 .project-details-card {
     position: fixed;
     top: 15px;
-    left: 15px;
+    left: -200px; /* Start hidden on mobile by default */
     width: 250px;
     height: 250px;
     background: linear-gradient(135deg, var(--card-background), #f9f9f9);
@@ -1855,8 +1858,13 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
     z-index: 998;
     font-family: 'Noto Sans Hebrew', sans-serif;
     text-align: right;
-    transition: left 0.3s ease;
+    transition: none; /* No transition initially to prevent jump */
     overflow-y: auto;
+}
+
+/* Enable transition after page load (added by JS) */
+.project-details-card.loaded {
+    transition: left 0.3s ease;
 }
 
 .pull-handle {
@@ -2964,11 +2972,14 @@ body.dark-mode .add-metric-modal-content input {
         height: 250px;
         max-height: 80vh; /* Don't exceed viewport height in landscape */
         left: -150px; /* Hidden by default, draggable */
-        transition: left 0.3s ease;
         overflow-y: auto; /* Make scrollable in landscape too */
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
         touch-action: pan-y; /* Allow vertical scrolling in landscape */
+    }
+    
+    .project-details-card.loaded {
+        transition: left 0.3s ease;
     }
     
     .pull-handle {
