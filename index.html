@@ -54,7 +54,7 @@
         <div class="sidebar-footer">
             <div class="auth-section">
                 <div class="auth-status" id="authStatus">לא מחובר</div>
-                <button id="loginBtn">התחבר עם Google</button>
+                <button id="loginBtn">התחבר</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
             </div>
             <div class="divider"></div>
@@ -76,20 +76,35 @@
         <div class="login-modal-content">
             <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
             <h2>ברוכים הבאים!</h2>
-            <p>כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמא. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
+            <p>כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, התחבר עם Google או עם סיסמה שיצרת.</p>
             <button class="google-btn" onclick="loginWithGoogle()">
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
                 התחבר עם Google
             </button>
+            <div class="separator">
+                <span>או</span>
+            </div>
             <div class="email-form">
                 <input type="email" id="emailInput" placeholder="אימייל" required>
-                <input type="password" id="passwordInput" placeholder="סיסמא" required>
+                <input type="password" id="passwordInput" placeholder="סיסמה לאתר" required>
                 <div class="buttons">
-                    <button class="register-btn" onclick="registerWithEmail()">רישום</button>
-                    <button class="login-btn" onclick="loginWithEmail()">התחבר</button>
+                    <button class="login-btn" onclick="loginWithEmail()">התחבר עם סיסמה</button>
                 </div>
             </div>
             <button class="skip-btn" onclick="skipLogin()">המשך ללא התחברות</button>
+        </div>
+    </div>
+    <div class="login-modal" id="createPasswordModal" style="display:none;">
+        <div class="login-modal-content">
+            <h2>צור סיסמה לאתר</h2>
+            <p>התחברת בהצלחה! כדי שתוכל להתחבר מכל מכשיר, צור סיסמה מותאמת אישית לאתר שלנו.</p>
+            <div class="email-form">
+                <label>האימייל שלך: <strong id="userEmailDisplay"></strong></label>
+                <input type="password" id="newPasswordInput" placeholder="צור סיסמה חדשה" required>
+                <input type="password" id="confirmPasswordInput" placeholder="אשר סיסמה" required>
+                <button class="register-btn" onclick="createSitePassword()">שמור סיסמה</button>
+            </div>
+            <button class="skip-btn" onclick="skipPasswordCreation()">דלג - אשתמש רק ב-Google</button>
         </div>
     </div>
     <div class="top-section-wrapper">
@@ -278,10 +293,27 @@
             <div class="add-reminder-form">
                 <input type="text" id="reminderText" placeholder="טקסט התזכורת">
                 <input type="datetime-local" id="reminderDateTime">
+                <label>צלצול:</label>
+                <select id="reminderRingtone">
+                    <option value="beep">ביפ פשוט</option>
+                    <option value="chime">פעמון</option>
+                    <option value="bell">פעמון עמוק</option>
+                    <option value="alarm">אזעקה</option>
+                </select>
                 <label><input type="checkbox" id="reminderPopup"> הצג כהודעה קופצת בדפדפן</label>
                 <button onclick="addReminder()">הוסף תזכורת</button>
             </div>
             <ul id="remindersList" class="reminders-list"></ul>
+        </div>
+    </div>
+    <div id="alarmModal" class="modal alarm-modal" style="display:none;">
+        <div class="modal-content alarm-modal-content">
+            <h2>⏰ תזכורת!</h2>
+            <p id="alarmText"></p>
+            <div class="alarm-buttons">
+                <button class="stop-alarm-btn" onclick="stopAlarm()">עצור</button>
+                <button class="snooze-alarm-btn" onclick="snoozeAlarm()">דחה ל-5 דקות</button>
+            </div>
         </div>
     </div>
     <div id="instructionsModal" class="modal">
@@ -519,7 +551,10 @@
         const reminderTextInput = document.getElementById('reminderText');
         const reminderDateTimeInput = document.getElementById('reminderDateTime');
         const reminderPopupInput = document.getElementById('reminderPopup');
+        const reminderRingtoneInput = document.getElementById('reminderRingtone');
         const remindersList = document.getElementById('remindersList');
+        const alarmModal = document.getElementById('alarmModal');
+        const alarmText = document.getElementById('alarmText');
         const instructionsModal = document.getElementById('instructionsModal');
         const timelineModal = document.getElementById('timelineModal');
         const timelineContainer = document.getElementById('timelineContainer');
@@ -537,6 +572,118 @@
         let comparisonProjectId = null;
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+        
+        // Audio context for alarm sounds
+        let audioContext = null;
+        let alarmOscillator = null;
+        let alarmGainNode = null;
+        let currentAlarmReminder = null;
+        
+        // Initialize audio context on user interaction (required by browsers)
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+        
+        // Play alarm sound based on ringtone type
+        function playAlarmSound(ringtone) {
+            try {
+                const ctx = initAudioContext();
+                
+                // Stop any existing alarm
+                if (alarmOscillator) {
+                    alarmOscillator.stop();
+                    alarmOscillator = null;
+                }
+                
+                alarmGainNode = ctx.createGain();
+                alarmGainNode.connect(ctx.destination);
+                alarmGainNode.gain.value = 0.3;
+                
+                // Create different sounds based on ringtone type
+                switch(ringtone) {
+                    case 'beep':
+                        playBeep(ctx, alarmGainNode);
+                        break;
+                    case 'chime':
+                        playChime(ctx, alarmGainNode);
+                        break;
+                    case 'bell':
+                        playBell(ctx, alarmGainNode);
+                        break;
+                    case 'alarm':
+                        playAlarmTone(ctx, alarmGainNode);
+                        break;
+                    default:
+                        playBeep(ctx, alarmGainNode);
+                }
+            } catch (err) {
+                console.error('Error playing alarm sound:', err);
+            }
+        }
+        
+        function playBeep(ctx, gainNode) {
+            let beepInterval = setInterval(() => {
+                const osc = ctx.createOscillator();
+                osc.connect(gainNode);
+                osc.frequency.value = 880;
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.2);
+            }, 500);
+            
+            // Store reference to stop later
+            alarmOscillator = { stop: () => clearInterval(beepInterval) };
+        }
+        
+        function playChime(ctx, gainNode) {
+            let chimeInterval = setInterval(() => {
+                [659, 784, 880].forEach((freq, i) => {
+                    setTimeout(() => {
+                        const osc = ctx.createOscillator();
+                        osc.connect(gainNode);
+                        osc.frequency.value = freq;
+                        osc.type = 'sine';
+                        osc.start(ctx.currentTime);
+                        osc.stop(ctx.currentTime + 0.3);
+                    }, i * 150);
+                });
+            }, 2000);
+            
+            alarmOscillator = { stop: () => clearInterval(chimeInterval) };
+        }
+        
+        function playBell(ctx, gainNode) {
+            let bellInterval = setInterval(() => {
+                const osc = ctx.createOscillator();
+                osc.connect(gainNode);
+                osc.frequency.value = 440;
+                osc.type = 'sine';
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 1);
+            }, 2000);
+            
+            alarmOscillator = { stop: () => clearInterval(bellInterval) };
+        }
+        
+        function playAlarmTone(ctx, gainNode) {
+            let alarmInterval = setInterval(() => {
+                [800, 1000, 800, 1000].forEach((freq, i) => {
+                    setTimeout(() => {
+                        const osc = ctx.createOscillator();
+                        osc.connect(gainNode);
+                        osc.frequency.value = freq;
+                        osc.type = 'square';
+                        osc.start(ctx.currentTime);
+                        osc.stop(ctx.currentTime + 0.15);
+                    }, i * 150);
+                });
+            }, 1000);
+            
+            alarmOscillator = { stop: () => clearInterval(alarmInterval) };
+        }
+        
         // משתני הזזה לכרטיסיה
         let isDragging = false;
         let startX = 0;
@@ -610,6 +757,11 @@
                 const reminderTime = new Date(reminder.datetime);
                 if (reminderTime <= now && !reminder.notified) {
                     reminder.notified = true;
+                    
+                    // Show alarm modal and play sound
+                    showAlarmModal(reminder);
+                    
+                    // Also show browser notification if enabled
                     if (reminder.popup && 'Notification' in window && Notification.permission === 'granted') {
                         new Notification(reminder.text);
                     }
@@ -621,16 +773,87 @@
             localStorage.setItem('inbox', JSON.stringify(inbox));
             renderRemindersList();
         }
+        
+        function showAlarmModal(reminder) {
+            currentAlarmReminder = reminder;
+            const modal = document.getElementById('alarmModal');
+            const textElement = document.getElementById('alarmText');
+            
+            if (textElement) {
+                textElement.textContent = reminder.text;
+            }
+            
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+            
+            // Play alarm sound
+            const ringtone = reminder.ringtone || 'beep';
+            playAlarmSound(ringtone);
+        }
+        
+        function stopAlarm() {
+            // Stop the alarm sound
+            if (alarmOscillator) {
+                alarmOscillator.stop();
+                alarmOscillator = null;
+            }
+            
+            // Close the modal
+            const modal = document.getElementById('alarmModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            currentAlarmReminder = null;
+        }
+        
+        function snoozeAlarm() {
+            if (!currentAlarmReminder) return;
+            
+            // Stop the current alarm
+            stopAlarm();
+            
+            // Create a new reminder 5 minutes from now
+            const snoozeTime = new Date();
+            snoozeTime.setMinutes(snoozeTime.getMinutes() + 5);
+            
+            // Format the datetime for the input
+            const snoozeDatetime = snoozeTime.toISOString().slice(0, 16);
+            
+            // Create new snoozed reminder
+            const snoozedReminder = {
+                id: Date.now(),
+                text: currentAlarmReminder.text + ' (נדחה)',
+                datetime: snoozeDatetime,
+                popup: currentAlarmReminder.popup,
+                ringtone: currentAlarmReminder.ringtone || 'beep',
+                notified: false
+            };
+            
+            reminders.push(snoozedReminder);
+            localStorage.setItem('reminders', JSON.stringify(reminders));
+            renderRemindersList();
+            
+            alert('התזכורת נדחתה ל-5 דקות');
+        }
+        
         function addReminder() {
+            // Initialize audio context on user interaction
+            initAudioContext();
+            
             const text = reminderTextInput.value.trim();
             const datetime = reminderDateTimeInput.value;
             const popup = reminderPopupInput.checked;
+            const ringtone = reminderRingtoneInput.value || 'beep';
+            
             if (text && datetime) {
-                reminders.push({ id: Date.now(), text, datetime, popup, notified: false });
+                reminders.push({ id: Date.now(), text, datetime, popup, ringtone, notified: false });
                 localStorage.setItem('reminders', JSON.stringify(reminders));
                 reminderTextInput.value = '';
                 reminderDateTimeInput.value = '';
                 reminderPopupInput.checked = false;
+                reminderRingtoneInput.value = 'beep';
                 renderRemindersList();
                 checkReminders();
             } else {
@@ -641,11 +864,19 @@
             remindersList.innerHTML = '';
             reminders.forEach(reminder => {
                 if (!reminder.notified) {
+                    const ringtoneNames = {
+                        'beep': 'ביפ פשוט',
+                        'chime': 'פעמון',
+                        'bell': 'פעמון עמוק',
+                        'alarm': 'אזעקה'
+                    };
+                    const ringtone = ringtoneNames[reminder.ringtone] || 'ביפ פשוט';
                     const li = document.createElement('li');
                     li.innerHTML = `
                         <div class="reminder-details">
                             <div class="text">${reminder.text}</div>
                             <div class="datetime">${new Date(reminder.datetime).toLocaleString('he-IL')}</div>
+                            <div class="ringtone" style="font-size: 0.8em; color: var(--light-text-color);">🔔 ${ringtone}</div>
                         </div>
                         <div class="reminder-actions">
                             <button onclick="deleteReminder(${reminder.id})">מחק</button>
@@ -2766,29 +2997,49 @@
                 console.error('שגיאה בטעינת מצב מפיירבייס:', err);
             }
         }
+        
+        let firestoreUnsubscribe = null;
+        
+        function setupRealtimeListener(user) {
+            // Remove existing listener if any
+            if (firestoreUnsubscribe) {
+                firestoreUnsubscribe();
+            }
+            
+            // Set up real-time listener
+            const docRef = db.collection('wineMonitoringStates').doc(user.uid);
+            firestoreUnsubscribe = docRef.onSnapshot((docSnap) => {
+                if (docSnap.exists) {
+                    const data = docSnap.data();
+                    if (data.state) {
+                        console.log('עדכון בזמן אמת התקבל מענן');
+                        applyStateToUI(data.state);
+                    }
+                }
+            }, (error) => {
+                console.error('שגיאה במאזין בזמן אמת:', error);
+            });
+        }
+        
         window.addEventListener('load', () => {
             const loginBtn = document.getElementById('loginBtn');
             const logoutBtn = document.getElementById('logoutBtn');
             const authStatus = document.getElementById('authStatus');
-            const googleProvider = new firebase.auth.GoogleAuthProvider();
+            
+            // Handle redirect result for mobile devices
             auth.getRedirectResult().then((result) => {
                 if (result.user) {
                     console.log('User signed in via redirect');
-                } else {
-                    console.log('No user from redirect');
+                    handleGoogleSignIn(result.user);
                 }
             }).catch((error) => {
                 console.error('Redirect sign-in error:', error);
                 alert('שגיאה בהתחברות: ' + error.message);
             });
+            
             if (loginBtn) {
-                loginBtn.addEventListener('click', async () => {
-                    try {
-                        await auth.signInWithPopup(googleProvider);
-                    } catch (err) {
-                        console.error(err);
-                        alert('שגיאה בהתחברות: ' + err.message);
-                    }
+                loginBtn.addEventListener('click', () => {
+                    openLoginModal();
                 });
             }
             if (logoutBtn) {
@@ -2802,8 +3053,14 @@
                     if (loginBtn) loginBtn.style.display = 'none';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     await loadStateFromFirebase(user);
+                    setupRealtimeListener(user);  // Setup real-time updates
                     closeLoginModal();
+                    closeCreatePasswordModal();
                 } else {
+                    if (firestoreUnsubscribe) {
+                        firestoreUnsubscribe();  // Cleanup listener on logout
+                        firestoreUnsubscribe = null;
+                    }
                     if (authStatus) authStatus.textContent = 'לא מחובר';
                     if (loginBtn) loginBtn.style.display = 'inline-block';
                     if (logoutBtn) logoutBtn.style.display = 'none';
@@ -2826,48 +3083,132 @@
         function skipLogin() {
             closeLoginModal();
         }
-        function loginWithGoogle() {
+        
+        async function loginWithGoogle() {
             const googleProvider = new firebase.auth.GoogleAuthProvider();
             
             // Check if mobile device
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
             
-            if (isMobile) {
-                // Use redirect on mobile devices as popups are often blocked
-                auth.signInWithRedirect(googleProvider)
-                    .catch((error) => {
-                        console.error('Redirect sign-in error:', error);
-                        alert('שגיאה בהתחברות: ' + error.message);
-                    });
-            } else {
-                // Use popup on desktop
-                auth.signInWithPopup(googleProvider)
-                    .then((result) => {
-                        console.log('User signed in with Google:', result.user);
-                        closeLoginModal();
-                    })
-                    .catch((error) => {
-                        console.error('Popup failed, trying redirect:', error);
-                        auth.signInWithRedirect(googleProvider);
-                    });
+            try {
+                let result;
+                if (isMobile) {
+                    // Use redirect on mobile devices as popups are often blocked
+                    await auth.signInWithRedirect(googleProvider);
+                    return; // Will continue after redirect
+                } else {
+                    // Use popup on desktop
+                    result = await auth.signInWithPopup(googleProvider);
+                }
+                
+                if (result && result.user) {
+                    await handleGoogleSignIn(result.user);
+                }
+            } catch (error) {
+                console.error('Error signing in with Google:', error);
+                alert('שגיאה בהתחברות עם Google: ' + error.message);
             }
         }
-        function registerWithEmail() {
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
-            if (!email || !password) {
+        
+        async function handleGoogleSignIn(user) {
+            // Check if user has already created a site password
+            try {
+                const userDoc = await db.collection('userPasswords').doc(user.uid).get();
+                
+                if (!userDoc.exists) {
+                    // First time login - show password creation modal
+                    showCreatePasswordModal(user);
+                } else {
+                    // User already has a password, continue normally
+                    console.log('User already has a site password');
+                    closeLoginModal();
+                }
+            } catch (error) {
+                console.error('Error checking user password:', error);
+                closeLoginModal();
+            }
+        }
+        
+        function showCreatePasswordModal(user) {
+            closeLoginModal();
+            const modal = document.getElementById('createPasswordModal');
+            const emailDisplay = document.getElementById('userEmailDisplay');
+            if (emailDisplay) {
+                emailDisplay.textContent = user.email;
+            }
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+        
+        function closeCreatePasswordModal() {
+            const modal = document.getElementById('createPasswordModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        async function createSitePassword() {
+            const newPassword = document.getElementById('newPasswordInput').value;
+            const confirmPassword = document.getElementById('confirmPasswordInput').value;
+            const user = auth.currentUser;
+            
+            if (!newPassword || !confirmPassword) {
                 alert('אנא מלא את כל השדות.');
                 return;
             }
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    console.log('User registered:', userCredential.user);
-                })
-                .catch((error) => {
-                    console.error('Error registering:', error);
-                    alert('שגיאה ברישום: ' + error.message);
+            
+            if (newPassword !== confirmPassword) {
+                alert('הסיסמאות אינן תואמות.');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('הסיסמה חייבת להכיל לפחות 6 תווים.');
+                return;
+            }
+            
+            if (!user) {
+                alert('שגיאה: משתמש לא מחובר.');
+                return;
+            }
+            
+            try {
+                // Link email/password credential to the Google account
+                const credential = firebase.auth.EmailAuthProvider.credential(user.email, newPassword);
+                await user.linkWithCredential(credential);
+                
+                // Store password creation flag in Firestore
+                await db.collection('userPasswords').doc(user.uid).set({
+                    hasPassword: true,
+                    email: user.email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                
+                alert('הסיסמה נשמרה בהצלחה! כעת תוכל להתחבר עם ' + user.email + ' והסיסמה שיצרת.');
+                closeCreatePasswordModal();
+                
+                // Clear the password fields
+                document.getElementById('newPasswordInput').value = '';
+                document.getElementById('confirmPasswordInput').value = '';
+            } catch (error) {
+                console.error('Error creating site password:', error);
+                if (error.code === 'auth/provider-already-linked') {
+                    alert('כבר יש לך סיסמה. נסה להתחבר עם האימייל והסיסמה.');
+                } else if (error.code === 'auth/email-already-in-use') {
+                    alert('האימייל כבר בשימוש עם סיסמה אחרת.');
+                } else {
+                    alert('שגיאה בשמירת הסיסמה: ' + error.message);
+                }
+            }
         }
+        
+        function skipPasswordCreation() {
+            if (confirm('האם אתה בטוח? ללא סיסמה תוכל להתחבר רק דרך Google.')) {
+                closeCreatePasswordModal();
+            }
+        }
+        
         function loginWithEmail() {
             const email = document.getElementById('emailInput').value;
             const password = document.getElementById('passwordInput').value;
@@ -2877,11 +3218,18 @@
             }
             auth.signInWithEmailAndPassword(email, password)
                 .then((userCredential) => {
-                    console.log('User signed in:', userCredential.user);
+                    console.log('User signed in with email/password:', userCredential.user);
+                    closeLoginModal();
                 })
                 .catch((error) => {
                     console.error('Error signing in:', error);
-                    alert('שגיאה בהתחברות: ' + error.message);
+                    if (error.code === 'auth/user-not-found') {
+                        alert('משתמש לא קיים. נסה להתחבר דרך Google תחילה וליצור סיסמה.');
+                    } else if (error.code === 'auth/wrong-password') {
+                        alert('סיסמה שגויה.');
+                    } else {
+                        alert('שגיאה בהתחברות: ' + error.message);
+                    }
                 });
         }
         // פונקציות הזזה לכרטיסיה במובייל
