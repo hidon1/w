@@ -1,73 +1,165 @@
-/* תיקון קפיצה: הכרטיסייה תמיד מוסתרת בהתחלה */
+/* Fix jumping issue: NO transition until loaded class is added */
 .project-details-card {
     position: fixed;
-    left: -250px; /* מוסתר בהתחלה */
     top: 100px;
     width: 250px;
     height: 300px;
-    transition: left 0.3s ease;
     z-index: 1000;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    /* NO transition by default - prevents jumping */
+    transition: none;
 }
 
-/* רק בפלפון (media query נוכחי) - עדכון לנשלפות */
+/* Only enable transition after page loads */
+.project-details-card.loaded {
+    transition: left 0.3s ease;
+}
+
+/* Pull handle styling for mobile */
+.pull-handle {
+    position: absolute;
+    right: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 35px;
+    height: 50px;
+    background: var(--primary-color, #8B0000);
+    border-radius: 0 8px 8px 0;
+    display: none; /* Hidden on desktop */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    font-size: 18px;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+    z-index: 1001;
+    touch-action: manipulation;
+}
+
+/* Close card button styling */
+.close-card-btn {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-color, #333);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: none; /* Hidden on desktop */
+    line-height: 1;
+    z-index: 1002;
+}
+
+/* Mobile styles */
 @media (max-width: 768px) {
     .project-details-card {
         height: auto;
         max-height: 80vh;
-        /* הוסף חץ נשלף קטן */
-        .pull-handle {
-            position: absolute;
-            right: -30px; /* מחוץ לכרטיסייה */
-            top: 50%;
-            transform: translateY(-50%);
-            width: 30px;
-            height: 30px;
-            background: var(--primary-color);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: white;
-            font-size: 16px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 1001;
-        }
-        .pull-handle::before {
-            content: '❯'; /* חץ ימין - ישנה ל-❮ כשהכרטיסייה פתוחה */
-        }
+        width: 200px;
     }
-    .project-details-card.open .pull-handle::before {
-        content: '❮'; /* חץ שמאל כשהפתוחה */
+    
+    /* Show pull handle and close button on mobile */
+    .pull-handle {
+        display: flex;
     }
-    .project-details-card.open {
-        left: 0; /* נשלף פתוח */
+    
+    .close-card-btn {
+        display: block;
+    }
+    
+    /* Landscape orientation adjustments */
+    @media (orientation: landscape) {
+        .project-details-card {
+            width: 150px;
+            max-height: 70vh;
+        }
     }
 }
 
-/* שנה צבע כפתור הוספת מדד */
+/* Change "Add Metric" button color from yellow to blue/purple gradient */
 .add-data-cube {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); /* שנה מ-accent-color ל-primary-color */
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
     color: white;
-    /* שאר הקוד נשאר */
+    cursor: pointer;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* תיקון כפתורים בפלפון */
+.add-data-cube:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+}
+
+/* Change modal close button color from yellow to more neutral */
+.close-button {
+    background: #6b7280;
+    color: white;
+    border: none;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 5px 12px;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.close-button:hover {
+    background: #4b5563;
+}
+
+/* Fix mobile button interactions */
 @media (max-width: 768px) {
-    button, .modal button, .input-group button, .add-project-btn, .add-custom-property-btn {
+    /* Ensure all buttons are touchable */
+    button, 
+    .modal button, 
+    .input-group button, 
+    .add-project-btn, 
+    .add-custom-property-btn,
+    .close-button,
+    .close-login-btn {
         min-height: 44px;
         min-width: 44px;
         touch-action: manipulation;
-        z-index: 1000; /* מבטיח שהם לא חסומים */
+        position: relative;
+        z-index: 10;
+        cursor: pointer;
     }
+    
+    /* Ensure modals are above everything */
+    .modal {
+        z-index: 10000;
+    }
+    
     .modal-content {
-        z-index: 1001; /* מעל הכל */
+        z-index: 10001;
         overflow-y: auto;
         max-height: 85vh;
+        position: relative;
     }
-    .project-list li, .reminders-list li, .finance-list li {
-        min-height: 44px; /* touch targets לרשימות */
+    
+    /* Make list items touchable */
+    .project-list li, 
+    .reminders-list li, 
+    .finance-list li {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+    
+    /* Fix project actions buttons */
+    .project-actions button {
+        min-height: 36px;
+        min-width: 60px;
+        margin: 2px;
+        padding: 8px 12px;
+        font-size: 14px;
+        touch-action: manipulation;
     }
 }
