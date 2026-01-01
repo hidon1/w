@@ -209,7 +209,7 @@
             <h3>ניהול כספים בפרויקט הנוכחי</h3>
             <div class="finance-input-group">
                 <label for="financeAmount">סכום:</label>
-                <input type="number" id="financeAmount" placeholder="הכנס סכום">
+                <input type="text" id="financeAmount" placeholder="הכנס סכום">
                 <label for="financeNotes">הערות:</label>
                 <textarea id="financeNotes" placeholder="הכנס הערות (אופציונלי)" rows="3"></textarea>
                 <div class="finance-input-buttons">
@@ -385,7 +385,7 @@
                 longName: 'פרטי יין',
                 metrics: {
                     'wineName': { name: 'שם היין', type: 'text', placeholder: 'קברנה יקב הידון 2024' },
-                    'vintageYear': { name: 'שנה', type: 'number', step: 1, precision: 0, placeholder: '2024' },
+                    'vintageYear': { name: 'שנה', type: 'text', step: 1, precision: 0, placeholder: '2024' },
                     'grapeVariety': { name: 'זן הענבים', type: 'select', options: ['קברנה סוביניון', 'מרלו', 'שיראז', 'שרדונה', 'סוביניון בלאן', 'פינו נואר', 'גרנאש', 'זינפנדל','ריזלינג', 'גוורצטרמינר', 'שן בלאן', 'ויונייה', 'ברברה', 'סנג\'ובזה', 'נביולו', 'טמפרניו', 'אחר'], placeholder: 'בחר זן' },
                     'vineyardSource': { name: 'מקור הענבים', type: 'text', placeholder: 'כרם גליל עליון' },
                     'harvestDate': { name: 'תאריך בציר', type: 'date', placeholder: 'בחר תאריך' },
@@ -398,10 +398,10 @@
                 longName: 'בציר',
                 emoji: '🟢',
                 metrics: {
-                    'brix': { name: 'בריקס', type: 'number', step: 0.1, precision: 1, placeholder: '22.5' },
-                    'ph': { name: 'pH', type: 'number', step: 0.01, precision: 2, placeholder: '3.5' },
-                    'ta': { name: 'חומצה כוללת', type: 'number', step: 0.01, precision: 2, placeholder: '6.8' },
-                    'grapeTemp': { name: 'טמפרטורת ענבים', type: 'number', step: 0.1, precision: 1, placeholder: '25.0' },
+                    'brix': { name: 'בריקס', type: 'text', step: 0.1, precision: 1, placeholder: '22.5' },
+                    'ph': { name: 'pH', type: 'text', step: 0.01, precision: 2, placeholder: '3.5' },
+                    'ta': { name: 'חומצה כוללת', type: 'text', step: 0.01, precision: 2, placeholder: '6.8' },
+                    'grapeTemp': { name: 'טמפרטורת ענבים', type: 'text', step: 0.1, precision: 1, placeholder: '25.0' },
                 },
                 summaryMetrics: ['brix', 'ph', 'ta'],
                 customMetrics: {}
@@ -411,11 +411,11 @@
                 longName: 'ריסוק והכנה לתסיסה',
                 emoji: '🍇',
                 metrics: {
-                    'so2Added': { name: 'SO₂', type: 'number', step: 0.1, precision: 1, placeholder: '50' },
-                    'enzymesAdded': { name: 'אנזימים', type: 'number', step: 0.1, precision: 1, placeholder: '0.8' },
-                    'mixTemp': { name: 'טמפרטורת תערובת', type: 'number', step: 0.1, precision: 1, placeholder: '18.0' },
+                    'so2Added': { name: 'SO₂', type: 'text', step: 0.1, precision: 1, placeholder: '50' },
+                    'enzymesAdded': { name: 'אנזימים', type: 'text', step: 0.1, precision: 1, placeholder: '0.8' },
+                    'mixTemp': { name: 'טמפרטורת תערובת', type: 'text', step: 0.1, precision: 1, placeholder: '18.0' },
                     'skinLiquidRatio': { name: 'יחס קליפות/נוזלים', type: 'text', placeholder: '1:3' },
-                    'brixStart': { name: 'בריקס התחלה', type: 'number', step: 0.1, precision: 1, placeholder: '23.0' },
+                    'brixStart': { name: 'בריקס התחלה', type: 'text', step: 0.1, precision: 1, placeholder: '23.0' },
                     'fermentationSync': { name: 'מצב סנכרון', type: 'text', placeholder: 'אושר' }
                 },
                 summaryMetrics: ['so2Added', 'mixTemp', 'brixStart'],
@@ -426,12 +426,12 @@
                 longName: 'תסיסה אלכוהולית',
                 emoji: '🍷',
                 metrics: {
-                    'brixDaily': { name: 'בריקס יומי', type: 'number', step: 0.1, precision: 1, placeholder: '15.0' },
-                    'phFerment': { name: 'pH', type: 'number', step: 0.01, precision: 2, placeholder: '3.65' },
-                    'fermentTemp': { name: 'טמפרטורת תסיסה', type: 'number', step: 0.1, precision: 1, placeholder: '26.5' },
+                    'brixDaily': { name: 'בריקס יומי', type: 'text', step: 0.1, precision: 1, placeholder: '15.0' },
+                    'phFerment': { name: 'pH', type: 'text', step: 0.01, precision: 2, placeholder: '3.65' },
+                    'fermentTemp': { name: 'טמפרטורת תסיסה', type: 'text', step: 0.1, precision: 1, placeholder: '26.5' },
                     'yeastAdded': { name: 'שמרים', type: 'text', placeholder: 'EC-1118' },
                     'yeastFoodAdded': { name: 'מזון שמרים', type: 'text', placeholder: '2 גרם/ליטר' },
-                    'density': { name: 'צפיפות (SG)', type: 'number', step: 0.001, precision: 3, placeholder: '1.050' },
+                    'density': { name: 'צפיפות (SG)', type: 'text', step: 0.001, precision: 3, placeholder: '1.050' },
                     'fermentRate': { name: 'קצב תסיסה', type: 'text', placeholder: 'יציב / מהיר' },
                     'fermentStartDate': { name: 'תאריך התחלה', type: 'date', placeholder: '20/08/2024' },
                     'fermentEndDate': { name: 'תאריך סיום', type: 'date', placeholder: '30/08/2024' }
@@ -444,9 +444,9 @@
                 longName: 'תסיסה מלולקטית',
                 emoji: '🔁',
                 metrics: {
-                    'phMLF': { name: 'pH', type: 'number', step: 0.01, precision: 2, placeholder: '3.80' },
+                    'phMLF': { name: 'pH', type: 'text', step: 0.01, precision: 2, placeholder: '3.80' },
                     'malicAcid': { name: 'חומצה מלית', type: 'text', placeholder: 'ירידה קלה' },
-                    'roomTempMLF': { name: 'טמפרטורת חדר', type: 'number', step: 0.1, precision: 1, placeholder: '20.0' },
+                    'roomTempMLF': { name: 'טמפרטורת חדר', type: 'text', step: 0.1, precision: 1, placeholder: '20.0' },
                     'mlfStatus': { name: 'מצב תסיסה', type: 'text', placeholder: 'באמצע' },
                     'bacteriaAdded': { name: 'חיידקים', type: 'text', placeholder: 'Oenococcus oeni' },
                     'tasteNotesMLF': { name: 'טעמים (רישום ידני)', type: 'text', placeholder: 'חמאתיות עדינה' }
@@ -460,8 +460,8 @@
                 emoji: '🛢',
                 metrics: {
                     'containerType': { name: 'סוג מיכל', type: 'text', placeholder: 'חבית עץ אלון צרפתי' },
-                    'agingTime': { name: 'זמן יישון (ימים)', type: 'number', step: 1, precision: 0, placeholder: '180' },
-                    'agingRoomTemp': { name: 'טמפרטורת חדר יישון', type: 'number', step: 0.1, precision: 1, placeholder: '15.0' },
+                    'agingTime': { name: 'זמן יישון (ימים)', type: 'text', step: 1, precision: 0, placeholder: '180' },
+                    'agingRoomTemp': { name: 'טמפרטורת חדר יישון', type: 'text', step: 0.1, precision: 1, placeholder: '15.0' },
                     'so2Control': { name: 'פקדי חמצון (SO₂)', type: 'text', placeholder: 'בדיקה חודשית' },
                     'tasteTextureNotes': { name: 'טעמים ומרקם', type: 'text', placeholder: 'עיגול טעמים, טאנינים רכים' },
                     'rackingDate': { name: 'תאריך שקיעה', type: 'date', placeholder: '01/03/2025' },
@@ -475,12 +475,12 @@
                 longName: 'הכנה לבקבוק',
                 emoji: '🧪',
                 metrics: {
-                    'phFinal': { name: 'pH סופי', type: 'number', step: 0.01, precision: 2, placeholder: '3.75' },
+                    'phFinal': { name: 'pH סופי', type: 'text', step: 0.01, precision: 2, placeholder: '3.75' },
                     'clarity': { name: 'צלילות', type: 'text', placeholder: 'צלול לגמרי' },
                     'bottlingDate': { name: 'תאריך בקבוק', type: 'date', placeholder: '15/05/2025' },
-                    'bottleCount': { name: 'כמות בקבוקים', type: 'number', step: 1, precision: 0, placeholder: '750' },
-                    'so2AddedBottle': { name: 'תוספת SO₂', type: 'number', step: 0.1, precision: 1, placeholder: '30' },
-                    'alcoholLevel': { name: 'רמת אלכוהול (%)', type: 'number', step: 0.1, precision: 1, placeholder: '14.2' },
+                    'bottleCount': { name: 'כמות בקבוקים', type: 'text', step: 1, precision: 0, placeholder: '750' },
+                    'so2AddedBottle': { name: 'תוספת SO₂', type: 'text', step: 0.1, precision: 1, placeholder: '30' },
+                    'alcoholLevel': { name: 'רמת אלכוהול (%)', type: 'text', step: 0.1, precision: 1, placeholder: '14.2' },
                     'batchNumber': { name: 'מספר אצווה / תווית', type: 'text', placeholder: 'יין אדום 2024A' }
                 },
                 summaryMetrics: ['phFinal', 'bottleCount', 'alcoholLevel'],

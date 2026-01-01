@@ -57,23 +57,23 @@
     }
     
     .dashboard-section h2 {
-        font-size: calc(var(--font-size-base) * 1);
+        font-size: calc(var(--font-size-base) * 0.85);
         margin-bottom: 3px;
     }
     
     .dashboard-item {
-        min-width: 60px;
-        max-width: 80px;
-        padding: 6px 8px;
-        min-height: 50px;
+        min-width: 55px;
+        max-width: 75px;
+        padding: 5px 6px;
+        min-height: 45px;
     }
     
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.6);
+        font-size: calc(var(--font-size-base) * 0.55);
     }
     
     .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.8);
+        font-size: calc(var(--font-size-base) * 0.75);
     }
     
     /* Move add-data-cube to side on mobile */
@@ -82,9 +82,53 @@
         right: 15px;
         bottom: 180px;
         z-index: 900;
-        padding: 10px 15px;
-        font-size: calc(var(--font-size-base) * 0.8);
+        padding: 8px 12px;
+        font-size: calc(var(--font-size-base) * 0.75);
         margin: 0;
+    }
+    
+    /* Metrics in portrait: 2 per row with smaller text */
+    .input-section {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .input-group {
+        padding: 12px;
+    }
+    
+    .input-group label {
+        font-size: calc(var(--font-size-base) * 0.85);
+        margin-bottom: 6px;
+    }
+    
+    .input-group input[type="number"], 
+    .input-group input[type="text"], 
+    .input-group select, 
+    .input-group textarea {
+        padding: 8px;
+        font-size: calc(var(--font-size-base) * 0.85);
+        margin-bottom: 10px;
+    }
+    
+    .input-group button {
+        padding: 8px 12px;
+        font-size: calc(var(--font-size-base) * 0.85);
+    }
+    
+    /* Stage overview below metrics */
+    .stage-overview-container {
+        order: 2;
+        margin-top: 20px;
+    }
+    
+    #currentStageContent {
+        order: 1;
+    }
+    
+    .container {
+        display: flex;
+        flex-direction: column;
     }
     
     /* Ensure buttons are touchable */
@@ -2868,7 +2912,16 @@ body.dark-mode .add-metric-modal-content input {
     .project-details-card {
         width: 200px;
         height: 250px;
-        left: -150px; /* Hidden by default */
+        left: -150px; /* Hidden by default, draggable */
+        transition: left 0.3s ease;
+    }
+    
+    .pull-handle {
+        display: flex; /* Enable handle in landscape */
+    }
+    
+    .close-card-btn {
+        display: block; /* Enable close button in landscape */
     }
     
     .dashboard-section {
@@ -2876,29 +2929,29 @@ body.dark-mode .add-metric-modal-content input {
     }
     
     .dashboard-section h2 {
-        font-size: calc(var(--font-size-base) * 0.9);
+        font-size: calc(var(--font-size-base) * 0.8);
         margin-bottom: 2px;
     }
     
     .dashboard-item {
         min-width: 50px;
         max-width: 70px;
-        padding: 5px 6px;
-        min-height: 45px;
+        padding: 4px 5px;
+        min-height: 40px;
     }
     
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.55);
+        font-size: calc(var(--font-size-base) * 0.5);
     }
     
     .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.75);
+        font-size: calc(var(--font-size-base) * 0.7);
     }
     
     .add-data-cube {
-        bottom: 140px;
-        padding: 8px 12px;
-        font-size: calc(var(--font-size-base) * 0.75);
+        bottom: 120px;
+        padding: 6px 10px;
+        font-size: calc(var(--font-size-base) * 0.7);
     }
 }
 
