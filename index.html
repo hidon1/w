@@ -720,12 +720,19 @@
             checkReminders();
             const user = auth.currentUser;
             if (!user && Object.keys(projects).length <= 1) {
-                openLoginModal();
+                // Don't force login modal on mobile - allow offline usage
+                // openLoginModal();
             }
             // הוספת event listeners להזזה
             projectDetailsCard.addEventListener('touchstart', handleTouchStart);
             projectDetailsCard.addEventListener('touchmove', handleTouchMove);
             projectDetailsCard.addEventListener('touchend', handleTouchEnd);
+            
+            // Initialize card position for mobile
+            if (window.innerWidth <= 768) {
+                projectDetailsCard.style.left = '-200px';
+                cardOpen = false;
+            }
         };
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
@@ -991,10 +998,7 @@
             filterProjectsByYear();
         }
         function addNewProject() {
-            if (!auth.currentUser) {
-                openLoginModal();
-                return;
-            }
+            // Allow creating projects even without authentication for offline usage
             let newProjectName = prompt('הכנס שם לפרויקט החדש:');
             if (newProjectName && newProjectName.trim() !== '') {
                 newProjectName = newProjectName.trim();
