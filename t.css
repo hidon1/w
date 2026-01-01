@@ -8,18 +8,24 @@
     }
     .project-details-card {
         width: 250px;
-        left: -150px; /* שינוי: ציצה קצת (50px גלויים) */
-        height: 300px;
-        transition: left 0.3s ease; /* הוספת transition להזזה חלקה */
+        left: -200px; /* Card hidden by default */
+        height: auto; /* Changed from 300px to auto */
+        max-height: 80vh; /* Allow taller card */
+        transition: left 0.3s ease;
+        overflow-y: auto; /* Make scrollable */
     }
     .pull-handle {
-        right: -20px;
+        right: -25px;
         display: flex; /* מוצג במובייל */
+        width: 25px;
+        height: 50px;
+        border-radius: 0 10px 10px 0;
     }
     .close-card-btn {
         top: 5px;
         left: 5px;
         font-size: calc(var(--font-size-base) * 1);
+        display: block; /* Show close button on mobile */
     }
     .stage-nav-container {
         flex-direction: column;
@@ -39,11 +45,76 @@
     .stage-nav-button {
         min-width: 90px;
         padding: 8px 10px;
-        font-size: calc(var(--font-size-base) * 0.8);
+        font-size: calc(var(--font-size-base) * 0.7);
     }
     .close-button {
         top: 20px;
         left: 20px;
+    }
+    
+    /* Mobile portrait: 2 cards per row */
+    .input-section {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    /* Smaller text in input groups for mobile */
+    .input-group label {
+        font-size: calc(var(--font-size-base) * 0.85);
+    }
+    
+    .input-group h5 {
+        font-size: calc(var(--font-size-base) * 0.9);
+    }
+    
+    /* Dashboard: Add metric button next to items */
+    .dashboard-section {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 8px 10px;
+    }
+    
+    .dashboard-section h2 {
+        flex-basis: 100%;
+        font-size: calc(var(--font-size-base) * 1);
+        margin-bottom: 5px;
+    }
+    
+    .dashboard-grid {
+        flex: 1;
+        justify-content: flex-start;
+    }
+    
+    .add-data-cube {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 5px;
+        flex-shrink: 0;
+    }
+    
+    .add-data-cube span {
+        display: none; /* Hide text on mobile */
+    }
+    
+    .add-data-cube i {
+        margin: 0;
+        font-size: calc(var(--font-size-base) * 1.2);
+    }
+}
+
+/* Mobile landscape mode */
+@media (max-width: 768px) and (orientation: landscape) {
+    .project-details-card {
+        left: -200px;
+    }
+    
+    .pull-handle {
+        display: flex; /* Show pull handle in landscape too */
     }
 }
 
@@ -51,7 +122,7 @@
 :root {
     --primary-color: #8B0000;
     --secondary-color: #A52A2A;
-    --accent-color: #FFD700;
+    --accent-color: #4CAF50; /* Changed from #FFD700 (yellow) to green */
     --background-color: #FFF8E1;
     --card-background: #ffffff;
     --text-color: #333;
@@ -74,10 +145,12 @@
     --dark-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
     --dark-primary-color: #B80000;
     --dark-secondary-color: #8B0000;
-    --dark-accent-color: #ADFF2F;
+    --dark-accent-color: #66BB6A; /* Changed from #ADFF2F to darker green */
     --dark-graph-line-color: #FFD700;
     --dark-graph-area-color: rgba(255, 215, 0, 0.2);
     --font-size-base: 16px;
+    --card-width-desktop: 220px;
+    --card-max-height-desktop: 85vh;
 }
 
 * {
@@ -703,17 +776,18 @@ body.dark-mode .modal-graph-container {
 }
 
 .graph-controls button {
-    background: linear-gradient(135deg, var(--accent-color), #FFD700);
+    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
     border: none;
     border-radius: 5px;
     padding: 5px 10px;
     cursor: pointer;
     font-size: calc(var(--font-size-base) * 0.8);
     transition: background 0.3s ease;
+    color: white;
 }
 
 .graph-controls button:hover {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
+    background: linear-gradient(135deg, #66BB6A, #81C784);
 }
 
 .history-list {
@@ -1005,7 +1079,7 @@ input:checked + .slider:before {
 }
 
 .zoom-controls button {
-    background: linear-gradient(135deg, var(--accent-color), #FFD700);
+    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
     border: none;
     border-radius: 50%;
     width: 30px;
@@ -1014,10 +1088,11 @@ input:checked + .slider:before {
     font-size: 18px;
     font-weight: bold;
     transition: all 0.3s ease;
+    color: white;
 }
 
 .zoom-controls button:hover {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
+    background: linear-gradient(135deg, #66BB6A, #81C784);
     transform: scale(1.1);
 }
 
@@ -1591,8 +1666,9 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
     position: fixed;
     top: 15px;
     left: 15px;
-    width: 250px;
-    height: 250px;
+    width: var(--card-width-desktop); /* Narrower for desktop */
+    height: auto;
+    max-height: var(--card-max-height-desktop); /* Taller for desktop */
     background: linear-gradient(135deg, var(--card-background), #f9f9f9);
     border-radius: var(--border-radius);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 0 10px var(--primary-color);
@@ -1748,7 +1824,7 @@ body.dark-mode .project-details-card:hover::-webkit-scrollbar-track {
 }
 
 .add-custom-property-btn {
-    background: linear-gradient(135deg, var(--accent-color), #FFD700);
+    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
     color: white;
     padding: 8px 15px;
     border: none;
@@ -1762,7 +1838,7 @@ body.dark-mode .project-details-card:hover::-webkit-scrollbar-track {
 }
 
 .add-custom-property-btn:hover {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
+    background: linear-gradient(135deg, #66BB6A, #81C784);
     transform: translateY(-2px);
 }
 
@@ -1987,7 +2063,7 @@ body.dark-mode .timeline-event-content {
 }
 
 .download-pdf-btn {
-    background: linear-gradient(135deg, var(--accent-color), #FFD700);
+    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
     color: white;
     padding: 10px 20px;
     border: none;
@@ -2000,7 +2076,7 @@ body.dark-mode .timeline-event-content {
 }
 
 .download-pdf-btn:hover {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
+    background: linear-gradient(135deg, #66BB6A, #81C784);
     transform: translateY(-2px);
 }
 
@@ -2441,12 +2517,12 @@ body.dark-mode .login-modal-content .email-form input {
 }
 
 .login-modal-content .email-form .buttons .login-btn {
-    background: linear-gradient(135deg, var(--accent-color), #FFD700);
-    color: black;
+    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
+    color: white;
 }
 
 .login-modal-content .email-form .buttons .login-btn:hover {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
+    background: linear-gradient(135deg, #66BB6A, #81C784);
     transform: translateY(-2px);
 }
 
@@ -2483,7 +2559,7 @@ body.dark-mode .login-modal-content .email-form input {
 
 .add-data-cube {
     display: inline-block;
-    background: linear-gradient(135deg, var(--accent-color), #FFD700);
+    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
     color: white;
     padding: 12px 20px;
     border: none;
@@ -2497,7 +2573,7 @@ body.dark-mode .login-modal-content .email-form input {
 }
 
 .add-data-cube:hover {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
+    background: linear-gradient(135deg, #66BB6A, #81C784);
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
