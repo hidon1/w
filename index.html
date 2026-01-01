@@ -1226,10 +1226,7 @@
             filterProjectsByYear();
         }
         function addNewProject() {
-            if (!auth.currentUser) {
-                openLoginModal();
-                return;
-            }
+            // Allow project creation even without login
             let newProjectName = prompt('הכנס שם לפרויקט החדש:');
             if (newProjectName && newProjectName.trim() !== '') {
                 newProjectName = newProjectName.trim();
