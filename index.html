@@ -721,8 +721,9 @@
             const user = auth.currentUser;
             // Allow offline usage - don't force login modal
             // Users can still login via sidebar if they want cloud sync
+            // Data is stored in localStorage and will be synced to Firebase once logged in
             
-            // הוספת event listeners להזזה
+            // Add touch event listeners for card swipe functionality
             projectDetailsCard.addEventListener('touchstart', handleTouchStart);
             projectDetailsCard.addEventListener('touchmove', handleTouchMove);
             projectDetailsCard.addEventListener('touchend', handleTouchEnd);
@@ -998,6 +999,7 @@
         }
         function addNewProject() {
             // Allow creating projects even without authentication for offline usage
+            // Projects will be saved to localStorage and synced to Firebase when user logs in
             let newProjectName = prompt('הכנס שם לפרויקט החדש:');
             if (newProjectName && newProjectName.trim() !== '') {
                 newProjectName = newProjectName.trim();
