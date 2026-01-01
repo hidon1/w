@@ -946,6 +946,24 @@
             }
         }
         window.onload = () => {
+            // Set initial card position based on screen size without animation
+            if (window.innerWidth <= 768) {
+                // Mobile: start hidden
+                if (window.matchMedia('(orientation: landscape)').matches) {
+                    projectDetailsCard.style.left = '-150px';
+                } else {
+                    projectDetailsCard.style.left = '-200px';
+                }
+            } else {
+                // Desktop: show card
+                projectDetailsCard.style.left = '15px';
+            }
+            
+            // Add loaded class after a brief delay to enable transitions
+            setTimeout(() => {
+                projectDetailsCard.classList.add('loaded');
+            }, 100);
+            
             loadDarkModeState();
             populateYearSelects();
             setDefaultYearFilter();
@@ -3233,37 +3251,80 @@
         let isSidebarTouching = false;
         let sidebarStartX = 0;
         let sidebarCurrentX = 0;
+        let startY = 0;
+        let hasMoved = false;
         
         function handleTouchStart(e) {
             if (window.innerWidth > 768) return; // רק במובייל
             // Don't start dragging if touching a button or input
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'A') {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'A' || e.target.tagName === 'SPAN') {
                 return;
             }
+            // Only handle drag from the pull handle or card header area
+            const rect = projectDetailsCard.getBoundingClientRect();
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            
+            // Only drag from pull handle or top 50px of card
+            const pullHandle = projectDetailsCard.querySelector('.pull-handle');
+            const pullHandleRect = pullHandle ? pullHandle.getBoundingClientRect() : null;
+            const touchingHandle = pullHandleRect && touchX >= pullHandleRect.left && touchX <= pullHandleRect.right && touchY >= pullHandleRect.top && touchY <= pullHandleRect.bottom;
+            const touchingTop = touchY >= rect.top && touchY <= rect.top + 50;
+            
+            if (!touchingHandle && !touchingTop) {
+                // Allow scrolling in the card content
+                return;
+            }
+            
             isDragging = true;
+            hasMoved = false;
             startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
             currentX = startX;
-            projectDetailsCard.style.transition = 'none'; // ביטול אנימציה במהלך הזזה
         }
         function handleTouchMove(e) {
             if (!isDragging || window.innerWidth > 768) return;
-            e.preventDefault();
+            
             currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
             const deltaX = currentX - startX;
+            const deltaY = currentY - startY;
+            
+            // If user is scrolling vertically more than horizontally, don't prevent default or drag
+            if (!hasMoved && Math.abs(deltaY) > Math.abs(deltaX)) {
+                isDragging = false;
+                return;
+            }
+            
+            hasMoved = true;
+            
+            // Only prevent default if we're actually dragging horizontally
+            if (Math.abs(deltaX) > 5) {
+                e.preventDefault();
+            }
+            
+            // Temporarily remove transition during drag
+            projectDetailsCard.classList.remove('loaded');
             
             // For RTL: positive deltaX = drag right (open), negative = drag left (close)
-            const currentLeft = cardOpen ? 15 : -200;
+            const currentLeft = cardOpen ? 15 : (window.matchMedia('(orientation: landscape)').matches ? -150 : -200);
             let newLeft = currentLeft + deltaX;
             
-            // Limit movement between -200px and 15px
-            newLeft = Math.min(15, Math.max(-200, newLeft));
+            // Limit movement based on orientation
+            const minLeft = window.matchMedia('(orientation: landscape)').matches ? -150 : -200;
+            newLeft = Math.min(15, Math.max(minLeft, newLeft));
             projectDetailsCard.style.left = newLeft + 'px';
         }
         function handleTouchEnd(e) {
             if (!isDragging || window.innerWidth > 768) return;
             isDragging = false;
-            projectDetailsCard.style.transition = 'left 0.3s ease'; // הוספת אנימציה חזרה
+            hasMoved = false;
+            
+            // Re-enable transition
+            projectDetailsCard.classList.add('loaded');
+            
             const deltaX = currentX - startX;
+            const hiddenLeft = window.matchMedia('(orientation: landscape)').matches ? -150 : -200;
             
             // If dragged right more than 50px, open it
             if (deltaX > 50) {
@@ -3272,25 +3333,25 @@
             } 
             // If dragged left more than 50px, close it
             else if (deltaX < -50) {
-                projectDetailsCard.style.left = '-200px';
+                projectDetailsCard.style.left = hiddenLeft + 'px';
                 cardOpen = false;
             } 
             // Otherwise, return to previous state
             else {
-                projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
+                projectDetailsCard.style.left = cardOpen ? '15px' : hiddenLeft + 'px';
             }
         }
         function toggleCard() {
             if (window.innerWidth > 768) return; // רק במובייל
             cardOpen = !cardOpen;
-            projectDetailsCard.style.transition = 'left 0.3s ease';
-            projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
+            const hiddenLeft = window.matchMedia('(orientation: landscape)').matches ? -150 : -200;
+            projectDetailsCard.style.left = cardOpen ? '15px' : hiddenLeft + 'px';
         }
         function closeCard() {
             if (window.innerWidth > 768) return;
             cardOpen = false;
-            projectDetailsCard.style.transition = 'left 0.3s ease';
-            projectDetailsCard.style.left = '-200px';
+            const hiddenLeft = window.matchMedia('(orientation: landscape)').matches ? -150 : -200;
+            projectDetailsCard.style.left = hiddenLeft + 'px';
         }
         
         // Improved sidebar behavior for mobile: click to open, swipe to close
@@ -3323,6 +3384,31 @@
         sidebar.addEventListener('touchstart', handleSidebarTouchStart);
         sidebar.addEventListener('touchmove', handleSidebarTouchMove);
         sidebar.addEventListener('touchend', handleSidebarTouchEnd);
+        
+        // Handle orientation changes to adjust card position
+        window.addEventListener('orientationchange', () => {
+            if (window.innerWidth <= 768) {
+                setTimeout(() => {
+                    const hiddenLeft = window.matchMedia('(orientation: landscape)').matches ? -150 : -200;
+                    if (!cardOpen) {
+                        projectDetailsCard.style.left = hiddenLeft + 'px';
+                    }
+                }, 100);
+            }
+        });
+        
+        // Also handle window resize for responsive behavior
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                // Desktop: always show card
+                projectDetailsCard.style.left = '15px';
+                cardOpen = true;
+            } else if (!cardOpen) {
+                // Mobile: hide if not open
+                const hiddenLeft = window.matchMedia('(orientation: landscape)').matches ? -150 : -200;
+                projectDetailsCard.style.left = hiddenLeft + 'px';
+            }
+        });
     </script>
 </body>
 </html>
