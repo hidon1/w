@@ -3256,26 +3256,24 @@
         
         function handleTouchStart(e) {
             if (window.innerWidth > 768) return; // רק במובייל
-            // Don't start dragging if touching a button or input
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'A' || e.target.tagName === 'SPAN') {
-                return;
-            }
-            // Only handle drag from the pull handle or card header area
-            const rect = projectDetailsCard.getBoundingClientRect();
+            
+            // Only handle drag from the pull handle - this allows scrolling everywhere else
+            const pullHandle = projectDetailsCard.querySelector('.pull-handle');
+            if (!pullHandle) return;
+            
+            const pullHandleRect = pullHandle.getBoundingClientRect();
             const touchX = e.touches[0].clientX;
             const touchY = e.touches[0].clientY;
             
-            // Only drag from pull handle or top 50px of card
-            const pullHandle = projectDetailsCard.querySelector('.pull-handle');
-            const pullHandleRect = pullHandle ? pullHandle.getBoundingClientRect() : null;
-            const touchingHandle = pullHandleRect && touchX >= pullHandleRect.left && touchX <= pullHandleRect.right && touchY >= pullHandleRect.top && touchY <= pullHandleRect.bottom;
-            const touchingTop = touchY >= rect.top && touchY <= rect.top + 50;
+            const touchingHandle = touchX >= pullHandleRect.left && touchX <= pullHandleRect.right && 
+                                   touchY >= pullHandleRect.top && touchY <= pullHandleRect.bottom;
             
-            if (!touchingHandle && !touchingTop) {
-                // Allow scrolling in the card content
+            if (!touchingHandle) {
+                // Allow scrolling in the card content - don't start dragging
                 return;
             }
             
+            // Only start dragging when touching the pull handle
             isDragging = true;
             hasMoved = false;
             startX = e.touches[0].clientX;
