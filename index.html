@@ -103,7 +103,9 @@
     </div>
     <div class="container">
         <div class="project-details-card" id="projectDetailsCard">
-            <div class="pull-handle" onclick="toggleCard()"><i class="fas fa-chevron-left"></i></div>
+            <div class="pull-handle" onclick="toggleCard()">
+                <i class="fas fa-angle-double-left" id="pullHandleIcon"></i>
+            </div>
             <div class="close-card-btn" onclick="closeCard()">&times;</div>
             <h4>פרטי פרויקט</h4>
             <div class="project-details-item" data-metric-id="wineName" data-section="wineDetails">
@@ -711,6 +713,22 @@
             }
         }
         window.onload = () => {
+            // Load stagesConfig from localStorage if available
+            const savedStagesConfig = localStorage.getItem('stagesConfig');
+            if (savedStagesConfig) {
+                try {
+                    const parsedConfig = JSON.parse(savedStagesConfig);
+                    // Merge custom metrics into stagesConfig
+                    Object.keys(parsedConfig).forEach(stageId => {
+                        if (parsedConfig[stageId].customMetrics && stagesConfig[stageId]) {
+                            stagesConfig[stageId].customMetrics = parsedConfig[stageId].customMetrics;
+                        }
+                    });
+                } catch (e) {
+                    console.error('Failed to load stagesConfig from localStorage', e);
+                }
+            }
+            
             loadDarkModeState();
             populateYearSelects();
             setDefaultYearFilter();
@@ -728,11 +746,7 @@
             projectDetailsCard.addEventListener('touchmove', handleTouchMove);
             projectDetailsCard.addEventListener('touchend', handleTouchEnd);
             
-            // Initialize card position for mobile
-            if (window.innerWidth <= 768) {
-                projectDetailsCard.style.left = '-200px';
-                cardOpen = false;
-            }
+            // Card position is set via CSS, no need to set via JS
         };
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
@@ -882,6 +896,7 @@
         }
         function saveAllProjects() {
             localStorage.setItem('projects', JSON.stringify(projects));
+            localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig)); // Save stagesConfig too
             try {
                 if (auth && auth.currentUser) {
                     saveStateToFirebase();
@@ -2623,6 +2638,7 @@
                 projects: projects,
                 currentProjectId: currentProjectId,
                 currentStageId: currentStageId,
+                stagesConfig: stagesConfig, // Save custom metrics in stagesConfig
                 darkMode: document.body.classList.contains('dark-mode'),
                 savedAt: new Date().toISOString()
             };
@@ -2631,6 +2647,18 @@
             if (!state) return;
             if (state.projects) {
                 projects = state.projects;
+            }
+            if (state.stagesConfig) {
+                // Merge stagesConfig to preserve custom metrics
+                Object.keys(state.stagesConfig).forEach(stageId => {
+                    if (state.stagesConfig[stageId].customMetrics) {
+                        if (!stagesConfig[stageId]) {
+                            stagesConfig[stageId] = state.stagesConfig[stageId];
+                        } else {
+                            stagesConfig[stageId].customMetrics = state.stagesConfig[stageId].customMetrics;
+                        }
+                    }
+                });
             }
             if (state.currentProjectId && projects[state.currentProjectId]) {
                 currentProjectId = state.currentProjectId;
@@ -2757,6 +2785,11 @@
         }
         function loginWithGoogle() {
             const googleProvider = new firebase.auth.GoogleAuthProvider();
+            // Add credential hint for better UX on mobile
+            googleProvider.setCustomParameters({
+                prompt: 'select_account'
+            });
+            
             auth.signInWithPopup(googleProvider)
                 .then((result) => {
                     console.log('User signed in with Google:', result.user);
@@ -2832,18 +2865,36 @@
                 // חזור למצב הקודם
                 projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
             }
+            
+            // Update icon based on final state
+            const icon = document.getElementById('pullHandleIcon');
+            if (icon) {
+                icon.className = cardOpen ? 'fas fa-angle-double-right' : 'fas fa-angle-double-left';
+            }
         }
         function toggleCard() {
             if (window.innerWidth > 768) return; // רק במובייל
             cardOpen = !cardOpen;
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
+            
+            // Update icon direction
+            const icon = document.getElementById('pullHandleIcon');
+            if (icon) {
+                icon.className = cardOpen ? 'fas fa-angle-double-right' : 'fas fa-angle-double-left';
+            }
         }
         function closeCard() {
             if (window.innerWidth > 768) return;
             cardOpen = false;
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = '-200px';
+            
+            // Update icon direction
+            const icon = document.getElementById('pullHandleIcon');
+            if (icon) {
+                icon.className = 'fas fa-angle-double-left';
+            }
         }
     </script>
 </body>

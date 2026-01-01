@@ -8,17 +8,19 @@
     }
     .project-details-card {
         width: 250px;
-        left: -200px; /* Card hidden by default */
+        left: -200px; /* Card hidden by default - positioned immediately */
         height: auto; /* Changed from 300px to auto */
         max-height: 80vh; /* Allow taller card */
         transition: left 0.3s ease;
         overflow-y: auto; /* Make scrollable */
+        /* Prevent animation on page load */
+        animation: none !important;
     }
     .pull-handle {
-        right: -25px;
-        display: flex; /* מוצג במובייל */
-        width: 25px;
-        height: 50px;
+        right: -30px;
+        display: flex; /* Show on mobile */
+        width: 30px;
+        height: 60px;
         border-radius: 0 10px 10px 0;
     }
     .close-card-btn {
@@ -122,7 +124,7 @@
 :root {
     --primary-color: #8B0000;
     --secondary-color: #A52A2A;
-    --accent-color: #4CAF50; /* Changed from #FFD700 (yellow) to green */
+    --accent-color: #FF6B6B; /* Changed to coral red */
     --background-color: #FFF8E1;
     --card-background: #ffffff;
     --text-color: #333;
@@ -145,7 +147,7 @@
     --dark-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
     --dark-primary-color: #B80000;
     --dark-secondary-color: #8B0000;
-    --dark-accent-color: #66BB6A; /* Changed from #ADFF2F to darker green */
+    --dark-accent-color: #FF8787; /* Changed to lighter coral */
     --dark-graph-line-color: #FFD700;
     --dark-graph-area-color: rgba(255, 215, 0, 0.2);
     --font-size-base: 16px;
@@ -547,7 +549,7 @@ body.dark-mode .input-group input[type="number"], body.dark-mode .input-group in
     border-radius: 8px;
     cursor: pointer;
     font-size: calc(var(--font-size-base) * 1);
-    font-weight: 700;
+    font-weight: 400; /* Thinner font */
     transition: all 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
     align-self: flex-end;
 }
@@ -664,7 +666,8 @@ body.dark-mode .modal-content {
     transition: color 0.3s ease;
     position: absolute;
     top: 10px;
-    left: 20px;
+    right: 20px; /* Changed from left to right to avoid overlap */
+    left: auto; /* Override float left */
 }
 
 .close-button:hover, .close-button:focus {
@@ -776,18 +779,19 @@ body.dark-mode .modal-graph-container {
 }
 
 .graph-controls button {
-    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
+    background: linear-gradient(135deg, var(--accent-color), #FF8787);
     border: none;
     border-radius: 5px;
     padding: 5px 10px;
     cursor: pointer;
     font-size: calc(var(--font-size-base) * 0.8);
+    font-weight: 400; /* Thinner font */
     transition: background 0.3s ease;
     color: white;
 }
 
 .graph-controls button:hover {
-    background: linear-gradient(135deg, #66BB6A, #81C784);
+    background: linear-gradient(135deg, #FF8787, #FFA5A5);
 }
 
 .history-list {
@@ -1079,20 +1083,20 @@ input:checked + .slider:before {
 }
 
 .zoom-controls button {
-    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
+    background: linear-gradient(135deg, var(--accent-color), #FF8787);
     border: none;
     border-radius: 50%;
     width: 30px;
     height: 30px;
     cursor: pointer;
     font-size: 18px;
-    font-weight: bold;
+    font-weight: 400; /* Thinner font */
     transition: all 0.3s ease;
     color: white;
 }
 
 .zoom-controls button:hover {
-    background: linear-gradient(135deg, #66BB6A, #81C784);
+    background: linear-gradient(135deg, #FF8787, #FFA5A5);
     transform: scale(1.1);
 }
 
@@ -1309,6 +1313,7 @@ body.dark-mode .finance-input-group input, body.dark-mode .finance-input-group t
 
 .finance-input-buttons .add-income-btn {
     background: linear-gradient(135deg, #4CAF50, #66BB6A);
+    font-weight: 400; /* Thinner font */
 }
 
 .finance-input-buttons .add-income-btn:hover {
@@ -1317,6 +1322,7 @@ body.dark-mode .finance-input-group input, body.dark-mode .finance-input-group t
 
 .finance-input-buttons .add-expense-btn {
     background: linear-gradient(135deg, #F44336, #E57373);
+    font-weight: 400; /* Thinner font */
 }
 
 .finance-input-buttons .add-expense-btn:hover {
@@ -1684,18 +1690,26 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
 .pull-handle {
     position: absolute;
     top: 50%;
-    right: -20px;
-    width: 20px;
-    height: 40px;
+    transform: translateY(-50%);
+    right: -30px; /* Increased from -20px to be more visible */
+    width: 30px; /* Increased from 20px */
+    height: 60px; /* Increased from 40px */
     background: var(--primary-color);
     border-radius: 0 10px 10px 0;
     cursor: pointer;
     z-index: 999;
-    display: flex;
+    display: none; /* Hidden on desktop by default */
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 12px;
+    font-size: 16px; /* Larger icon */
+    box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+}
+
+.pull-handle:hover {
+    background: var(--secondary-color);
+    right: -32px;
 }
 
 .close-card-btn {
@@ -1824,21 +1838,21 @@ body.dark-mode .project-details-card:hover::-webkit-scrollbar-track {
 }
 
 .add-custom-property-btn {
-    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
+    background: linear-gradient(135deg, var(--accent-color), #FF8787);
     color: white;
     padding: 8px 15px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-size: calc(var(--font-size-base) * 0.9);
-    font-weight: 700;
+    font-weight: 400; /* Thinner font */
     transition: all 0.3s ease;
     width: 100%;
     margin-top: 15px;
 }
 
 .add-custom-property-btn:hover {
-    background: linear-gradient(135deg, #66BB6A, #81C784);
+    background: linear-gradient(135deg, #FF8787, #FFA5A5);
     transform: translateY(-2px);
 }
 
@@ -2063,20 +2077,20 @@ body.dark-mode .timeline-event-content {
 }
 
 .download-pdf-btn {
-    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
+    background: linear-gradient(135deg, var(--accent-color), #FF8787);
     color: white;
     padding: 10px 20px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-size: calc(var(--font-size-base) * 1);
-    font-weight: 700;
+    font-weight: 400; /* Thinner font */
     margin-top: 20px;
     transition: all 0.3s ease;
 }
 
 .download-pdf-btn:hover {
-    background: linear-gradient(135deg, #66BB6A, #81C784);
+    background: linear-gradient(135deg, #FF8787, #FFA5A5);
     transform: translateY(-2px);
 }
 
@@ -2517,12 +2531,13 @@ body.dark-mode .login-modal-content .email-form input {
 }
 
 .login-modal-content .email-form .buttons .login-btn {
-    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
+    background: linear-gradient(135deg, var(--accent-color), #FF8787);
     color: white;
+    font-weight: 400; /* Thinner font */
 }
 
 .login-modal-content .email-form .buttons .login-btn:hover {
-    background: linear-gradient(135deg, #66BB6A, #81C784);
+    background: linear-gradient(135deg, #FF8787, #FFA5A5);
     transform: translateY(-2px);
 }
 
@@ -2559,21 +2574,21 @@ body.dark-mode .login-modal-content .email-form input {
 
 .add-data-cube {
     display: inline-block;
-    background: linear-gradient(135deg, var(--accent-color), #66BB6A);
+    background: linear-gradient(135deg, var(--accent-color), #FF8787);
     color: white;
     padding: 12px 20px;
     border: none;
     border-radius: 50px;
     cursor: pointer;
     font-size: calc(var(--font-size-base) * 0.9);
-    font-weight: 700;
+    font-weight: 400; /* Thinner font */
     transition: all 0.3s ease, transform 0.2s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     margin: 10px;
 }
 
 .add-data-cube:hover {
-    background: linear-gradient(135deg, #66BB6A, #81C784);
+    background: linear-gradient(135deg, #FF8787, #FFA5A5);
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
