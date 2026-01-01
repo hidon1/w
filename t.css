@@ -2657,6 +2657,116 @@ body.dark-mode .login-modal-content .email-form input {
     text-decoration: underline;
 }
 
+.login-modal-content .separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 15px 0;
+    color: var(--light-text-color);
+}
+
+.login-modal-content .separator::before,
+.login-modal-content .separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.login-modal-content .separator span {
+    padding: 0 10px;
+    font-size: calc(var(--font-size-base) * 0.9);
+}
+
+body.dark-mode .login-modal-content .separator::before,
+body.dark-mode .login-modal-content .separator::after {
+    border-color: var(--dark-border-color);
+}
+
+.login-modal-content .email-form label {
+    color: var(--text-color);
+    font-size: calc(var(--font-size-base) * 0.95);
+    margin-bottom: 10px;
+}
+
+body.dark-mode .login-modal-content .email-form label {
+    color: var(--dark-text-color);
+}
+
+.login-modal-content .email-form .buttons .login-btn {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    flex: 1;
+}
+
+.login-modal-content .email-form .buttons .login-btn:hover {
+    background: linear-gradient(135deg, var(--secondary-color), #8B0000);
+    transform: translateY(-2px);
+}
+
+.alarm-modal {
+    z-index: 3000;
+}
+
+.alarm-modal-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 400px;
+}
+
+.alarm-modal-content h2 {
+    font-size: calc(var(--font-size-base) * 2);
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.alarm-modal-content p {
+    font-size: calc(var(--font-size-base) * 1.2);
+    margin-bottom: 30px;
+    color: var(--text-color);
+}
+
+.alarm-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.alarm-buttons button {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: calc(var(--font-size-base) * 1);
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+.stop-alarm-btn {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    color: white;
+}
+
+.stop-alarm-btn:hover {
+    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+    transform: translateY(-2px);
+}
+
+.snooze-alarm-btn {
+    background: linear-gradient(135deg, var(--accent-color), #FFD700);
+    color: black;
+}
+
+.snooze-alarm-btn:hover {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    transform: translateY(-2px);
+}
+
 .add-data-cube {
     display: inline-block;
     background: linear-gradient(135deg, var(--accent-color), #FFD700);
@@ -2798,6 +2908,7 @@ body.dark-mode .add-metric-modal-content input {
         left: 15px;
         width: 220px;
         height: 320px;
+        transition: none; /* Remove transition to prevent jumping on desktop */
     }
     .pull-handle {
         display: none;
