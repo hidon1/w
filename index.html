@@ -1063,7 +1063,9 @@
             }
             for (const stageId in stagesConfig) {
                 if (stageId === 'wineDetails') continue;
-                newProject.stages[stageId] = {};
+                newProject.stages[stageId] = {
+                    customMetrics: [] // Store custom metrics in project data
+                };
                 for (const metricId in stagesConfig[stageId].metrics) {
                     newProject.stages[stageId][metricId] = [];
                 }
@@ -1113,6 +1115,10 @@
                     if (stageId === 'wineDetails') continue;
                     if (!project.stages[stageId]) {
                         project.stages[stageId] = {};
+                    }
+                    // Initialize customMetrics array if not present
+                    if (!project.stages[stageId].customMetrics) {
+                        project.stages[stageId].customMetrics = [];
                     }
                     for (const metricId in stagesConfig[stageId].metrics) {
                         if (!project.stages[stageId][metricId]) {
@@ -1436,11 +1442,12 @@
                 }
             }
             
-            // Render custom metrics with the same styling
-            for (const metricId in stageConfig.customMetrics) {
-                const metric = stageConfig.customMetrics[metricId];
+            // Render custom metrics from project data
+            const customMetrics = projects[currentProjectId].stages[currentStageId].customMetrics || [];
+            customMetrics.forEach(metric => {
+                const metricId = metric.id;
                 const inputGroup = document.createElement('div');
-                inputGroup.className = 'input-group';
+                inputGroup.className = 'input-group custom-metric-input';
                 let inputElementHTML = '';
                 if (metric.type === 'date') {
                     inputElementHTML = `<input type="text" id="${metricId}Input" placeholder="${metric.placeholder || ''}" readonly>`;
@@ -1449,9 +1456,10 @@
                     inputElementHTML = `<input type="text" id="${metricId}Input" placeholder="${metric.placeholder || ''}" ${metric.type === 'number' ? `data-number-type="true" data-step="${metric.step}"` : ''}>`;
                 }
                 inputGroup.innerHTML = `
-                    <label for="${metricId}Input">${metric.name}:</label>
+                    <label for="${metricId}Input">${metric.name}: <span class="custom-badge" style="font-size: 0.7em; color: #8b5cf6;">מותאם</span></label>
                     ${inputElementHTML}
                     <button onclick="updateMetricValue('${currentStageId}', '${metricId}')">עדכן</button>
+                    <button onclick="deleteCustomMetric('${metricId}')" style="background: #ef4444; margin-right: 5px;">מחק</button>
                 `;
                 currentStageInputSection.appendChild(inputGroup);
                 if (metric.type === 'date') {
@@ -1464,15 +1472,24 @@
                         });
                     }
                 }
-            }
+            });
             updateDashboardForCurrentStage();
             renderPreviousStageOverview();
         }
         function updateMetricValue(stageId, metricId) {
             let inputElement;
             let value;
-            // Check if it's a custom metric or predefined metric
-            const metricConfig = stagesConfig[stageId].metrics[metricId] || stagesConfig[stageId].customMetrics[metricId];
+            // Check if it's a predefined metric
+            let metricConfig = stagesConfig[stageId].metrics[metricId];
+            
+            // If not predefined, check if it's a custom metric
+            if (!metricConfig) {
+                const customMetrics = projects[currentProjectId].stages[stageId].customMetrics || [];
+                const customMetric = customMetrics.find(m => m.id === metricId);
+                if (customMetric) {
+                    metricConfig = customMetric;
+                }
+            }
             
             if (!metricConfig) {
                 console.error('Metric not found:', metricId);
@@ -1529,7 +1546,7 @@
         function updateDashboardForCurrentStage() {
             fixedDashboardGrid.innerHTML = '';
             const stageMetrics = stagesConfig[currentStageId].metrics;
-            const customMetrics = stagesConfig[currentStageId].customMetrics;
+            const customMetrics = projects[currentProjectId].stages[currentStageId].customMetrics || [];
             
             // Render predefined metrics
             for (const metricId in stageMetrics) {
@@ -1548,22 +1565,22 @@
                 fixedDashboardGrid.appendChild(dashboardItem);
             }
             
-            // Render custom metrics with the same styling
-            for (const metricId in customMetrics) {
-                const metricConfig = customMetrics[metricId];
+            // Render custom metrics from project data
+            customMetrics.forEach(metricConfig => {
+                const metricId = metricConfig.id;
                 const currentEntries = projects[currentProjectId].stages[currentStageId][metricId];
                 const displayValue = currentEntries && currentEntries.length > 0
                     ? (metricConfig.type === 'number' ? currentEntries[currentEntries.length - 1].value.toFixed(metricConfig.precision || 2) : currentEntries[currentEntries.length - 1].value)
                     : '--';
                 const dashboardItem = document.createElement('div');
-                dashboardItem.className = 'dashboard-item';
+                dashboardItem.className = 'dashboard-item custom-metric';
                 dashboardItem.setAttribute('onclick', `openHistoryModal('${currentStageId}', '${metricId}', '${metricConfig.name}')`);
                 dashboardItem.innerHTML = `
-                    <h3>${metricConfig.name}</h3>
+                    <h3>${metricConfig.name} <span class="custom-badge">מותאם</span></h3>
                     <p>${displayValue}</p>
                 `;
                 fixedDashboardGrid.appendChild(dashboardItem);
-            }
+            });
         }
         function openHistoryModal(sectionId, metricId, metricName) {
             currentMetricTypeForModal = { sectionId, metricId };
@@ -1588,8 +1605,16 @@
                     }
                 }
             } else {
-                // Check predefined metrics first, then custom metrics
-                metricConfig = stagesConfig[sectionId].metrics[metricId] || stagesConfig[sectionId].customMetrics[metricId];
+                // Check predefined metrics first
+                metricConfig = stagesConfig[sectionId].metrics[metricId];
+                // If not predefined, check custom metrics
+                if (!metricConfig) {
+                    const customMetrics = projects[currentProjectId].stages[sectionId].customMetrics || [];
+                    const customMetric = customMetrics.find(m => m.id === metricId);
+                    if (customMetric) {
+                        metricConfig = customMetric;
+                    }
+                }
                 historyEntries = projects[currentProjectId].stages[sectionId][metricId];
             }
             const precision = metricConfig ? metricConfig.precision : null;
@@ -2906,23 +2931,23 @@
                 // Generate unique metric ID
                 const metricId = `customMetric_${Date.now()}`;
                 
-                // Add to stagesConfig customMetrics
-                if (!stagesConfig[currentStageId].customMetrics) {
-                    stagesConfig[currentStageId].customMetrics = {};
+                // Initialize customMetrics array if needed
+                if (!projects[currentProjectId].stages[currentStageId].customMetrics) {
+                    projects[currentProjectId].stages[currentStageId].customMetrics = [];
                 }
-                stagesConfig[currentStageId].customMetrics[metricId] = {
+                
+                // Add to project's custom metrics (persistent storage)
+                projects[currentProjectId].stages[currentStageId].customMetrics.push({
+                    id: metricId,
                     name: name,
                     type: 'text',
                     placeholder: 'הכנס ערך'
-                };
+                });
                 
                 // Initialize data array in project
-                if (!projects[currentProjectId].stages[currentStageId]) {
-                    projects[currentProjectId].stages[currentStageId] = {};
-                }
                 projects[currentProjectId].stages[currentStageId][metricId] = [];
                 
-                // Save to localStorage
+                // Save to localStorage and cloud
                 saveAllProjects();
                 
                 // Clear input and close modal
@@ -2931,9 +2956,31 @@
                 
                 // Re-render the current stage to show the new metric
                 loadCurrentStageContent();
+                updateDashboardForCurrentStage();
             } else {
                 alert('אנא הזן שם למדד.');
             }
+        }
+        function deleteCustomMetric(metricId) {
+            if (!confirm('האם אתה בטוח שברצונך למחוק מדד מותאם זה? כל הנתונים יימחקו.')) {
+                return;
+            }
+            
+            // Remove from custom metrics array
+            const customMetrics = projects[currentProjectId].stages[currentStageId].customMetrics || [];
+            projects[currentProjectId].stages[currentStageId].customMetrics = customMetrics.filter(m => m.id !== metricId);
+            
+            // Remove data
+            if (projects[currentProjectId].stages[currentStageId][metricId]) {
+                delete projects[currentProjectId].stages[currentStageId][metricId];
+            }
+            
+            // Save to localStorage and cloud
+            saveAllProjects();
+            
+            // Re-render
+            loadCurrentStageContent();
+            updateDashboardForCurrentStage();
         }
         function getCurrentAppState() {
             return {
