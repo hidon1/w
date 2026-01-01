@@ -719,10 +719,9 @@
             setInterval(checkReminders, 60000);
             checkReminders();
             const user = auth.currentUser;
-            if (!user && Object.keys(projects).length <= 1) {
-                // Don't force login modal on mobile - allow offline usage
-                // openLoginModal();
-            }
+            // Allow offline usage - don't force login modal
+            // Users can still login via sidebar if they want cloud sync
+            
             // הוספת event listeners להזזה
             projectDetailsCard.addEventListener('touchstart', handleTouchStart);
             projectDetailsCard.addEventListener('touchmove', handleTouchMove);

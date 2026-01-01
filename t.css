@@ -149,6 +149,8 @@
     --dark-graph-line-color: #FFD700;
     --dark-graph-area-color: rgba(255, 215, 0, 0.2);
     --font-size-base: 16px;
+    --card-width-desktop: 220px;
+    --card-max-height-desktop: 85vh;
 }
 
 * {
@@ -1664,9 +1666,9 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
     position: fixed;
     top: 15px;
     left: 15px;
-    width: 220px; /* Narrower for desktop */
+    width: var(--card-width-desktop); /* Narrower for desktop */
     height: auto;
-    max-height: 85vh; /* Taller for desktop */
+    max-height: var(--card-max-height-desktop); /* Taller for desktop */
     background: linear-gradient(135deg, var(--card-background), #f9f9f9);
     border-radius: var(--border-radius);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 0 10px var(--primary-color);
