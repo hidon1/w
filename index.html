@@ -1237,18 +1237,25 @@
                 }
             } else {
                 inputElement = document.getElementById(`${metricId}Input`);
-                value = inputElement.value;
+                value = inputElement.value.trim();
             }
-            if (metricConfig.type === 'number') {
-                value = parseFloat(value);
-                if (isNaN(value)) {
-                    alert('אנא הזן ערך מספרי תקין.');
-                    return;
+            
+            // Accept both numbers and text
+            // For number-type inputs, try to parse as number but allow text fallback
+            if (metricConfig.type === 'number' && value !== '') {
+                const numValue = parseFloat(value);
+                // If it's a valid number, use it; otherwise keep as text
+                if (!isNaN(numValue)) {
+                    value = numValue;
                 }
-            } else if (value === '') {
+                // Allow text input even for number fields
+            }
+            
+            if (value === '' || value === null || value === undefined) {
                 alert('אנא הזן ערך.');
                 return;
             }
+            
             const timestamp = new Date().toLocaleString('he-IL', {
                 year: 'numeric', month: 'numeric', day: 'numeric',
                 hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
@@ -1283,9 +1290,15 @@
             for (const metricId in stageMetrics) {
                 const metricConfig = stageMetrics[metricId];
                 const currentEntries = projects[currentProjectId].stages[currentStageId][metricId];
-                const displayValue = currentEntries && currentEntries.length > 0
-                    ? (metricConfig.type === 'number' ? currentEntries[currentEntries.length - 1].value.toFixed(metricConfig.precision) : currentEntries[currentEntries.length - 1].value)
-                    : '--';
+                let displayValue = '--';
+                if (currentEntries && currentEntries.length > 0) {
+                    const lastValue = currentEntries[currentEntries.length - 1].value;
+                    if (typeof lastValue === 'number' && metricConfig.precision != null) {
+                        displayValue = lastValue.toFixed(metricConfig.precision);
+                    } else {
+                        displayValue = lastValue;
+                    }
+                }
                 const dashboardItem = document.createElement('div');
                 dashboardItem.className = 'dashboard-item';
                 dashboardItem.setAttribute('onclick', `openHistoryModal('${currentStageId}', '${metricId}', '${metricConfig.name}')`);
@@ -1300,9 +1313,15 @@
             for (const metricId in customMetrics) {
                 const metricConfig = customMetrics[metricId];
                 const currentEntries = projects[currentProjectId].stages[currentStageId][metricId];
-                const displayValue = currentEntries && currentEntries.length > 0
-                    ? (metricConfig.type === 'number' ? currentEntries[currentEntries.length - 1].value.toFixed(metricConfig.precision || 2) : currentEntries[currentEntries.length - 1].value)
-                    : '--';
+                let displayValue = '--';
+                if (currentEntries && currentEntries.length > 0) {
+                    const lastValue = currentEntries[currentEntries.length - 1].value;
+                    if (typeof lastValue === 'number' && metricConfig.precision != null) {
+                        displayValue = lastValue.toFixed(metricConfig.precision || 2);
+                    } else {
+                        displayValue = lastValue;
+                    }
+                }
                 const dashboardItem = document.createElement('div');
                 dashboardItem.className = 'dashboard-item';
                 dashboardItem.setAttribute('onclick', `openHistoryModal('${currentStageId}', '${metricId}', '${metricConfig.name}')`);
@@ -1341,7 +1360,11 @@
                 historyEntries = projects[currentProjectId].stages[sectionId][metricId];
             }
             const precision = metricConfig ? metricConfig.precision : null;
-            if (metricConfig && metricConfig.type === 'number' && historyEntries && historyEntries.length > 0) {
+            // Check if we have any numeric values for graphing
+            const hasNumericValues = historyEntries && historyEntries.length > 0 && 
+                historyEntries.some(e => typeof e.value === 'number' && !isNaN(e.value));
+            
+            if (metricConfig && hasNumericValues) {
                 modalGraphSvg.style.display = 'block';
                 historyModal.style.display = 'flex';
                 setTimeout(() => {
@@ -1356,7 +1379,7 @@
                     const originalIndex = historyEntries.length - 1 - index;
                     const listItem = document.createElement('li');
                     let displayValue;
-                    if (metricConfig && metricConfig.type === 'number') {
+                    if (typeof entry.value === 'number' && metricConfig && metricConfig.precision != null) {
                         displayValue = entry.value.toFixed(precision);
                     } else {
                         displayValue = entry.value;
@@ -1376,7 +1399,11 @@
         }
         function drawModalGraph(entries, precision) {
             modalGraphSvg.innerHTML = '';
-            if (entries.length < 1) {
+            
+            // Filter only numeric entries for graph
+            const numericEntries = entries.filter(e => typeof e.value === 'number' && !isNaN(e.value));
+            
+            if (numericEntries.length < 1) {
                 return;
             }
             const svgWidth = modalGraphSvg.clientWidth;
@@ -1387,11 +1414,11 @@
             const paddingRight = 10;
             const graphWidth = svgWidth - paddingLeft - paddingRight;
             const graphHeight = svgHeight - paddingTop - paddingBottom;
-            let values = entries.map(e => e.value);
+            let values = numericEntries.map(e => e.value);
             let minValue = Math.min(...values);
             let maxValue = Math.max(...values);
             let averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
-            if (entries.length === 1 || minValue === maxValue) {
+            if (numericEntries.length === 1 || minValue === maxValue) {
                 const buffer = (values[0] * 0.1) || 1;
                 minValue = values[0] - buffer;
                 maxValue = values[0] + buffer;
@@ -1409,16 +1436,20 @@
                     compHistoryEntries = projects[comparisonProjectId].stages[currentMetricTypeForModal.sectionId][currentMetricTypeForModal.metricId];
                 }
                 if (compHistoryEntries && compHistoryEntries.length > 0) {
-                    comparisonEntries = compHistoryEntries;
-                    const compValues = compHistoryEntries.map(e => e.value);
-                    minValue = Math.min(minValue, ...compValues);
-                    maxValue = Math.max(maxValue, ...compValues);
-                    values = values.concat(compValues);
-                    averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+                    // Filter numeric values from comparison entries too
+                    const compNumericEntries = compHistoryEntries.filter(e => typeof e.value === 'number' && !isNaN(e.value));
+                    if (compNumericEntries.length > 0) {
+                        comparisonEntries = compNumericEntries;
+                        const compValues = compNumericEntries.map(e => e.value);
+                        minValue = Math.min(minValue, ...compValues);
+                        maxValue = Math.max(maxValue, ...compValues);
+                        values = values.concat(compValues);
+                        averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+                    }
                 }
             }
             const valueRange = maxValue - minValue;
-            const xScale = (index) => paddingLeft + (index / (entries.length - 1 || 1)) * graphWidth;
+            const xScale = (index) => paddingLeft + (index / (numericEntries.length - 1 || 1)) * graphWidth;
             const yScale = (value) => graphHeight - ((value - minValue) / valueRange) * graphHeight + paddingTop;
             const numYLabels = 3;
             for (let i = 0; i < numYLabels; i++) {
@@ -1440,7 +1471,7 @@
             }
             let linePath = '';
             let areaPath = `M ${paddingLeft} ${yScale(minValue)}`;
-            entries.forEach((entry, i) => {
+            numericEntries.forEach((entry, i) => {
                 const x = xScale(i);
                 const y = yScale(entry.value);
                 if (i === 0) {
@@ -1459,8 +1490,8 @@
                 modalGraphSvg.appendChild(circle);
                 const datePart = entry.timestamp.split(',')[0];
                 const timePart = entry.timestamp.split(',')[1] ? entry.timestamp.split(',')[1].trim() : '';
-                const interval = Math.ceil(entries.length / 5);
-                if (entries.length <= 2 || i % interval === 0 || i === entries.length - 1) {
+                const interval = Math.ceil(numericEntries.length / 5);
+                if (numericEntries.length <= 2 || i % interval === 0 || i === numericEntries.length - 1) {
                     const textX = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     textX.setAttribute('x', x);
                     textX.setAttribute('y', svgHeight - paddingBottom + 10);
@@ -1481,7 +1512,7 @@
                     modalGraphSvg.appendChild(textX);
                 }
             });
-            areaPath += `L ${xScale(entries.length - 1)} ${yScale(minValue)} L ${paddingLeft} ${yScale(minValue)} Z`;
+            areaPath += `L ${xScale(numericEntries.length - 1)} ${yScale(minValue)} L ${paddingLeft} ${yScale(minValue)} Z`;
             const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             area.setAttribute('d', areaPath);
             area.classList.add('modal-graph-area-path');
