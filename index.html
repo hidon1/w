@@ -103,7 +103,9 @@
     </div>
     <div class="container">
         <div class="project-details-card" id="projectDetailsCard">
-            <div class="pull-handle" onclick="toggleCard()"><i class="fas fa-chevron-left"></i></div>
+            <div class="pull-handle" onclick="toggleCard()">
+                <i class="fas fa-angle-double-left" id="pullHandleIcon"></i>
+            </div>
             <div class="close-card-btn" onclick="closeCard()">&times;</div>
             <h4>פרטי פרויקט</h4>
             <div class="project-details-item" data-metric-id="wineName" data-section="wineDetails">
@@ -2863,18 +2865,36 @@
                 // חזור למצב הקודם
                 projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
             }
+            
+            // Update icon based on final state
+            const icon = document.getElementById('pullHandleIcon');
+            if (icon) {
+                icon.className = cardOpen ? 'fas fa-angle-double-right' : 'fas fa-angle-double-left';
+            }
         }
         function toggleCard() {
             if (window.innerWidth > 768) return; // רק במובייל
             cardOpen = !cardOpen;
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
+            
+            // Update icon direction
+            const icon = document.getElementById('pullHandleIcon');
+            if (icon) {
+                icon.className = cardOpen ? 'fas fa-angle-double-right' : 'fas fa-angle-double-left';
+            }
         }
         function closeCard() {
             if (window.innerWidth > 768) return;
             cardOpen = false;
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = '-200px';
+            
+            // Update icon direction
+            const icon = document.getElementById('pullHandleIcon');
+            if (icon) {
+                icon.className = 'fas fa-angle-double-left';
+            }
         }
     </script>
 </body>
