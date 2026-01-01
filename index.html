@@ -3233,23 +3233,58 @@
         let isSidebarTouching = false;
         let sidebarStartX = 0;
         let sidebarCurrentX = 0;
+        let startY = 0;
+        let hasMoved = false;
         
         function handleTouchStart(e) {
             if (window.innerWidth > 768) return; // רק במובייל
             // Don't start dragging if touching a button or input
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'A') {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'A' || e.target.tagName === 'SPAN') {
                 return;
             }
+            // Only handle drag from the pull handle or card header area
+            const rect = projectDetailsCard.getBoundingClientRect();
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            
+            // Only drag from pull handle or top 50px of card
+            const pullHandle = projectDetailsCard.querySelector('.pull-handle');
+            const pullHandleRect = pullHandle ? pullHandle.getBoundingClientRect() : null;
+            const touchingHandle = pullHandleRect && touchX >= pullHandleRect.left && touchX <= pullHandleRect.right && touchY >= pullHandleRect.top && touchY <= pullHandleRect.bottom;
+            const touchingTop = touchY >= rect.top && touchY <= rect.top + 50;
+            
+            if (!touchingHandle && !touchingTop) {
+                // Allow scrolling in the card content
+                return;
+            }
+            
             isDragging = true;
+            hasMoved = false;
             startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
             currentX = startX;
             projectDetailsCard.style.transition = 'none'; // ביטול אנימציה במהלך הזזה
         }
         function handleTouchMove(e) {
             if (!isDragging || window.innerWidth > 768) return;
-            e.preventDefault();
+            
             currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
             const deltaX = currentX - startX;
+            const deltaY = currentY - startY;
+            
+            // If user is scrolling vertically more than horizontally, don't prevent default or drag
+            if (!hasMoved && Math.abs(deltaY) > Math.abs(deltaX)) {
+                isDragging = false;
+                return;
+            }
+            
+            hasMoved = true;
+            
+            // Only prevent default if we're actually dragging horizontally
+            if (Math.abs(deltaX) > 5) {
+                e.preventDefault();
+            }
             
             // For RTL: positive deltaX = drag right (open), negative = drag left (close)
             const currentLeft = cardOpen ? 15 : -200;
@@ -3262,6 +3297,7 @@
         function handleTouchEnd(e) {
             if (!isDragging || window.innerWidth > 768) return;
             isDragging = false;
+            hasMoved = false;
             projectDetailsCard.style.transition = 'left 0.3s ease'; // הוספת אנימציה חזרה
             const deltaX = currentX - startX;
             

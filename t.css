@@ -10,9 +10,12 @@
         width: 250px;
         left: -200px; /* Hidden by default, shows 50px handle */
         height: 300px;
+        max-height: 70vh; /* Don't exceed viewport height */
         transition: left 0.3s ease;
-        overflow-y: scroll; /* Make scrollable */
+        overflow-y: auto; /* Make scrollable */
+        overflow-x: hidden; /* Prevent horizontal scroll */
         -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        touch-action: pan-y; /* Allow vertical scrolling */
     }
     .pull-handle {
         right: -20px;
@@ -49,6 +52,13 @@
     .close-button {
         top: 20px;
         left: 20px;
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--font-size-base) * 1.5);
+        touch-action: manipulation;
     }
     
     /* Dashboard: more compact on mobile */
@@ -117,6 +127,14 @@
     }
     
     /* Stage overview below metrics */
+    .add-project-btn {
+        min-height: 44px;
+        padding: 12px 20px;
+        font-size: calc(var(--font-size-base) * 1);
+        touch-action: manipulation;
+    }
+    
+    /* Stage overview below metrics */
     .stage-overview-container {
         order: 2;
         margin-top: 20px;
@@ -135,6 +153,27 @@
     button, .input-group button, .modal button {
         min-height: 44px; /* Apple's recommended touch target */
         min-width: 44px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(139, 0, 0, 0.2);
+    }
+    
+    /* Ensure undo/cancel buttons in history list are touch-friendly */
+    .history-list li .undo-button {
+        min-height: 44px;
+        min-width: 60px;
+        padding: 10px 15px;
+        font-size: calc(var(--font-size-base) * 0.9);
+        touch-action: manipulation;
+    }
+    
+    /* Ensure all action buttons are clickable */
+    .project-actions button,
+    .finance-item-actions button,
+    .reminder-actions button {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 8px 12px;
+        touch-action: manipulation;
     }
     
     /* Make sidebar scrollable and ensure overflow is visible */
@@ -149,6 +188,17 @@
         max-height: 85vh;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+    }
+    
+    /* Specific modal scrolling areas */
+    .history-list,
+    .project-list,
+    .finance-list,
+    .reminders-list,
+    .timeline-container {
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
     }
 }
 
@@ -2912,8 +2962,13 @@ body.dark-mode .add-metric-modal-content input {
     .project-details-card {
         width: 200px;
         height: 250px;
+        max-height: 80vh; /* Don't exceed viewport height in landscape */
         left: -150px; /* Hidden by default, draggable */
         transition: left 0.3s ease;
+        overflow-y: auto; /* Make scrollable in landscape too */
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y; /* Allow vertical scrolling in landscape */
     }
     
     .pull-handle {
