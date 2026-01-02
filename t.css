@@ -6,6 +6,27 @@
         top: 35px;
         right: 20px;
     }
+    
+    /* Sidebar improvements for mobile */
+    .sidebar {
+        width: 250px; /* Smaller width */
+        right: -250px;
+        max-height: 100vh;
+        overflow-y: auto; /* Scrollable */
+    }
+    
+    .sidebar-toggle-handle {
+        display: flex; /* Show on mobile */
+    }
+    
+    .sidebar.open {
+        right: 0;
+    }
+    
+    .sidebar.open .sidebar-toggle-handle {
+        left: -35px;
+    }
+    
     .project-details-card {
         width: 250px;
         left: -200px; /* Card hidden by default - positioned immediately */
@@ -918,6 +939,44 @@ body.dark-mode .history-list li {
     flex-direction: column;
     border-left: 1px solid var(--border-color);
     overflow-y: auto;
+}
+
+.sidebar-toggle-handle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: -35px;
+    width: 35px;
+    height: 70px;
+    background: var(--primary-color);
+    border-radius: 10px 0 0 10px;
+    cursor: pointer;
+    z-index: 1051;
+    display: flex; /* Changed from none to flex as default for mobile-first */
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+}
+
+.sidebar-toggle-handle:hover {
+    background: var(--secondary-color);
+    left: -37px;
+}
+
+.sidebar-toggle-handle:active {
+    background: var(--secondary-color);
+}
+
+body.dark-mode .sidebar-toggle-handle {
+    background: var(--dark-primary-color);
+}
+
+body.dark-mode .sidebar-toggle-handle:hover,
+body.dark-mode .sidebar-toggle-handle:active {
+    background: var(--dark-secondary-color);
 }
 
 body.dark-mode .sidebar {
@@ -2527,6 +2586,10 @@ body.dark-mode .login-modal-content .email-form input {
     font-size: calc(var(--font-size-base) * 1);
     font-weight: 700;
     transition: all 0.3s ease;
+    /* Ensure touch events work on mobile */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 }
 
 .login-modal-content .email-form .buttons .register-btn {
@@ -2534,7 +2597,8 @@ body.dark-mode .login-modal-content .email-form input {
     color: white;
 }
 
-.login-modal-content .email-form .buttons .register-btn:hover {
+.login-modal-content .email-form .buttons .register-btn:hover,
+.login-modal-content .email-form .buttons .register-btn:active {
     background: linear-gradient(135deg, var(--secondary-color), #8B0000);
     transform: translateY(-2px);
 }
@@ -2687,6 +2751,10 @@ body.dark-mode .add-metric-modal-content input {
     }
     .close-card-btn {
         display: none;
+    }
+    
+    .sidebar-toggle-handle {
+        display: none !important; /* Hide on desktop */
     }
     
     /* Input section: 4 data cubes per row instead of 2 */

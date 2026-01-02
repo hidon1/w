@@ -38,6 +38,9 @@
         <span></span>
     </div>
     <div class="sidebar" id="sidebar">
+        <div class="sidebar-toggle-handle" onclick="toggleSidebar()">
+            <i class="fas fa-angle-double-left" id="sidebarToggleIcon"></i>
+        </div>
         <ul>
             <li><a href="#" onclick="closeSidebar(); showMainContent();">ראשי</a></li>
             <li><button onclick="openProjectManagementModal();">ניהול פרויקטים</button></li>
@@ -797,6 +800,16 @@
             hamburgerBtn.classList.toggle('open');
             sidebar.classList.toggle('open');
             sidebarOverlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+            
+            // Update toggle icon direction
+            const sidebarToggleIcon = document.getElementById('sidebarToggleIcon');
+            if (sidebarToggleIcon) {
+                if (sidebar.classList.contains('open')) {
+                    sidebarToggleIcon.className = 'fas fa-angle-double-right';
+                } else {
+                    sidebarToggleIcon.className = 'fas fa-angle-double-left';
+                }
+            }
         }
         function closeSidebar() {
             hamburgerBtn.classList.remove('open');
@@ -2891,6 +2904,7 @@
             
             if (!newPasswordEl || !confirmPasswordEl) {
                 console.error('Password input elements not found');
+                alert('שגיאה: לא נמצאו שדות הסיסמה. נסה לרענן את הדף.');
                 return;
             }
             
@@ -2930,10 +2944,22 @@
             } catch (error) {
                 console.error('Error saving site password:', error);
                 if (error.code === 'auth/provider-already-linked') {
-                    // Password provider already linked, user needs to re-authenticate before updating
-                    alert('כדי לעדכן את הסיסמה, עליך להתחבר מחדש תחילה. אנא צא וחזור לאתר, ולאחר מכן נסה שוב.');
+                    // Password provider already linked, try updating instead
+                    try {
+                        // User already has a password, need to update it
+                        // This requires re-authentication, so we'll inform the user
+                        alert('כדי לעדכן את הסיסמה, עליך להתחבר מחדש תחילה. אנא צא וחזור לאתר, ולאחר מכן נסה שוב.');
+                        closePasswordSetupModal();
+                    } catch (updateError) {
+                        console.error('Error updating password:', updateError);
+                        alert('שגיאה בעדכון הסיסמה: ' + updateError.message);
+                    }
                 } else if (error.code === 'auth/email-already-in-use') {
                     alert('כבר קיים חשבון עם אימייל זה. נסה להתחבר עם הסיסמה.');
+                    closePasswordSetupModal();
+                } else if (error.code === 'auth/requires-recent-login') {
+                    alert('נדרשת התחברות מחודשת. אנא צא ממערכת והתחבר שוב, ולאחר מכן נסה להגדיר סיסמה.');
+                    closePasswordSetupModal();
                 } else {
                     alert('שגיאה בשמירת הסיסמה: ' + error.message);
                 }
