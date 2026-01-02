@@ -2766,10 +2766,9 @@
             // Set up real-time listener for changes
             const docRef = db.collection('wineMonitoringStates').doc(user.uid);
             realtimeUnsubscribe = docRef.onSnapshot((doc) => {
-                if (doc.exists) {
+                if (doc.exists && doc.metadata && !doc.metadata.hasPendingWrites) {
+                    // This is a remote update (not from this device)
                     const data = doc.data();
-                    // Only update if the change came from another device
-                    // We check this by comparing timestamps
                     const remoteState = data.state;
                     const localSavedAt = localStorage.getItem('lastSavedAt');
                     
@@ -2782,7 +2781,7 @@
                         showSyncNotification();
                     }
                 } else {
-                    console.log('אין מסמך זמין');
+                    console.log('עדכון מקומי - לא מעדכן UI');
                 }
             }, (error) => {
                 console.error('שגיאה בהאזנה לשינויים:', error);
@@ -2805,6 +2804,7 @@
             notification.style.fontWeight = 'bold';
             notification.textContent = '✓ הנתונים עודכנו';
             notification.style.animation = 'slideInRight 0.3s ease-out';
+            notification.className = 'sync-notification';
             
             document.body.appendChild(notification);
             
@@ -2812,14 +2812,15 @@
             setTimeout(() => {
                 notification.style.animation = 'fadeOut 0.3s ease-out';
                 setTimeout(() => {
-                    document.body.removeChild(notification);
+                    // Check if element still exists before removing
+                    if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                    }
                 }, 300);
             }, 2000);
         }
         
-        // Update saveStateToFirebase to set the savedAt timestamp
-        const originalSaveStateToFirebase = saveStateToFirebase;
-        saveStateToFirebase = async function() {
+        async function saveStateToFirebase() {
             const user = auth.currentUser;
             if (!user) {
                 console.log('לא מחובר – שומר רק בלוקאלי');
@@ -2827,6 +2828,7 @@
                 return;
             }
             const state = getCurrentAppState();
+            // Store timestamp for change detection
             localStorage.setItem('lastSavedAt', state.savedAt);
             
             try {
