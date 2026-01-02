@@ -952,7 +952,7 @@ body.dark-mode .history-list li {
     border-radius: 10px 0 0 10px;
     cursor: pointer;
     z-index: 1051;
-    display: none; /* Hidden on desktop */
+    display: flex; /* Changed from none to flex as default for mobile-first */
     align-items: center;
     justify-content: center;
     color: white;
@@ -968,6 +968,15 @@ body.dark-mode .history-list li {
 
 .sidebar-toggle-handle:active {
     background: var(--secondary-color);
+}
+
+body.dark-mode .sidebar-toggle-handle {
+    background: var(--dark-primary-color);
+}
+
+body.dark-mode .sidebar-toggle-handle:hover,
+body.dark-mode .sidebar-toggle-handle:active {
+    background: var(--dark-secondary-color);
 }
 
 body.dark-mode .sidebar {
@@ -2742,6 +2751,10 @@ body.dark-mode .add-metric-modal-content input {
     }
     .close-card-btn {
         display: none;
+    }
+    
+    .sidebar-toggle-handle {
+        display: none !important; /* Hide on desktop */
     }
     
     /* Input section: 4 data cubes per row instead of 2 */
