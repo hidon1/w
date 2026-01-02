@@ -55,6 +55,7 @@
             <div class="auth-section">
                 <div class="auth-status" id="authStatus">לא מחובר</div>
                 <button id="loginBtn">התחבר עם Google</button>
+                <button id="changeSitePasswordBtn" class="change-password-btn" style="display:none;" onclick="openPasswordSetupModal()">שנה סיסמת אתר</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
             </div>
             <div class="divider"></div>
@@ -76,20 +77,33 @@
         <div class="login-modal-content">
             <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
             <h2>ברוכים הבאים!</h2>
-            <p>כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמא. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
+            <p>כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
             <button class="google-btn" onclick="loginWithGoogle()">
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
                 התחבר עם Google
             </button>
             <div class="email-form">
-                <input type="email" id="emailInput" placeholder="אימייל" required>
-                <input type="password" id="passwordInput" placeholder="סיסמא" required>
+                <input type="email" id="siteEmailInput" placeholder="אימייל" required>
+                <input type="password" id="sitePasswordInput" placeholder="סיסמה לאתר" required>
                 <div class="buttons">
-                    <button class="register-btn" onclick="registerWithEmail()">רישום</button>
-                    <button class="login-btn" onclick="loginWithEmail()">התחבר</button>
+                    <button class="login-btn" onclick="loginWithSitePassword()">התחבר</button>
                 </div>
             </div>
             <button class="skip-btn" onclick="skipLogin()">המשך ללא התחברות</button>
+        </div>
+    </div>
+    <div class="login-modal" id="passwordSetupModal">
+        <div class="login-modal-content">
+            <h2>הגדרת סיסמה לאתר</h2>
+            <p>כדי להתחבר לאתר ממכשירים אחרים, אנא הגדר סיסמה לאתר. הסיסמה תשמש להתחברות עם האימייל שלך מכל מקום.</p>
+            <div class="email-form">
+                <input type="password" id="newSitePassword" placeholder="סיסמה חדשה לאתר" required minlength="6">
+                <input type="password" id="confirmSitePassword" placeholder="אימות סיסמה" required minlength="6">
+                <div class="buttons">
+                    <button class="register-btn" onclick="saveSitePassword()">שמור סיסמה</button>
+                    <button class="skip-btn" onclick="skipPasswordSetup()">דלג בינתיים</button>
+                </div>
+            </div>
         </div>
     </div>
     <div class="top-section-wrapper">
@@ -2726,6 +2740,7 @@
         window.addEventListener('load', () => {
             const loginBtn = document.getElementById('loginBtn');
             const logoutBtn = document.getElementById('logoutBtn');
+            const changeSitePasswordBtn = document.getElementById('changeSitePasswordBtn');
             const authStatus = document.getElementById('authStatus');
             const googleProvider = new firebase.auth.GoogleAuthProvider();
             auth.getRedirectResult().then((result) => {
@@ -2757,12 +2772,22 @@
                 if (user) {
                     if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
                     if (loginBtn) loginBtn.style.display = 'none';
+                    if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'inline-block';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     await loadStateFromFirebase(user);
                     closeLoginModal();
+                    
+                    // Check if user signed in with Google and needs to set site password
+                    if (user.providerData && user.providerData.length > 0) {
+                        const googleProvider = user.providerData.find(p => p.providerId === 'google.com');
+                        if (googleProvider) {
+                            await checkAndPromptForSitePassword(user);
+                        }
+                    }
                 } else {
                     if (authStatus) authStatus.textContent = 'לא מחובר';
                     if (loginBtn) loginBtn.style.display = 'inline-block';
+                    if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'none';
                     if (logoutBtn) logoutBtn.style.display = 'none';
                     openLoginModal();
                 }
@@ -2785,52 +2810,178 @@
         }
         function loginWithGoogle() {
             const googleProvider = new firebase.auth.GoogleAuthProvider();
-            // Add credential hint for better UX on mobile
+            // Detect mobile using multiple methods for better reliability
+            const isMobile = (function() {
+                // Check for touch support
+                const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                // Check screen size
+                const isSmallScreen = window.innerWidth <= 768;
+                // Check user agent as fallback
+                const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                // Consider it mobile if it has touch AND small screen, OR matches mobile UA
+                return (hasTouch && isSmallScreen) || mobileUA;
+            })();
+            
             googleProvider.setCustomParameters({
                 prompt: 'select_account'
             });
             
-            auth.signInWithPopup(googleProvider)
-                .then((result) => {
-                    console.log('User signed in with Google:', result.user);
-                    closeLoginModal();
-                })
-                .catch((error) => {
-                    console.error('Popup failed, trying redirect:', error);
-                    auth.signInWithRedirect(googleProvider);
-                });
+            if (isMobile) {
+                // On mobile, use redirect for better UX (no popup issues)
+                auth.signInWithRedirect(googleProvider);
+            } else {
+                // On desktop, try popup first with fallback to redirect
+                auth.signInWithPopup(googleProvider)
+                    .then((result) => {
+                        console.log('User signed in with Google:', result.user);
+                        closeLoginModal();
+                    })
+                    .catch((error) => {
+                        console.error('Popup failed, trying redirect:', error);
+                        auth.signInWithRedirect(googleProvider);
+                    });
+            }
         }
-        function registerWithEmail() {
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
+        
+        async function checkAndPromptForSitePassword(user) {
+            try {
+                // Check if user has a site password set in Firestore
+                const userDoc = await db.collection('userSitePasswords').doc(user.uid).get();
+                
+                if (!userDoc.exists) {
+                    // User doesn't have a site password, prompt them to set one
+                    openPasswordSetupModal();
+                }
+            } catch (error) {
+                console.error('Error checking site password:', error);
+            }
+        }
+        
+        function openPasswordSetupModal() {
+            const modal = document.getElementById('passwordSetupModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+        
+        function closePasswordSetupModal() {
+            const modal = document.getElementById('passwordSetupModal');
+            if (modal) {
+                modal.style.display = 'none';
+                // Clear inputs
+                document.getElementById('newSitePassword').value = '';
+                document.getElementById('confirmSitePassword').value = '';
+            }
+        }
+        
+        function skipPasswordSetup() {
+            closePasswordSetupModal();
+        }
+        
+        async function saveSitePassword() {
+            const user = auth.currentUser;
+            if (!user || !user.email) {
+                alert('אנא התחבר קודם.');
+                return;
+            }
+            
+            const newPasswordEl = document.getElementById('newSitePassword');
+            const confirmPasswordEl = document.getElementById('confirmSitePassword');
+            
+            if (!newPasswordEl || !confirmPasswordEl) {
+                console.error('Password input elements not found');
+                return;
+            }
+            
+            const newPassword = newPasswordEl.value;
+            const confirmPassword = confirmPasswordEl.value;
+            
+            if (!newPassword || !confirmPassword) {
+                alert('אנא מלא את כל השדות.');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('הסיסמה חייבת להיות לפחות 6 תווים.');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('הסיסמאות אינן תואמות.');
+                return;
+            }
+            
+            try {
+                // Link email/password provider to the existing Google account
+                const credential = firebase.auth.EmailAuthProvider.credential(user.email, newPassword);
+                await user.linkWithCredential(credential);
+                
+                // Save a marker in Firestore that this user has set up site password
+                await db.collection('userSitePasswords').doc(user.uid).set({
+                    email: user.email,
+                    hasPassword: true,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                alert('הסיסמה נשמרה בהצלחה! עכשיו תוכל להתחבר עם ' + user.email + ' והסיסמה שהגדרת ממכשירים אחרים.');
+                closePasswordSetupModal();
+            } catch (error) {
+                console.error('Error saving site password:', error);
+                if (error.code === 'auth/provider-already-linked') {
+                    // Password provider already linked, user needs to re-authenticate before updating
+                    alert('כדי לעדכן את הסיסמה, עליך להתחבר מחדש תחילה. אנא צא וחזור לאתר, ולאחר מכן נסה שוב.');
+                } else if (error.code === 'auth/email-already-in-use') {
+                    alert('כבר קיים חשבון עם אימייל זה. נסה להתחבר עם הסיסמה.');
+                } else {
+                    alert('שגיאה בשמירת הסיסמה: ' + error.message);
+                }
+            }
+        }
+        
+        async function loginWithSitePassword() {
+            const email = document.getElementById('siteEmailInput').value;
+            const password = document.getElementById('sitePasswordInput').value;
+            
             if (!email || !password) {
                 alert('אנא מלא את כל השדות.');
                 return;
             }
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    console.log('User registered:', userCredential.user);
-                })
-                .catch((error) => {
-                    console.error('Error registering:', error);
-                    alert('שגיאה ברישום: ' + error.message);
-                });
-        }
-        function loginWithEmail() {
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
-            if (!email || !password) {
-                alert('אנא מלא את כל השדות.');
-                return;
-            }
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    console.log('User signed in:', userCredential.user);
-                })
-                .catch((error) => {
-                    console.error('Error signing in:', error);
+            
+            try {
+                // Sign in with email and password
+                await auth.signInWithEmailAndPassword(email, password);
+                console.log('User signed in with site password');
+                closeLoginModal();
+            } catch (error) {
+                console.error('Error during site password login:', error);
+                if (error.code === 'auth/user-not-found') {
+                    alert('משתמש לא נמצא. אנא התחבר תחילה דרך Google כדי ליצור חשבון.');
+                } else if (error.code === 'auth/wrong-password') {
+                    alert('סיסמא שגויה.');
+                } else {
                     alert('שגיאה בהתחברות: ' + error.message);
-                });
+                }
+            }
+        }
+        
+        /**
+         * Deprecated: Email/password registration removed in favor of Google OAuth
+         * This function is kept for backward compatibility but redirects to Google login
+         * Will be removed in a future version
+         */
+        function registerWithEmail() {
+            alert('אנא השתמש בכפתור "התחבר עם Google" להרשמה.');
+        }
+        
+        /**
+         * Deprecated: Legacy email/password login replaced with site password login
+         * This function is kept for backward compatibility and calls the new implementation
+         * Will be removed in a future version
+         */
+        function loginWithEmail() {
+            loginWithSitePassword();
         }
         // פונקציות הזזה לכרטיסיה במובייל
         function handleTouchStart(e) {
