@@ -589,9 +589,15 @@ body.dark-mode .input-group input[type="number"], body.dark-mode .input-group in
     font-weight: 400; /* Thinner font */
     transition: all 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
     align-self: flex-end;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
 }
 
-.input-group button:hover {
+.input-group button:hover,
+.input-group button:active {
     background: linear-gradient(135deg, var(--secondary-color), #8B0000);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -1050,6 +1056,11 @@ body.dark-mode .sidebar {
     background: none;
     width: 100%;
     cursor: pointer;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
 }
 
 body.dark-mode .sidebar ul li a, body.dark-mode .sidebar ul li button {
@@ -1329,9 +1340,15 @@ body.dark-mode .project-list li:hover {
     transition: all 0.3s ease;
     width: 100%;
     margin-top: 20px;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
 }
 
-.add-project-btn:hover {
+.add-project-btn:hover,
+.add-project-btn:active {
     background: linear-gradient(135deg, var(--secondary-color), #8B0000);
     transform: translateY(-2px);
 }
@@ -1399,6 +1416,11 @@ body.dark-mode .finance-input-group input, body.dark-mode .finance-input-group t
     font-size: calc(var(--font-size-base) * 1);
     font-weight: 700;
     transition: all 0.3s ease;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
 }
 
 .finance-input-buttons .add-income-btn {
@@ -1406,7 +1428,8 @@ body.dark-mode .finance-input-group input, body.dark-mode .finance-input-group t
     font-weight: 400; /* Thinner font */
 }
 
-.finance-input-buttons .add-income-btn:hover {
+.finance-input-buttons .add-income-btn:hover,
+.finance-input-buttons .add-income-btn:active {
     background: linear-gradient(135deg, #43a047, #4CAF50);
 }
 
@@ -1415,7 +1438,8 @@ body.dark-mode .finance-input-group input, body.dark-mode .finance-input-group t
     font-weight: 400; /* Thinner font */
 }
 
-.finance-input-buttons .add-expense-btn:hover {
+.finance-input-buttons .add-expense-btn:hover,
+.finance-input-buttons .add-expense-btn:active {
     background: linear-gradient(135deg, #d32f2f, #F44336);
 }
 
@@ -1937,8 +1961,8 @@ body.dark-mode .project-details-card:hover::-webkit-scrollbar-track {
     font-size: calc(var(--font-size-base) * 0.9);
     font-weight: 400; /* Thinner font */
     transition: all 0.3s ease;
-    width: 100%;
-    margin-top: 15px;
+    width: calc(100% - 10px); /* Account for padding */
+    margin: 15px 5px 5px 5px;
     /* Ensure touch events work */
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
@@ -1946,12 +1970,14 @@ body.dark-mode .project-details-card:hover::-webkit-scrollbar-track {
     position: relative;
     z-index: 10; /* Ensure it's above other elements */
     min-height: 44px; /* Minimum touch target size */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .add-custom-property-btn:hover,
 .add-custom-property-btn:active {
     background: linear-gradient(135deg, #FFB366, #FFC999);
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 #datePickerModal .modal-content {
@@ -2489,6 +2515,11 @@ body.dark-mode .add-reminder-form input, body.dark-mode .add-reminder-form texta
     font-size: calc(var(--font-size-base) * 0.9);
     margin: 5px;
     transition: all 0.3s ease;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
 }
 
 .auth-section button:hover {
