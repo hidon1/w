@@ -3158,11 +3158,8 @@
         }
         function setCardFabVisibility() {
             if (!cardFab) return;
-            if (window.innerWidth <= 768) {
-                cardFab.style.display = 'flex';
-            } else {
-                cardFab.style.display = 'none';
-            }
+            const shouldShow = window.innerWidth <= 768 && !cardOpen;
+            cardFab.style.display = shouldShow ? 'flex' : 'none';
         }
         // פונקציות הזזה לכרטיסיה במובייל
         function handleTouchStart(e) {
@@ -3204,6 +3201,7 @@
                 icon.className = cardOpen ? 'fas fa-angle-double-left' : 'fas fa-angle-double-right';
             }
             updateCardFabState();
+            setCardFabVisibility();
             projectDetailsCard.style.pointerEvents = cardOpen ? 'auto' : 'none';
         }
         function updateCardFabState() {
@@ -3231,6 +3229,7 @@
                 icon.className = cardOpen ? 'fas fa-angle-double-left' : 'fas fa-angle-double-right';
             }
             updateCardFabState();
+            setCardFabVisibility();
         }
         function closeCard() {
             if (window.innerWidth > 768) return;
@@ -3245,6 +3244,7 @@
                 icon.className = 'fas fa-angle-double-right';
             }
             updateCardFabState();
+            setCardFabVisibility();
         }
     </script>
 </body>
