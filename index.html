@@ -121,7 +121,7 @@
     <div class="container">
         <div class="project-details-card" id="projectDetailsCard">
             <div class="pull-handle" onclick="toggleCard()">
-                <i class="fas fa-angle-double-left" id="pullHandleIcon"></i>
+                <i class="fas fa-angle-double-right" id="pullHandleIcon"></i>
             </div>
             <div class="close-card-btn" onclick="closeCard()">&times;</div>
             <h4>פרטי פרויקט</h4>
@@ -3148,7 +3148,7 @@
             // Update icon based on final state
             const icon = document.getElementById('pullHandleIcon');
             if (icon) {
-                icon.className = cardOpen ? 'fas fa-angle-double-right' : 'fas fa-angle-double-left';
+                icon.className = cardOpen ? 'fas fa-angle-double-left' : 'fas fa-angle-double-right';
             }
         }
         function toggleCard() {
@@ -3160,7 +3160,7 @@
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
             if (icon) {
-                icon.className = cardOpen ? 'fas fa-angle-double-right' : 'fas fa-angle-double-left';
+                icon.className = cardOpen ? 'fas fa-angle-double-left' : 'fas fa-angle-double-right';
             }
         }
         function closeCard() {
@@ -3172,7 +3172,7 @@
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
             if (icon) {
-                icon.className = 'fas fa-angle-double-left';
+                icon.className = 'fas fa-angle-double-right';
             }
         }
     </script>

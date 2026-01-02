@@ -38,11 +38,14 @@
         animation: none !important;
     }
     .pull-handle {
-        right: -30px;
+        right: -22px;
         display: flex; /* Show on mobile */
-        width: 30px;
-        height: 60px;
-        border-radius: 0 10px 10px 0;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.25);
     }
     .close-card-btn {
         top: 5px;
