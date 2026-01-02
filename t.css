@@ -145,7 +145,7 @@
 :root {
     --primary-color: #8B0000;
     --secondary-color: #A52A2A;
-    --accent-color: #FF6B6B; /* Changed to coral red */
+    --accent-color: #FF8C42; /* Soft orange */
     --background-color: #FFF8E1;
     --card-background: #ffffff;
     --text-color: #333;
@@ -168,7 +168,7 @@
     --dark-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
     --dark-primary-color: #B80000;
     --dark-secondary-color: #8B0000;
-    --dark-accent-color: #FF8787; /* Changed to lighter coral */
+    --dark-accent-color: #FFB366; /* Lighter soft orange for dark mode */
     --dark-graph-line-color: #FFD700;
     --dark-graph-area-color: rgba(255, 215, 0, 0.2);
     --font-size-base: 16px;
@@ -199,6 +199,22 @@ body {
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from { 
+        opacity: 0; 
+        transform: translateX(100px);
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 
 body.dark-mode {
@@ -800,19 +816,26 @@ body.dark-mode .modal-graph-container {
 }
 
 .graph-controls button {
-    background: linear-gradient(135deg, var(--accent-color), #FF8787);
+    background: linear-gradient(135deg, var(--accent-color), #FFB366);
     border: none;
     border-radius: 5px;
-    padding: 5px 10px;
+    padding: 8px 12px; /* Increased padding for better touch */
     cursor: pointer;
     font-size: calc(var(--font-size-base) * 0.8);
     font-weight: 400; /* Thinner font */
     transition: background 0.3s ease;
     color: white;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
+    min-width: 44px;
 }
 
-.graph-controls button:hover {
-    background: linear-gradient(135deg, #FF8787, #FFA5A5);
+.graph-controls button:hover,
+.graph-controls button:active {
+    background: linear-gradient(135deg, #FFB366, #FFC999);
 }
 
 .history-list {
@@ -1142,20 +1165,28 @@ input:checked + .slider:before {
 }
 
 .zoom-controls button {
-    background: linear-gradient(135deg, var(--accent-color), #FF8787);
+    background: linear-gradient(135deg, var(--accent-color), #FFB366);
     border: none;
     border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    width: 35px;
+    height: 35px;
     cursor: pointer;
     font-size: 18px;
     font-weight: 400; /* Thinner font */
     transition: all 0.3s ease;
     color: white;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.zoom-controls button:hover {
-    background: linear-gradient(135deg, #FF8787, #FFA5A5);
+.zoom-controls button:hover,
+.zoom-controls button:active {
+    background: linear-gradient(135deg, #FFB366, #FFC999);
     transform: scale(1.1);
 }
 
@@ -1897,9 +1928,9 @@ body.dark-mode .project-details-card:hover::-webkit-scrollbar-track {
 }
 
 .add-custom-property-btn {
-    background: linear-gradient(135deg, var(--accent-color), #FF8787);
+    background: linear-gradient(135deg, var(--accent-color), #FFB366);
     color: white;
-    padding: 8px 15px;
+    padding: 12px 15px; /* Increased padding for better touch target */
     border: none;
     border-radius: 8px;
     cursor: pointer;
@@ -1908,10 +1939,18 @@ body.dark-mode .project-details-card:hover::-webkit-scrollbar-track {
     transition: all 0.3s ease;
     width: 100%;
     margin-top: 15px;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    position: relative;
+    z-index: 10; /* Ensure it's above other elements */
+    min-height: 44px; /* Minimum touch target size */
 }
 
-.add-custom-property-btn:hover {
-    background: linear-gradient(135deg, #FF8787, #FFA5A5);
+.add-custom-property-btn:hover,
+.add-custom-property-btn:active {
+    background: linear-gradient(135deg, #FFB366, #FFC999);
     transform: translateY(-2px);
 }
 
@@ -2136,7 +2175,7 @@ body.dark-mode .timeline-event-content {
 }
 
 .download-pdf-btn {
-    background: linear-gradient(135deg, var(--accent-color), #FF8787);
+    background: linear-gradient(135deg, var(--accent-color), #FFB366);
     color: white;
     padding: 10px 20px;
     border: none;
@@ -2146,10 +2185,16 @@ body.dark-mode .timeline-event-content {
     font-weight: 400; /* Thinner font */
     margin-top: 20px;
     transition: all 0.3s ease;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
 }
 
-.download-pdf-btn:hover {
-    background: linear-gradient(135deg, #FF8787, #FFA5A5);
+.download-pdf-btn:hover,
+.download-pdf-btn:active {
+    background: linear-gradient(135deg, #FFB366, #FFC999);
     transform: translateY(-2px);
 }
 
@@ -2460,12 +2505,18 @@ body.dark-mode .add-reminder-form input, body.dark-mode .add-reminder-form texta
 }
 
 .auth-section .change-password-btn {
-    background: linear-gradient(135deg, var(--accent-color), #FF8787);
+    background: linear-gradient(135deg, var(--accent-color), #FFB366);
     font-size: calc(var(--font-size-base) * 0.8);
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
 }
 
-.auth-section .change-password-btn:hover {
-    background: linear-gradient(135deg, #FF8787, #FFA5A5);
+.auth-section .change-password-btn:hover,
+.auth-section .change-password-btn:active {
+    background: linear-gradient(135deg, #FFB366, #FFC999);
 }
 
 .login-modal {
@@ -2604,13 +2655,18 @@ body.dark-mode .login-modal-content .email-form input {
 }
 
 .login-modal-content .email-form .buttons .login-btn {
-    background: linear-gradient(135deg, var(--accent-color), #FF8787);
+    background: linear-gradient(135deg, var(--accent-color), #FFB366);
     color: white;
     font-weight: 400; /* Thinner font */
+    /* Ensure touch events work on mobile */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 }
 
-.login-modal-content .email-form .buttons .login-btn:hover {
-    background: linear-gradient(135deg, #FF8787, #FFA5A5);
+.login-modal-content .email-form .buttons .login-btn:hover,
+.login-modal-content .email-form .buttons .login-btn:active {
+    background: linear-gradient(135deg, #FFB366, #FFC999);
     transform: translateY(-2px);
 }
 
@@ -2647,7 +2703,7 @@ body.dark-mode .login-modal-content .email-form input {
 
 .add-data-cube {
     display: inline-block;
-    background: linear-gradient(135deg, var(--accent-color), #FF8787);
+    background: linear-gradient(135deg, var(--accent-color), #FFB366);
     color: white;
     padding: 12px 20px;
     border: none;
@@ -2658,10 +2714,16 @@ body.dark-mode .login-modal-content .email-form input {
     transition: all 0.3s ease, transform 0.2s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     margin: 10px;
+    /* Ensure touch events work */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
 }
 
-.add-data-cube:hover {
-    background: linear-gradient(135deg, #FF8787, #FFA5A5);
+.add-data-cube:hover,
+.add-data-cube:active {
+    background: linear-gradient(135deg, #FFB366, #FFC999);
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
