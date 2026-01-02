@@ -2750,6 +2750,100 @@
                 console.error('שגיאה בטעינת מצב מפיירבייס:', err);
             }
         }
+        
+        // Real-time synchronization listener
+        let realtimeUnsubscribe = null;
+        function setupRealtimeSync(user) {
+            if (!user) {
+                // Unsubscribe if user logs out
+                if (realtimeUnsubscribe) {
+                    realtimeUnsubscribe();
+                    realtimeUnsubscribe = null;
+                }
+                return;
+            }
+            
+            // Set up real-time listener for changes
+            const docRef = db.collection('wineMonitoringStates').doc(user.uid);
+            realtimeUnsubscribe = docRef.onSnapshot((doc) => {
+                if (doc.exists && doc.metadata && !doc.metadata.hasPendingWrites) {
+                    // This is a remote update (not from this device)
+                    const data = doc.data();
+                    const remoteState = data.state;
+                    const localSavedAt = localStorage.getItem('lastSavedAt');
+                    
+                    if (remoteState && remoteState.savedAt && remoteState.savedAt !== localSavedAt) {
+                        console.log('התקבל עדכון מהענן - מעדכן את הנתונים');
+                        applyStateToUI(remoteState);
+                        localStorage.setItem('lastSavedAt', remoteState.savedAt);
+                        
+                        // Show a brief notification to user
+                        showSyncNotification();
+                    }
+                } else {
+                    console.log('עדכון מקומי - לא מעדכן UI');
+                }
+            }, (error) => {
+                console.error('שגיאה בהאזנה לשינויים:', error);
+            });
+        }
+        
+        function showSyncNotification() {
+            // Create a temporary notification element
+            const notification = document.createElement('div');
+            notification.style.position = 'fixed';
+            notification.style.top = '80px';
+            notification.style.right = '20px';
+            notification.style.background = 'linear-gradient(135deg, #4CAF50, #66BB6A)';
+            notification.style.color = 'white';
+            notification.style.padding = '10px 20px';
+            notification.style.borderRadius = '8px';
+            notification.style.zIndex = '9999';
+            notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+            notification.style.fontSize = '14px';
+            notification.style.fontWeight = 'bold';
+            notification.textContent = '✓ הנתונים עודכנו';
+            notification.style.animation = 'slideInRight 0.3s ease-out';
+            notification.className = 'sync-notification';
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 2 seconds
+            setTimeout(() => {
+                notification.style.animation = 'fadeOut 0.3s ease-out';
+                setTimeout(() => {
+                    // Check if element still exists before removing
+                    if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 2000);
+        }
+        
+        async function saveStateToFirebase() {
+            const user = auth.currentUser;
+            if (!user) {
+                console.log('לא מחובר – שומר רק בלוקאלי');
+                localStorage.setItem('projects', JSON.stringify(projects));
+                return;
+            }
+            const state = getCurrentAppState();
+            // Store timestamp for change detection
+            localStorage.setItem('lastSavedAt', state.savedAt);
+            
+            try {
+                await db.collection('wineMonitoringStates')
+                    .doc(user.uid)
+                    .set({
+                        state,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                console.log('מצב נשמר בהצלחה בענן וגם ב‑localStorage');
+                localStorage.setItem('projects', JSON.stringify(projects));
+            } catch (err) {
+                console.error('שגיאה בשמירה לפיירבייס:', err);
+            }
+        }
         window.addEventListener('load', () => {
             const loginBtn = document.getElementById('loginBtn');
             const logoutBtn = document.getElementById('logoutBtn');
@@ -2788,6 +2882,10 @@
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'inline-block';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     await loadStateFromFirebase(user);
+                    
+                    // Set up real-time synchronization
+                    setupRealtimeSync(user);
+                    
                     closeLoginModal();
                     
                     // Check if user signed in with Google and needs to set site password
@@ -2802,6 +2900,10 @@
                     if (loginBtn) loginBtn.style.display = 'inline-block';
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'none';
                     if (logoutBtn) logoutBtn.style.display = 'none';
+                    
+                    // Clean up real-time listener
+                    setupRealtimeSync(null);
+                    
                     openLoginModal();
                 }
             });
