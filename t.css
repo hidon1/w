@@ -29,7 +29,7 @@
     
     .project-details-card {
         width: 250px;
-        left: -200px; /* Card hidden by default - positioned immediately */
+        left: -280px; /* Card hidden by default - fully off-screen */
         height: auto; /* Changed from 300px to auto */
         max-height: 80vh; /* Allow taller card */
         transition: left 0.3s ease;
@@ -39,7 +39,7 @@
     }
     .pull-handle {
         right: -22px;
-        display: flex; /* Show on mobile */
+        display: none; /* Hidden in favor of floating button */
         width: 42px;
         height: 42px;
         border-radius: 50%;
@@ -131,16 +131,21 @@
         margin: 0;
         font-size: calc(var(--font-size-base) * 1.2);
     }
+    .card-fab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 /* Mobile landscape mode */
 @media (max-width: 768px) and (orientation: landscape) {
     .project-details-card {
-        left: -200px;
+        left: -280px;
     }
     
     .pull-handle {
-        display: flex; /* Show pull handle in landscape too */
+        display: none; /* Floating button handles toggling */
     }
 }
 
@@ -598,6 +603,15 @@ body.dark-mode .input-group input[type="number"], body.dark-mode .input-group in
     user-select: none;
     min-height: 44px; /* Minimum touch target size */
 }
+.delete-metric-btn {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    align-self: flex-start;
+    margin-top: 5px;
+}
+.delete-metric-btn:hover,
+.delete-metric-btn:active {
+    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+}
 
 .input-group button:hover,
 .input-group button:active {
@@ -954,6 +968,41 @@ body.dark-mode .history-list li {
 
 .hamburger-menu-btn.open span:nth-child(3) {
     transform: translateY(-9px) rotate(-45deg);
+}
+.card-fab {
+    position: fixed;
+    left: 15px;
+    bottom: 100px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    z-index: 1100;
+    display: none;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+}
+.card-fab:hover,
+.card-fab:active {
+    transform: scale(1.05);
+    background: linear-gradient(135deg, var(--secondary-color), #8B0000);
+}
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
 }
 
 .sidebar {

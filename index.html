@@ -76,6 +76,10 @@
         </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <button class="card-fab" id="cardFab" aria-label="פתח כרטיס פרויקט">
+        <span class="card-fab-icon" aria-hidden="true">ℹ️</span>
+        <span class="sr-only">פתח כרטיס פרויקט</span>
+    </button>
     <div class="login-modal" id="loginModal">
         <div class="login-modal-content">
             <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
@@ -493,6 +497,8 @@
         const currentProjectNameDisplay = document.getElementById('currentProjectName');
         const editProjectNameInput = document.getElementById('editProjectNameInput');
         const projectDetailsCard = document.getElementById('projectDetailsCard');
+        const cardFab = document.getElementById('cardFab');
+        const cardFabIcon = cardFab ? cardFab.querySelector('.card-fab-icon') : null;
         const stageNavContainer = document.getElementById('stageNavContainer');
         const stageOverviewContainer = document.getElementById('stageOverviewContainer');
         const stepCardsGrid = document.getElementById('stepCardsGrid');
@@ -763,7 +769,16 @@
             projectDetailsCard.addEventListener('touchmove', handleTouchMove);
             projectDetailsCard.addEventListener('touchend', handleTouchEnd);
             
-            // Card position is set via CSS, no need to set via JS
+            if (cardFab) {
+                cardFab.addEventListener('click', toggleCardFromFab);
+            }
+            if (window.innerWidth <= 768) {
+                cardOpen = false;
+                projectDetailsCard.style.left = '-280px';
+                projectDetailsCard.style.pointerEvents = 'none';
+                updateCardFabState();
+            }
+            setCardFabVisibility();
         };
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
@@ -796,6 +811,7 @@
         projectYearFilter.addEventListener('change', filterProjectsByYear);
         hamburgerBtn.addEventListener('click', toggleSidebar);
         sidebarOverlay.addEventListener('click', closeSidebar);
+        window.addEventListener('resize', handleCardFabResize);
         function toggleSidebar() {
             hamburgerBtn.classList.toggle('open');
             sidebar.classList.toggle('open');
@@ -1197,12 +1213,14 @@
                 } else if (metric.type === 'date') {
                     inputElementHTML = `<input type="text" id="${metricId}Input" placeholder="${metric.placeholder || ''}" readonly>`;
                 } else {
-                    inputElementHTML = `<input type="${metric.type}" id="${metricId}Input" ${metric.type === 'number' ? `step="${metric.step}"` : ''} placeholder="${metric.placeholder || ''}">`;
+                    const inputType = metric.type === 'number' ? 'text' : metric.type;
+                    inputElementHTML = `<input type="${inputType}" data-input-kind="${metric.type}" id="${metricId}Input" ${metric.type === 'number' ? `inputmode="decimal"` : ''} placeholder="${metric.placeholder || ''}">`;
                 }
                 inputGroup.innerHTML = `
                     <label for="${metricId}Input">${metric.name}:</label>
                     ${inputElementHTML}
                     <button onclick="updateMetricValue('${currentStageId}', '${metricId}')">עדכן</button>
+                    <button class="delete-metric-btn" onclick="deleteCustomMetric('${currentStageId}', '${metricId}')">מחק</button>
                 `;
                 currentStageInputSection.appendChild(inputGroup);
                 if (metric.type === 'select') {
@@ -1241,7 +1259,8 @@
                 if (metric.type === 'date') {
                     inputElementHTML = `<input type="text" id="${metricId}Input" placeholder="${metric.placeholder || ''}" readonly>`;
                 } else {
-                    inputElementHTML = `<input type="${metric.type}" id="${metricId}Input" ${metric.type === 'number' ? `step="${metric.step}"` : ''} placeholder="${metric.placeholder || ''}">`;
+                    const inputType = metric.type === 'number' ? 'text' : metric.type;
+                    inputElementHTML = `<input type="${inputType}" data-input-kind="${metric.type}" id="${metricId}Input" ${metric.type === 'number' ? `inputmode="decimal"` : ''} placeholder="${metric.placeholder || ''}">`;
                 }
                 inputGroup.innerHTML = `
                     <label for="${metricId}Input">${metric.name}:</label>
@@ -2200,10 +2219,7 @@
                     otherInput.addEventListener('blur', saveEditableDetail);
                 } else {
                     inputElement = document.createElement('input');
-                    inputElement.type = metricConfig.type;
-                    if (metricConfig.type === 'number') {
-                        inputElement.step = metricConfig.step || 'any';
-                    }
+                    inputElement.type = metricConfig.type === 'number' ? 'text' : metricConfig.type;
                     inputElement.value = currentValue;
                     inputElement.placeholder = metricConfig.placeholder || '';
                     item.appendChild(inputElement);
@@ -2660,6 +2676,23 @@
                 alert('אנא הזן שם למדד.');
             }
         }
+        function deleteCustomMetric(stageId, metricId) {
+            if (!stageId || !metricId) return;
+            if (!stagesConfig[stageId] || !stagesConfig[stageId].customMetrics || !stagesConfig[stageId].customMetrics[metricId]) return;
+            if (!confirm('למחוק את המדד המותאם? פעולה זו תמחק גם את הנתונים שלו.')) return;
+            delete stagesConfig[stageId].customMetrics[metricId];
+            Object.keys(projects).forEach(pid => {
+                if (projects[pid]?.stages?.[stageId]) {
+                    delete projects[pid].stages[stageId][metricId];
+                }
+            });
+            saveAllProjects();
+            if (stageId === currentStageId) {
+                loadCurrentStageContent();
+            } else {
+                updateDashboardForCurrentStage();
+            }
+        }
         function getCurrentAppState() {
             return {
                 projects: projects,
@@ -3111,6 +3144,26 @@
         function loginWithEmail() {
             loginWithSitePassword();
         }
+        function handleCardFabResize() {
+            setCardFabVisibility();
+            if (window.innerWidth <= 768) {
+                if (!cardOpen) {
+                    projectDetailsCard.style.left = '-280px';
+                    projectDetailsCard.style.pointerEvents = 'none';
+                }
+                updateCardFabState();
+            } else {
+                projectDetailsCard.style.pointerEvents = 'auto';
+            }
+        }
+        function setCardFabVisibility() {
+            if (!cardFab) return;
+            if (window.innerWidth <= 768) {
+                cardFab.style.display = 'flex';
+            } else {
+                cardFab.style.display = 'none';
+            }
+        }
         // פונקציות הזזה לכרטיסיה במובייל
         function handleTouchStart(e) {
             if (window.innerWidth > 768) return; // רק במובייל
@@ -3124,7 +3177,7 @@
             e.preventDefault();
             currentX = e.touches[0].clientX;
             const deltaX = currentX - startX;
-            const newLeft = Math.min(15, Math.max(-250, 15 + deltaX)); // מגביל בין 15px ל- -250px
+            const newLeft = Math.min(15, Math.max(-280, 15 + deltaX)); // מגביל בין 15px ל- -280px
             projectDetailsCard.style.left = newLeft + 'px';
         }
         function handleTouchEnd(e) {
@@ -3138,11 +3191,11 @@
                 cardOpen = true;
             } else if (deltaX < -50) {
                 // סגור אם הזיז שמאלה מספיק
-                projectDetailsCard.style.left = '-200px';
+                projectDetailsCard.style.left = '-280px';
                 cardOpen = false;
             } else {
                 // חזור למצב הקודם
-                projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
+                projectDetailsCard.style.left = cardOpen ? '15px' : '-280px';
             }
             
             // Update icon based on final state
@@ -3150,30 +3203,48 @@
             if (icon) {
                 icon.className = cardOpen ? 'fas fa-angle-double-left' : 'fas fa-angle-double-right';
             }
+            updateCardFabState();
+            projectDetailsCard.style.pointerEvents = cardOpen ? 'auto' : 'none';
+        }
+        function updateCardFabState() {
+            if (!cardFab) return;
+            if (cardFabIcon) {
+                cardFabIcon.textContent = cardOpen ? '×' : 'ℹ️';
+            } else {
+                cardFab.textContent = cardOpen ? '×' : 'ℹ️';
+            }
+            cardFab.setAttribute('aria-label', cardOpen ? 'סגור כרטיס פרויקט' : 'פתח כרטיס פרויקט');
+        }
+        function toggleCardFromFab() {
+            toggleCard();
         }
         function toggleCard() {
             if (window.innerWidth > 768) return; // רק במובייל
             cardOpen = !cardOpen;
             projectDetailsCard.style.transition = 'left 0.3s ease';
-            projectDetailsCard.style.left = cardOpen ? '15px' : '-200px';
+            projectDetailsCard.style.left = cardOpen ? '15px' : '-280px';
+            projectDetailsCard.style.pointerEvents = cardOpen ? 'auto' : 'none';
             
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
             if (icon) {
                 icon.className = cardOpen ? 'fas fa-angle-double-left' : 'fas fa-angle-double-right';
             }
+            updateCardFabState();
         }
         function closeCard() {
             if (window.innerWidth > 768) return;
             cardOpen = false;
             projectDetailsCard.style.transition = 'left 0.3s ease';
-            projectDetailsCard.style.left = '-200px';
+            projectDetailsCard.style.left = '-280px';
+            projectDetailsCard.style.pointerEvents = 'none';
             
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
             if (icon) {
                 icon.className = 'fas fa-angle-double-right';
             }
+            updateCardFabState();
         }
     </script>
 </body>
