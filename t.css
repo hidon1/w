@@ -2400,6 +2400,15 @@ body.dark-mode .add-reminder-form input, body.dark-mode .add-reminder-form texta
     background: linear-gradient(135deg, #d32f2f, #b71c1c);
 }
 
+.auth-section .change-password-btn {
+    background: linear-gradient(135deg, var(--accent-color), #FF8787);
+    font-size: calc(var(--font-size-base) * 0.8);
+}
+
+.auth-section .change-password-btn:hover {
+    background: linear-gradient(135deg, #FF8787, #FFA5A5);
+}
+
 .login-modal {
     display: none;
     position: fixed;
