@@ -776,7 +776,6 @@
                 cardOpen = false;
                 projectDetailsCard.style.left = '-280px';
                 projectDetailsCard.style.pointerEvents = 'none';
-                setCardFabVisibility();
                 updateCardFabState();
             }
             setCardFabVisibility();
@@ -2678,7 +2677,8 @@
             }
         }
         function deleteCustomMetric(stageId, metricId) {
-            if (!stagesConfig[stageId] || !stagesConfig[stageId].customMetrics[metricId]) return;
+            if (!stageId || !metricId) return;
+            if (!stagesConfig[stageId] || !stagesConfig[stageId].customMetrics || !stagesConfig[stageId].customMetrics[metricId]) return;
             if (!confirm('למחוק את המדד המותאם? פעולה זו תמחק גם את הנתונים שלו.')) return;
             delete stagesConfig[stageId].customMetrics[metricId];
             Object.keys(projects).forEach(pid => {
