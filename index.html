@@ -222,8 +222,8 @@
             <div class="modal-content">
                 <span class="close-button" onclick="closeHistoryModal()">&times;</span>
                 <h3 id="modalTitle"></h3>
-                <div class="graph-controls">
-                <button id="deleteMetricBtn" onclick="handleDeleteMetric()">מחק מדד</button>
+            <div class="graph-controls">
+                <button id="deleteMetricBtn" onclick="handleDeleteMetric()" aria-label="מחק מדד מותאם">מחק מדד</button>
                 <button onclick="openProjectSelectionForComparison()">השווה לפרויקט אחר</button>
             </div>
             <div class="modal-graph-container">
@@ -611,6 +611,34 @@
         let currentX = 0;
         let cardOpen = false; // מצב הכרטיסיה: פתוח או סגור
         let editingFinanceEntryId = null;
+        if (newProjectNameInput) {
+            newProjectNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    confirmAddNewProject();
+                }
+            });
+        }
+        if (customPropertyNameInput) {
+            customPropertyNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    confirmAddCustomProperty();
+                }
+            });
+        }
+        if (financeEditAmountInput) {
+            financeEditAmountInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveFinanceEdit();
+                }
+            });
+        }
+        if (financeEditNotesInput) {
+            financeEditNotesInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    saveFinanceEdit();
+                }
+            });
+        }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
             for (let year = 2020; year <= 2100; year++) {
@@ -1110,12 +1138,15 @@
                 setTimeout(() => newProjectNameInput.focus(), 0);
             }
         }
+        /**
+         * @param {string} [manualName] optional name for backward compatibility when modal is unavailable
+         */
         function confirmAddNewProject(manualName) {
             // Allow creating projects even without authentication for offline usage
             // Projects will be saved to localStorage and synced to Firebase when user logs in
             const nameFromModal = newProjectNameInput ? newProjectNameInput.value.trim() : '';
             const newProjectName = manualName || nameFromModal;
-            if (newProjectName && newProjectName.trim() !== '') {
+            if (newProjectName) {
                 const newProjectId = `project_${Date.now()}`;
                 projects[newProjectId] = createNewProjectData(newProjectName.trim());
                 saveAllProjects();
@@ -1461,6 +1492,21 @@
                 fixedDashboardGrid.appendChild(dashboardItem);
             }
         }
+        /**
+         * Determine whether a metric is a custom metric (stage or wine details).
+         * @param {string} sectionId stage identifier or 'wineDetails'
+         * @param {string} metricId metric identifier to check
+         * @returns {{isCustomStageMetric: boolean, isCustomWineMetric: boolean}}
+         */
+        function getCustomMetricFlags(sectionId, metricId) {
+            const isCustomStageMetric = sectionId !== 'wineDetails'
+                && stagesConfig[sectionId]?.customMetrics
+                && Boolean(stagesConfig[sectionId].customMetrics[metricId]);
+            const isCustomWineMetric = sectionId === 'wineDetails'
+                && Array.isArray(projects[currentProjectId]?.wineDetails?.customProperties)
+                && projects[currentProjectId].wineDetails.customProperties.some(prop => prop.id === metricId);
+            return { isCustomStageMetric, isCustomWineMetric };
+        }
         function openHistoryModal(sectionId, metricId, metricName) {
             currentMetricTypeForModal = { sectionId, metricId };
             modalTitle.textContent = `היסטוריית ${metricName} (${stagesConfig[sectionId].name})`;
@@ -1488,8 +1534,7 @@
                 metricConfig = stagesConfig[sectionId].metrics[metricId] || stagesConfig[sectionId].customMetrics[metricId];
                 historyEntries = projects[currentProjectId].stages[sectionId][metricId];
             }
-            const isCustomStageMetric = sectionId !== 'wineDetails' && stagesConfig[sectionId]?.customMetrics && stagesConfig[sectionId].customMetrics[metricId];
-            const isCustomWineMetric = sectionId === 'wineDetails' && !stagesConfig.wineDetails.metrics[metricId];
+            const { isCustomStageMetric, isCustomWineMetric } = getCustomMetricFlags(sectionId, metricId);
             if (deleteMetricBtn) {
                 deleteMetricBtn.style.display = (isCustomStageMetric || isCustomWineMetric) ? 'inline-block' : 'none';
             }
@@ -1724,8 +1769,7 @@
         function handleDeleteMetric() {
             if (!currentMetricTypeForModal) return;
             const { sectionId, metricId } = currentMetricTypeForModal;
-            const isCustomStageMetric = sectionId !== 'wineDetails' && stagesConfig[sectionId]?.customMetrics && stagesConfig[sectionId].customMetrics[metricId];
-            const isCustomWineMetric = sectionId === 'wineDetails' && !stagesConfig.wineDetails.metrics[metricId];
+            const { isCustomStageMetric, isCustomWineMetric } = getCustomMetricFlags(sectionId, metricId);
             if (!isCustomStageMetric && !isCustomWineMetric) {
                 alert('ניתן למחוק רק מדדים מותאמים אישית.');
                 return;
@@ -2260,12 +2304,9 @@
             if (!skipConfirm && !confirm('האם אתה בטוח שברצונך למחוק שדה מותאם אישית זה?')) {
                 return;
             }
-            const beforeLength = projects[currentProjectId].wineDetails.customProperties.length;
             projects[currentProjectId].wineDetails.customProperties = projects[currentProjectId].wineDetails.customProperties.filter(prop => prop.id !== propId);
-            if (projects[currentProjectId].wineDetails.customProperties.length < beforeLength) {
-                saveAllProjects();
-                updateProjectDetailsCard();
-            }
+            saveAllProjects();
+            updateProjectDetailsCard();
         }
         function closeCustomPropertyModal() {
             if (customPropertyModal) {
