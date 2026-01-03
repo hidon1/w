@@ -171,20 +171,59 @@
             <span>הוסף מדד</span>
         </div>
     </div>
-    <div id="addMetricModal" class="modal">
-        <div class="modal-content add-metric-modal-content">
-            <span class="close-button" onclick="closeAddMetricModal()">&times;</span>
-            <h3><i class="fas fa-chart-line"></i> הוסף מדד חדש לשלב הנוכחי</h3>
-            <label for="addMetricName"><i class="fas fa-tag"></i> שם המדד:</label>
-            <input type="text" id="addMetricName" placeholder="למשל: בריקס נוסף">
-            <button onclick="addNewMetric()"><i class="fas fa-plus"></i> הוסף</button>
+        <div id="addMetricModal" class="modal">
+            <div class="modal-content add-metric-modal-content">
+                <span class="close-button" onclick="closeAddMetricModal()">&times;</span>
+                <h3><i class="fas fa-chart-line"></i> הוסף מדד חדש לשלב הנוכחי</h3>
+                <label for="addMetricName"><i class="fas fa-tag"></i> שם המדד:</label>
+                <input type="text" id="addMetricName" placeholder="למשל: בריקס נוסף">
+                <button onclick="addNewMetric()"><i class="fas fa-plus"></i> הוסף</button>
+            </div>
         </div>
-    </div>
-    <div id="historyModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" onclick="closeHistoryModal()">&times;</span>
-            <h3 id="modalTitle"></h3>
+        <div id="newProjectModal" class="modal">
+            <div class="modal-content project-modal-content">
+                <span class="close-button" onclick="closeNewProjectModal()">&times;</span>
+                <h3>פרויקט חדש</h3>
+                <label for="newProjectNameInput">שם הפרויקט:</label>
+                <input type="text" id="newProjectNameInput" placeholder="למשל: יקב חדש">
+                <div class="modal-actions">
+                    <button onclick="confirmAddNewProject()">צור</button>
+                    <button onclick="closeNewProjectModal()">ביטול</button>
+                </div>
+            </div>
+        </div>
+        <div id="customPropertyModal" class="modal">
+            <div class="modal-content">
+                <span class="close-button" onclick="closeCustomPropertyModal()">&times;</span>
+                <h3>שדה מותאם אישית</h3>
+                <label for="customPropertyNameInput">שם השדה:</label>
+                <input type="text" id="customPropertyNameInput" placeholder="למשל: זן נוסף">
+                <div class="modal-actions">
+                    <button onclick="confirmAddCustomProperty()">הוסף</button>
+                    <button onclick="closeCustomPropertyModal()">ביטול</button>
+                </div>
+            </div>
+        </div>
+        <div id="financeEditModal" class="modal">
+            <div class="modal-content finance-modal-content">
+                <span class="close-button" onclick="closeFinanceEditModal()">&times;</span>
+                <h3>עריכת תנועה כספית</h3>
+                <label for="financeEditAmount">סכום:</label>
+                <input type="number" id="financeEditAmount" step="0.01" min="0">
+                <label for="financeEditNotes">הערות:</label>
+                <textarea id="financeEditNotes" rows="3" placeholder="הערות (אופציונלי)"></textarea>
+                <div class="modal-actions">
+                    <button onclick="saveFinanceEdit()">שמור</button>
+                    <button onclick="closeFinanceEditModal()">ביטול</button>
+                </div>
+            </div>
+        </div>
+        <div id="historyModal" class="modal">
+            <div class="modal-content">
+                <span class="close-button" onclick="closeHistoryModal()">&times;</span>
+                <h3 id="modalTitle"></h3>
             <div class="graph-controls">
+                <button id="deleteMetricBtn" onclick="handleDeleteMetric()" aria-label="מחק מדד מותאם">מחק מדד</button>
                 <button onclick="openProjectSelectionForComparison()">השווה לפרויקט אחר</button>
             </div>
             <div class="modal-graph-container">
@@ -518,6 +557,9 @@
         const financeNotesInput = document.getElementById('financeNotes');
         const financeList = document.getElementById('financeList');
         const currentBalanceDisplay = document.getElementById('currentBalance');
+        const financeEditModal = document.getElementById('financeEditModal');
+        const financeEditAmountInput = document.getElementById('financeEditAmount');
+        const financeEditNotesInput = document.getElementById('financeEditNotes');
         const currentProjectFinanceReportModal = document.getElementById('currentProjectFinanceReportModal');
         const currentProjectTotalIncomeDisplay = document.getElementById('currentProjectTotalIncome');
         const currentProjectTotalExpenseDisplay = document.getElementById('currentProjectTotalExpense');
@@ -552,6 +594,11 @@
         let datePickerCallback = null;
         const projectSelectionModal = document.getElementById('projectSelectionModal');
         const comparisonProjectList = document.getElementById('comparisonProjectList');
+        const newProjectModal = document.getElementById('newProjectModal');
+        const newProjectNameInput = document.getElementById('newProjectNameInput');
+        const customPropertyModal = document.getElementById('customPropertyModal');
+        const customPropertyNameInput = document.getElementById('customPropertyNameInput');
+        const deleteMetricBtn = document.getElementById('deleteMetricBtn');
         let currentMetricTypeForModal = { sectionId: '', metricId: '' };
         let currentEditableDetailElement = null;
         let graphComparisonMode = null;
@@ -563,6 +610,35 @@
         let startX = 0;
         let currentX = 0;
         let cardOpen = false; // מצב הכרטיסיה: פתוח או סגור
+        let editingFinanceEntryId = null;
+        if (newProjectNameInput) {
+            newProjectNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    confirmAddNewProject();
+                }
+            });
+        }
+        if (customPropertyNameInput) {
+            customPropertyNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    confirmAddCustomProperty();
+                }
+            });
+        }
+        if (financeEditAmountInput) {
+            financeEditAmountInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveFinanceEdit();
+                }
+            });
+        }
+        if (financeEditNotesInput) {
+            financeEditNotesInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    saveFinanceEdit();
+                }
+            });
+        }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
             for (let year = 2020; year <= 2100; year++) {
@@ -1056,16 +1132,34 @@
             filterProjectsByYear();
         }
         function addNewProject() {
+            if (newProjectModal && newProjectNameInput) {
+                newProjectNameInput.value = '';
+                newProjectModal.style.display = 'flex';
+                setTimeout(() => newProjectNameInput.focus(), 0);
+            }
+        }
+        /**
+         * @param {string} [manualName] optional name for backward compatibility when modal is unavailable
+         */
+        function confirmAddNewProject(manualName) {
             // Allow creating projects even without authentication for offline usage
             // Projects will be saved to localStorage and synced to Firebase when user logs in
-            let newProjectName = prompt('הכנס שם לפרויקט החדש:');
-            if (newProjectName && newProjectName.trim() !== '') {
-                newProjectName = newProjectName.trim();
+            const nameFromModal = newProjectNameInput ? newProjectNameInput.value.trim() : '';
+            const newProjectName = manualName || nameFromModal;
+            if (newProjectName) {
                 const newProjectId = `project_${Date.now()}`;
-                projects[newProjectId] = createNewProjectData(newProjectName);
+                projects[newProjectId] = createNewProjectData(newProjectName.trim());
                 saveAllProjects();
                 switchProject(newProjectId);
                 filterProjectsByYear();
+                closeNewProjectModal();
+            } else {
+                alert('אנא הזן שם לפרויקט.');
+            }
+        }
+        function closeNewProjectModal() {
+            if (newProjectModal) {
+                newProjectModal.style.display = 'none';
             }
         }
         function switchProject(id) {
@@ -1398,6 +1492,21 @@
                 fixedDashboardGrid.appendChild(dashboardItem);
             }
         }
+        /**
+         * Determine whether a metric is a custom metric (stage or wine details).
+         * @param {string} sectionId stage identifier or 'wineDetails'
+         * @param {string} metricId metric identifier to check
+         * @returns {{isCustomStageMetric: boolean, isCustomWineMetric: boolean}}
+         */
+        function getCustomMetricFlags(sectionId, metricId) {
+            const isCustomStageMetric = sectionId !== 'wineDetails'
+                && stagesConfig[sectionId]?.customMetrics
+                && Boolean(stagesConfig[sectionId].customMetrics[metricId]);
+            const isCustomWineMetric = sectionId === 'wineDetails'
+                && Array.isArray(projects[currentProjectId]?.wineDetails?.customProperties)
+                && projects[currentProjectId].wineDetails.customProperties.some(prop => prop.id === metricId);
+            return { isCustomStageMetric, isCustomWineMetric };
+        }
         function openHistoryModal(sectionId, metricId, metricName) {
             currentMetricTypeForModal = { sectionId, metricId };
             modalTitle.textContent = `היסטוריית ${metricName} (${stagesConfig[sectionId].name})`;
@@ -1424,6 +1533,10 @@
                 // Check predefined metrics first, then custom metrics
                 metricConfig = stagesConfig[sectionId].metrics[metricId] || stagesConfig[sectionId].customMetrics[metricId];
                 historyEntries = projects[currentProjectId].stages[sectionId][metricId];
+            }
+            const { isCustomStageMetric, isCustomWineMetric } = getCustomMetricFlags(sectionId, metricId);
+            if (deleteMetricBtn) {
+                deleteMetricBtn.style.display = (isCustomStageMetric || isCustomWineMetric) ? 'inline-block' : 'none';
             }
             const precision = metricConfig ? metricConfig.precision : null;
             // Check if we have any numeric values for graphing
@@ -1653,6 +1766,26 @@
             historyModal.style.display = 'none';
             comparisonProjectId = null;
         }
+        function handleDeleteMetric() {
+            if (!currentMetricTypeForModal) return;
+            const { sectionId, metricId } = currentMetricTypeForModal;
+            const { isCustomStageMetric, isCustomWineMetric } = getCustomMetricFlags(sectionId, metricId);
+            if (!isCustomStageMetric && !isCustomWineMetric) {
+                alert('ניתן למחוק רק מדדים מותאמים אישית.');
+                return;
+            }
+            if (!confirm('האם אתה בטוח שברצונך למחוק מדד זה? פעולה זו תמחק גם את ההיסטוריה שלו.')) {
+                return;
+            }
+            if (isCustomWineMetric) {
+                deleteCustomProperty(metricId, true);
+            } else {
+                deleteCustomMetric(sectionId, metricId, true);
+            }
+            closeHistoryModal();
+            updateDashboardForCurrentStage();
+            renderPreviousStageOverview();
+        }
         function undoUpdate(sectionId, metricId, indexToRemove) {
             if (!confirm('האם אתה בטוח שברצונך לבטל את העדכון הזה?')) {
                 return;
@@ -1787,18 +1920,16 @@
         function editFinanceEntry(id) {
             const entry = projects[currentProjectId].finance.find(e => e.id === id);
             if (!entry) return;
-            let newAmount = prompt(`ערוך סכום (${entry.type === 'income' ? 'הכנסה' : 'הוצאה'}):`, entry.amount);
-            if (newAmount === null) return;
-            newAmount = parseFloat(newAmount);
-            let newNotes = prompt('ערוך הערות:', entry.notes);
-            if (newNotes === null) return;
-            if (!isNaN(newAmount) && newAmount > 0) {
-                entry.amount = newAmount;
-                entry.notes = newNotes.trim();
-                saveAllProjects();
-                renderFinanceList();
-            } else {
-                alert('הסכום שהוזן אינו חוקי.');
+            editingFinanceEntryId = id;
+            if (financeEditAmountInput) {
+                financeEditAmountInput.value = entry.amount;
+            }
+            if (financeEditNotesInput) {
+                financeEditNotesInput.value = entry.notes || '';
+            }
+            if (financeEditModal) {
+                financeEditModal.style.display = 'flex';
+                setTimeout(() => financeEditAmountInput?.focus(), 0);
             }
         }
         function deleteFinanceEntry(id) {
@@ -1810,6 +1941,36 @@
                     renderFinanceList();
                 }
             }
+        }
+        function saveFinanceEdit() {
+            if (editingFinanceEntryId === null) {
+                closeFinanceEditModal();
+                return;
+            }
+            const entry = projects[currentProjectId].finance.find(e => e.id === editingFinanceEntryId);
+            if (!entry) {
+                closeFinanceEditModal();
+                return;
+            }
+            const newAmount = parseFloat(financeEditAmountInput ? financeEditAmountInput.value : '');
+            if (isNaN(newAmount) || newAmount <= 0) {
+                alert('הסכום שהוזן אינו חוקי.');
+                return;
+            }
+            const newNotes = financeEditNotesInput ? financeEditNotesInput.value.trim() : '';
+            entry.amount = newAmount;
+            entry.notes = newNotes;
+            saveAllProjects();
+            renderFinanceList();
+            closeFinanceEditModal();
+        }
+        function closeFinanceEditModal() {
+            if (financeEditModal) {
+                financeEditModal.style.display = 'none';
+            }
+            editingFinanceEntryId = null;
+            if (financeEditAmountInput) financeEditAmountInput.value = '';
+            if (financeEditNotesInput) financeEditNotesInput.value = '';
         }
         function openCurrentProjectFinanceReportModal() {
             closeSidebar();
@@ -2108,28 +2269,48 @@
                 alert('הפרויקט סגור. פתח אותו כדי לערוך.');
                 return;
             }
-            const propName = prompt('הכנס שם לשדה המותאם אישית החדש:');
-            if (propName && propName.trim() !== '') {
+            if (customPropertyModal && customPropertyNameInput) {
+                customPropertyNameInput.value = '';
+                customPropertyModal.style.display = 'flex';
+                setTimeout(() => customPropertyNameInput.focus(), 0);
+            }
+        }
+        function confirmAddCustomProperty() {
+            if (projects[currentProjectId].isClosed) {
+                alert('הפרויקט סגור. פתח אותו כדי לערוך.');
+                return;
+            }
+            const propName = customPropertyNameInput ? customPropertyNameInput.value.trim() : '';
+            if (propName) {
                 const propId = `customProp_${Date.now()}`;
                 const newCustomProperty = {
                     id: propId,
-                    name: propName.trim(),
+                    name: propName,
                     history: []
                 };
                 projects[currentProjectId].wineDetails.customProperties.push(newCustomProperty);
                 saveAllProjects();
                 updateProjectDetailsCard();
+                closeCustomPropertyModal();
+            } else {
+                alert('אנא הזן שם לשדה המותאם אישית.');
             }
         }
-        function deleteCustomProperty(propId) {
+        function deleteCustomProperty(propId, skipConfirm = false) {
             if (projects[currentProjectId].isClosed) {
                 alert('הפרויקט סגור. פתח אותו כדי לערוך.');
                 return;
             }
-            if (confirm('האם אתה בטוח שברצונך למחוק שדה מותאם אישית זה?')) {
-                projects[currentProjectId].wineDetails.customProperties = projects[currentProjectId].wineDetails.customProperties.filter(prop => prop.id !== propId);
-                saveAllProjects();
-                updateProjectDetailsCard();
+            if (!skipConfirm && !confirm('האם אתה בטוח שברצונך למחוק שדה מותאם אישית זה?')) {
+                return;
+            }
+            projects[currentProjectId].wineDetails.customProperties = projects[currentProjectId].wineDetails.customProperties.filter(prop => prop.id !== propId);
+            saveAllProjects();
+            updateProjectDetailsCard();
+        }
+        function closeCustomPropertyModal() {
+            if (customPropertyModal) {
+                customPropertyModal.style.display = 'none';
             }
         }
         function attachEditListenerToDetailItem(item) {
@@ -2631,6 +2812,15 @@
             if (event.target === projectSelectionModal) {
                 closeProjectSelectionModal();
             }
+            if (event.target === newProjectModal) {
+                closeNewProjectModal();
+            }
+            if (event.target === customPropertyModal) {
+                closeCustomPropertyModal();
+            }
+            if (event.target === financeEditModal) {
+                closeFinanceEditModal();
+            }
             if (event.target === sidebarOverlay) {
                 closeSidebar();
             }
@@ -2676,10 +2866,10 @@
                 alert('אנא הזן שם למדד.');
             }
         }
-        function deleteCustomMetric(stageId, metricId) {
+        function deleteCustomMetric(stageId, metricId, skipConfirm = false) {
             if (!stageId || !metricId) return;
             if (!stagesConfig[stageId] || !stagesConfig[stageId].customMetrics || !stagesConfig[stageId].customMetrics[metricId]) return;
-            if (!confirm('למחוק את המדד המותאם? פעולה זו תמחק גם את הנתונים שלו.')) return;
+            if (!skipConfirm && !confirm('למחוק את המדד המותאם? פעולה זו תמחק גם את הנתונים שלו.')) return;
             delete stagesConfig[stageId].customMetrics[metricId];
             Object.keys(projects).forEach(pid => {
                 if (projects[pid]?.stages?.[stageId]) {
