@@ -848,7 +848,7 @@
             if (cardFab) {
                 cardFab.addEventListener('click', toggleCardFromFab);
             }
-            if (window.innerWidth <= 768) {
+            if (isMobileViewport()) {
                 cardOpen = false;
                 projectDetailsCard.style.left = '-280px';
                 projectDetailsCard.style.pointerEvents = 'none';
@@ -1314,7 +1314,6 @@
                     <label for="${metricId}Input">${metric.name}:</label>
                     ${inputElementHTML}
                     <button onclick="updateMetricValue('${currentStageId}', '${metricId}')">עדכן</button>
-                    <button class="delete-metric-btn" onclick="deleteCustomMetric('${currentStageId}', '${metricId}')">מחק</button>
                 `;
                 currentStageInputSection.appendChild(inputGroup);
                 if (metric.type === 'select') {
@@ -1371,6 +1370,22 @@
                             });
                         });
                     }
+                }
+            }
+            // Render custom metrics with update option (no delete button here)
+            if (stageConfig.customMetrics) {
+                for (const metricId in stageConfig.customMetrics) {
+                    const metric = stageConfig.customMetrics[metricId];
+                    const inputGroup = document.createElement('div');
+                    inputGroup.className = 'input-group';
+                    const inputType = metric.type === 'number' ? 'text' : (metric.type || 'text');
+                    const placeholder = metric.placeholder || '';
+                    inputGroup.innerHTML = `
+                        <label for="${metricId}Input">${metric.name}:</label>
+                        <input type="${inputType}" data-input-kind="${metric.type || 'text'}" id="${metricId}Input" ${metric.type === 'number' ? `inputmode="decimal"` : ''} placeholder="${placeholder}">
+                        <button onclick="updateMetricValue('${currentStageId}', '${metricId}')">עדכן</button>
+                    `;
+                    currentStageInputSection.appendChild(inputGroup);
                 }
             }
             updateDashboardForCurrentStage();
@@ -3334,9 +3349,14 @@
         function loginWithEmail() {
             loginWithSitePassword();
         }
+        function isMobileViewport() {
+            const hasCoarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false;
+            const minDimension = Math.min(window.innerWidth, window.innerHeight);
+            return (hasCoarsePointer || window.innerWidth <= 900) && minDimension <= 900;
+        }
         function handleCardFabResize() {
             setCardFabVisibility();
-            if (window.innerWidth <= 768) {
+            if (isMobileViewport()) {
                 if (!cardOpen) {
                     projectDetailsCard.style.left = '-280px';
                     projectDetailsCard.style.pointerEvents = 'none';
@@ -3348,19 +3368,19 @@
         }
         function setCardFabVisibility() {
             if (!cardFab) return;
-            const shouldShow = window.innerWidth <= 768 && !cardOpen;
+            const shouldShow = isMobileViewport() && !cardOpen;
             cardFab.style.display = shouldShow ? 'flex' : 'none';
         }
         // פונקציות הזזה לכרטיסיה במובייל
         function handleTouchStart(e) {
-            if (window.innerWidth > 768) return; // רק במובייל
+            if (!isMobileViewport()) return; // רק במובייל
             isDragging = true;
             startX = e.touches[0].clientX;
             currentX = startX;
             projectDetailsCard.style.transition = 'none'; // ביטול אנימציה במהלך הזזה
         }
         function handleTouchMove(e) {
-            if (!isDragging || window.innerWidth > 768) return;
+            if (!isDragging || !isMobileViewport()) return;
             e.preventDefault();
             currentX = e.touches[0].clientX;
             const deltaX = currentX - startX;
@@ -3368,7 +3388,7 @@
             projectDetailsCard.style.left = newLeft + 'px';
         }
         function handleTouchEnd(e) {
-            if (!isDragging || window.innerWidth > 768) return;
+            if (!isDragging || !isMobileViewport()) return;
             isDragging = false;
             projectDetailsCard.style.transition = 'left 0.3s ease'; // הוספת אנימציה חזרה
             const deltaX = currentX - startX;
@@ -3407,7 +3427,7 @@
             toggleCard();
         }
         function toggleCard() {
-            if (window.innerWidth > 768) return; // רק במובייל
+            if (!isMobileViewport()) return; // רק במובייל
             cardOpen = !cardOpen;
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = cardOpen ? '15px' : '-280px';
@@ -3422,7 +3442,7 @@
             setCardFabVisibility();
         }
         function closeCard() {
-            if (window.innerWidth > 768) return;
+            if (!isMobileViewport()) return;
             cardOpen = false;
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = '-280px';
