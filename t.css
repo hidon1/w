@@ -176,6 +176,27 @@
     }
 }
 
+/* Small-height landscape devices (e.g., mobile rotated) */
+@media (max-height: 520px) and (orientation: landscape) and (pointer: coarse) {
+    .project-details-card {
+        width: 250px;
+        left: -280px;
+        max-height: 80vh;
+        overflow-y: auto;
+        transition: left 0.3s ease;
+    }
+    .pull-handle {
+        display: none;
+    }
+    .card-fab {
+        top: 50%;
+        left: 15px;
+        right: auto;
+        bottom: auto;
+        transform: translateY(-50%);
+    }
+}
+
 /* Base styles for all screen sizes */
 :root {
     --primary-color: #8B0000;
@@ -772,6 +793,60 @@ body.dark-mode .modal-content {
     border-bottom: 2px solid var(--border-color);
     padding-bottom: 10px;
     transition: color var(--animation-speed);
+}
+
+.text-prompt-modal-content {
+    max-width: 420px;
+    width: 90%;
+    gap: 12px;
+}
+
+.text-prompt-modal-content p {
+    margin: 0;
+    color: var(--light-text-color);
+    text-align: center;
+}
+
+.text-prompt-modal-content input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: calc(var(--font-size-base) * 0.95);
+    outline: none;
+}
+
+.text-prompt-modal-content input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.modal-actions button.secondary {
+    background: #e0e0e0;
+    color: var(--text-color);
+}
+
+.secondary-action {
+    background: #e0e0e0;
+    color: var(--text-color);
+}
+
+body.dark-mode .secondary-action {
+    background: #555;
+    color: var(--dark-text-color);
+}
+
+body.dark-mode .text-prompt-modal-content input {
+    background: var(--dark-card-background);
+    border-color: #555;
+    color: var(--dark-text-color);
 }
 
 .modal-graph-container {

@@ -186,6 +186,7 @@
             <h3 id="modalTitle"></h3>
             <div class="graph-controls">
                 <button onclick="openProjectSelectionForComparison()">השווה לפרויקט אחר</button>
+                <button id="deleteMetricFromGraphBtn" class="secondary-action" style="display:none;" onclick="handleDeleteMetricFromGraph()">מחק מדד</button>
             </div>
             <div class="modal-graph-container">
                 <svg class="modal-graph-svg" id="modalGraphSvg"></svg>
@@ -363,6 +364,18 @@
             <span class="close-button" onclick="closeProjectSelectionModal()">&times;</span>
             <h3>בחר פרויקט להשוואה</h3>
             <ul id="comparisonProjectList" class="project-list"></ul>
+        </div>
+    </div>
+    <div id="textPromptModal" class="modal">
+        <div class="modal-content text-prompt-modal-content">
+            <span class="close-button" onclick="closeTextPromptModal()">&times;</span>
+            <h3 id="textPromptTitle"></h3>
+            <p id="textPromptDescription"></p>
+            <input type="text" id="textPromptInput" />
+            <div class="modal-actions">
+                <button id="textPromptConfirmBtn">אישור</button>
+                <button class="secondary" onclick="closeTextPromptModal()">ביטול</button>
+            </div>
         </div>
     </div>
     <script>
@@ -552,17 +565,30 @@
         let datePickerCallback = null;
         const projectSelectionModal = document.getElementById('projectSelectionModal');
         const comparisonProjectList = document.getElementById('comparisonProjectList');
+        const textPromptModal = document.getElementById('textPromptModal');
+        const textPromptTitle = document.getElementById('textPromptTitle');
+        const textPromptDescription = document.getElementById('textPromptDescription');
+        const textPromptInput = document.getElementById('textPromptInput');
+        const textPromptConfirmBtn = document.getElementById('textPromptConfirmBtn');
         let currentMetricTypeForModal = { sectionId: '', metricId: '' };
         let currentEditableDetailElement = null;
         let graphComparisonMode = null;
         let comparisonProjectId = null;
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+        let textPromptCallback = null;
+        let textPromptOptions = null;
         // משתני הזזה לכרטיסיה
         let isDragging = false;
         let startX = 0;
         let currentX = 0;
         let cardOpen = false; // מצב הכרטיסיה: פתוח או סגור
+        function isMobileLayout() {
+            const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const narrowWidth = window.innerWidth <= 1024;
+            const shortHeight = window.innerHeight <= 520;
+            return hasTouch && (narrowWidth || shortHeight);
+        }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
             for (let year = 2020; year <= 2100; year++) {
@@ -714,6 +740,46 @@
             localStorage.setItem('inbox', JSON.stringify(inbox));
             renderInboxList();
         }
+        function openTextPrompt({ title, description = '', placeholder = '', defaultValue = '', inputType = 'text', onConfirm }) {
+            if (!textPromptModal || !textPromptInput || !textPromptConfirmBtn) return;
+            textPromptCallback = onConfirm;
+            textPromptOptions = { inputType };
+            textPromptTitle.textContent = title || '';
+            if (textPromptDescription) {
+                textPromptDescription.textContent = description || '';
+                textPromptDescription.style.display = description ? 'block' : 'none';
+            }
+            textPromptInput.type = inputType === 'number' ? 'number' : 'text';
+            textPromptInput.value = defaultValue || '';
+            textPromptInput.placeholder = placeholder || '';
+            textPromptModal.style.display = 'flex';
+            setTimeout(() => textPromptInput.focus(), 0);
+        }
+        function closeTextPromptModal() {
+            if (textPromptModal) {
+                textPromptModal.style.display = 'none';
+            }
+            textPromptCallback = null;
+            textPromptOptions = null;
+            if (textPromptInput) {
+                textPromptInput.value = '';
+                textPromptInput.placeholder = '';
+            }
+        }
+        function confirmTextPrompt() {
+            if (!textPromptCallback || !textPromptInput) {
+                closeTextPromptModal();
+                return;
+            }
+            let value = textPromptInput.value.trim();
+            if (textPromptOptions?.inputType === 'number') {
+                value = value === '' ? NaN : parseFloat(value);
+            }
+            const shouldClose = textPromptCallback(value);
+            if (shouldClose !== false) {
+                closeTextPromptModal();
+            }
+        }
         function openRemindersModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -772,13 +838,24 @@
             if (cardFab) {
                 cardFab.addEventListener('click', toggleCardFromFab);
             }
-            if (window.innerWidth <= 768) {
+            if (isMobileLayout()) {
                 cardOpen = false;
                 projectDetailsCard.style.left = '-280px';
                 projectDetailsCard.style.pointerEvents = 'none';
                 updateCardFabState();
             }
             setCardFabVisibility();
+            if (textPromptConfirmBtn) {
+                textPromptConfirmBtn.addEventListener('click', confirmTextPrompt);
+            }
+            if (textPromptInput) {
+                textPromptInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        confirmTextPrompt();
+                    }
+                });
+            }
         };
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
@@ -1058,15 +1135,23 @@
         function addNewProject() {
             // Allow creating projects even without authentication for offline usage
             // Projects will be saved to localStorage and synced to Firebase when user logs in
-            let newProjectName = prompt('הכנס שם לפרויקט החדש:');
-            if (newProjectName && newProjectName.trim() !== '') {
-                newProjectName = newProjectName.trim();
-                const newProjectId = `project_${Date.now()}`;
-                projects[newProjectId] = createNewProjectData(newProjectName);
-                saveAllProjects();
-                switchProject(newProjectId);
-                filterProjectsByYear();
-            }
+            openTextPrompt({
+                title: 'כרטיסייה חדשה',
+                description: 'הכנס שם לפרויקט החדש:',
+                placeholder: 'לדוגמה: קברנה 2025',
+                onConfirm: (value) => {
+                    const newProjectName = (value || '').toString().trim();
+                    if (!newProjectName) {
+                        alert('אנא הזן שם לפרויקט.');
+                        return false;
+                    }
+                    const newProjectId = `project_${Date.now()}`;
+                    projects[newProjectId] = createNewProjectData(newProjectName);
+                    saveAllProjects();
+                    switchProject(newProjectId);
+                    filterProjectsByYear();
+                }
+            });
         }
         function switchProject(id) {
             if (projects[id].isClosed) {
@@ -1220,7 +1305,6 @@
                     <label for="${metricId}Input">${metric.name}:</label>
                     ${inputElementHTML}
                     <button onclick="updateMetricValue('${currentStageId}', '${metricId}')">עדכן</button>
-                    <button class="delete-metric-btn" onclick="deleteCustomMetric('${currentStageId}', '${metricId}')">מחק</button>
                 `;
                 currentStageInputSection.appendChild(inputGroup);
                 if (metric.type === 'select') {
@@ -1403,6 +1487,11 @@
             modalTitle.textContent = `היסטוריית ${metricName} (${stagesConfig[sectionId].name})`;
             historyList.innerHTML = '';
             modalGraphSvg.innerHTML = '';
+            const deleteBtn = document.getElementById('deleteMetricFromGraphBtn');
+            if (deleteBtn) {
+                const isCustomMetric = Boolean(stagesConfig[sectionId]?.customMetrics?.[metricId]);
+                deleteBtn.style.display = isCustomMetric ? 'inline-block' : 'none';
+            }
             let metricConfig;
             let historyEntries;
             if (sectionId === 'wineDetails') {
@@ -1787,19 +1876,28 @@
         function editFinanceEntry(id) {
             const entry = projects[currentProjectId].finance.find(e => e.id === id);
             if (!entry) return;
-            let newAmount = prompt(`ערוך סכום (${entry.type === 'income' ? 'הכנסה' : 'הוצאה'}):`, entry.amount);
-            if (newAmount === null) return;
-            newAmount = parseFloat(newAmount);
-            let newNotes = prompt('ערוך הערות:', entry.notes);
-            if (newNotes === null) return;
-            if (!isNaN(newAmount) && newAmount > 0) {
-                entry.amount = newAmount;
-                entry.notes = newNotes.trim();
-                saveAllProjects();
-                renderFinanceList();
-            } else {
-                alert('הסכום שהוזן אינו חוקי.');
-            }
+            openTextPrompt({
+                title: `ערוך סכום (${entry.type === 'income' ? 'הכנסה' : 'הוצאה'})`,
+                inputType: 'number',
+                defaultValue: entry.amount,
+                onConfirm: (newAmount) => {
+                    if (isNaN(newAmount) || newAmount <= 0) {
+                        alert('הסכום שהוזן אינו חוקי.');
+                        return false;
+                    }
+                    openTextPrompt({
+                        title: 'ערוך הערות',
+                        placeholder: 'הערות (אופציונלי)',
+                        defaultValue: entry.notes || '',
+                        onConfirm: (newNotes) => {
+                            entry.amount = parseFloat(newAmount);
+                            entry.notes = (newNotes || '').toString().trim();
+                            saveAllProjects();
+                            renderFinanceList();
+                        }
+                    });
+                }
+            });
         }
         function deleteFinanceEntry(id) {
             if (confirm('האם אתה בטוח שברצונך למחוק תנועה כספית זו?')) {
@@ -2108,18 +2206,27 @@
                 alert('הפרויקט סגור. פתח אותו כדי לערוך.');
                 return;
             }
-            const propName = prompt('הכנס שם לשדה המותאם אישית החדש:');
-            if (propName && propName.trim() !== '') {
-                const propId = `customProp_${Date.now()}`;
-                const newCustomProperty = {
-                    id: propId,
-                    name: propName.trim(),
-                    history: []
-                };
-                projects[currentProjectId].wineDetails.customProperties.push(newCustomProperty);
-                saveAllProjects();
-                updateProjectDetailsCard();
-            }
+            openTextPrompt({
+                title: 'שדה מותאם אישי',
+                description: 'הכנס שם לשדה המותאם אישית החדש:',
+                placeholder: 'לדוגמה: זן נוסף',
+                onConfirm: (value) => {
+                    const propName = (value || '').toString().trim();
+                    if (!propName) {
+                        alert('אנא הזן שם לשדה.');
+                        return false;
+                    }
+                    const propId = `customProp_${Date.now()}`;
+                    const newCustomProperty = {
+                        id: propId,
+                        name: propName,
+                        history: []
+                    };
+                    projects[currentProjectId].wineDetails.customProperties.push(newCustomProperty);
+                    saveAllProjects();
+                    updateProjectDetailsCard();
+                }
+            });
         }
         function deleteCustomProperty(propId) {
             if (projects[currentProjectId].isClosed) {
@@ -2131,6 +2238,14 @@
                 saveAllProjects();
                 updateProjectDetailsCard();
             }
+        }
+        function handleDeleteMetricFromGraph() {
+            const { sectionId, metricId } = currentMetricTypeForModal || {};
+            if (!sectionId || !metricId) return;
+            const isCustomMetric = Boolean(stagesConfig[sectionId]?.customMetrics?.[metricId]);
+            if (!isCustomMetric) return;
+            deleteCustomMetric(sectionId, metricId);
+            closeHistoryModal();
         }
         function attachEditListenerToDetailItem(item) {
             const displaySpan = item.querySelector('.detail-value');
@@ -2630,6 +2745,9 @@
             }
             if (event.target === projectSelectionModal) {
                 closeProjectSelectionModal();
+            }
+            if (event.target === textPromptModal) {
+                closeTextPromptModal();
             }
             if (event.target === sidebarOverlay) {
                 closeSidebar();
@@ -3146,7 +3264,7 @@
         }
         function handleCardFabResize() {
             setCardFabVisibility();
-            if (window.innerWidth <= 768) {
+            if (isMobileLayout()) {
                 if (!cardOpen) {
                     projectDetailsCard.style.left = '-280px';
                     projectDetailsCard.style.pointerEvents = 'none';
@@ -3158,19 +3276,19 @@
         }
         function setCardFabVisibility() {
             if (!cardFab) return;
-            const shouldShow = window.innerWidth <= 768 && !cardOpen;
+            const shouldShow = isMobileLayout() && !cardOpen;
             cardFab.style.display = shouldShow ? 'flex' : 'none';
         }
         // פונקציות הזזה לכרטיסיה במובייל
         function handleTouchStart(e) {
-            if (window.innerWidth > 768) return; // רק במובייל
+            if (!isMobileLayout()) return; // רק במובייל
             isDragging = true;
             startX = e.touches[0].clientX;
             currentX = startX;
             projectDetailsCard.style.transition = 'none'; // ביטול אנימציה במהלך הזזה
         }
         function handleTouchMove(e) {
-            if (!isDragging || window.innerWidth > 768) return;
+            if (!isDragging || !isMobileLayout()) return;
             e.preventDefault();
             currentX = e.touches[0].clientX;
             const deltaX = currentX - startX;
@@ -3178,7 +3296,7 @@
             projectDetailsCard.style.left = newLeft + 'px';
         }
         function handleTouchEnd(e) {
-            if (!isDragging || window.innerWidth > 768) return;
+            if (!isDragging || !isMobileLayout()) return;
             isDragging = false;
             projectDetailsCard.style.transition = 'left 0.3s ease'; // הוספת אנימציה חזרה
             const deltaX = currentX - startX;
@@ -3217,7 +3335,7 @@
             toggleCard();
         }
         function toggleCard() {
-            if (window.innerWidth > 768) return; // רק במובייל
+            if (!isMobileLayout()) return; // רק במובייל
             cardOpen = !cardOpen;
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = cardOpen ? '15px' : '-280px';
@@ -3232,7 +3350,7 @@
             setCardFabVisibility();
         }
         function closeCard() {
-            if (window.innerWidth > 768) return;
+            if (!isMobileLayout()) return;
             cardOpen = false;
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = '-280px';
