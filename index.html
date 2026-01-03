@@ -51,6 +51,7 @@
             <li><button onclick="openInboxModal();">תיבת דואר</button></li>
             <li><button onclick="openRemindersModal();">תזכורות</button></li>
             <li><button onclick="openAccessControlModal();">ניהול גישה</button></li>
+            <li><button onclick="openManageEmailsModal();">ניהול כתובות מייל</button></li>
             <li class="divider"></li>
             <li><button onclick="openInstructionsModal()">הוראות</button></li>
             <li><button onclick="openTimelineModal()">ציר זמן</button></li>
@@ -426,6 +427,44 @@
                 <hr>
                 <h4 style="margin-top:0;">הזמנות פעילות</h4>
                 <ul id="inviteList" class="project-list"></ul>
+            </div>
+        </div>
+        <div id="manageEmailsModal" class="modal">
+            <div class="modal-content project-modal-content">
+                <span class="close-button" onclick="closeManageEmailsModal()">&times;</span>
+                <h3>ניהול כתובות מייל משויכות</h3>
+                <p style="margin-top:0; color: #666; font-size: 0.9em;">
+                    הוסף כתובות מייל נוספות לחשבון שלך. כל המיילים המשויכים יאפשרו לך להתחבר לאותו חשבון עם ה-UID הייחודי שלך.
+                </p>
+                
+                <!-- Display currently linked providers -->
+                <div style="margin-bottom: 25px; padding: 15px; background: linear-gradient(135deg, #f0f4ff, #e6f0ff); border-radius: 10px; border: 1px solid #d0e0ff;">
+                    <h4 style="margin-top: 0; color: #1f3b73; font-size: 1em;">כתובות מייל משויכות כעת:</h4>
+                    <ul id="linkedEmailsList" style="list-style: none; padding: 0; margin: 10px 0 0 0;">
+                        <li style="color: #888; font-style: italic;">טוען...</li>
+                    </ul>
+                </div>
+                
+                <!-- Form to add new email -->
+                <div style="padding: 20px; background: linear-gradient(135deg, #fff5f5, #ffe6e6); border-radius: 10px; border: 1px solid #ffd0d0;">
+                    <h4 style="margin-top: 0; color: #8b0000; font-size: 1em;">הוסף כתובת מייל חדשה:</h4>
+                    <p style="margin: 5px 0 15px 0; font-size: 0.85em; color: #666;">
+                        הזן כתובת מייל וסיסמה חדשים. הסיסמה חייבת להיות לפחות 6 תווים.
+                    </p>
+                    <div class="email-form">
+                        <input type="email" id="newLinkedEmail" placeholder="כתובת מייל חדשה" required>
+                        <input type="password" id="newLinkedEmailPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6">
+                        <div class="buttons">
+                            <button class="register-btn" onclick="linkNewEmail()" style="width: 100%;">
+                                <i class="fas fa-link" style="margin-left: 8px;"></i>
+                                שייך כתובת מייל חדשה
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status message area -->
+                <div id="linkEmailStatus" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none; font-size: 0.9em;"></div>
             </div>
         </div>
     <script>
@@ -3063,6 +3102,10 @@
             if (event.target === accessControlModal) {
                 closeAccessControlModal();
             }
+            const manageEmailsModal = document.getElementById('manageEmailsModal');
+            if (event.target === manageEmailsModal) {
+                closeManageEmailsModal();
+            }
             if (event.target === sidebarOverlay) {
                 closeSidebar();
             }
@@ -3626,6 +3669,213 @@
         function loginWithEmail() {
             loginWithSitePassword();
         }
+        
+        /**
+         * Opens the Manage Emails modal for linking multiple email addresses
+         * This allows users to add additional email/password combinations to their account
+         * All linked emails will share the same UID and allow login to the same account
+         */
+        function openManageEmailsModal() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('אנא התחבר תחילה כדי לנהל כתובות מייל.');
+                openLoginModal();
+                return;
+            }
+            
+            closeSidebar();
+            const modal = document.getElementById('manageEmailsModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                loadLinkedEmails();
+            }
+        }
+        
+        /**
+         * Closes the Manage Emails modal
+         */
+        function closeManageEmailsModal() {
+            const modal = document.getElementById('manageEmailsModal');
+            if (modal) {
+                modal.style.display = 'none';
+                // Clear form fields
+                document.getElementById('newLinkedEmail').value = '';
+                document.getElementById('newLinkedEmailPassword').value = '';
+                // Hide status message
+                const statusDiv = document.getElementById('linkEmailStatus');
+                if (statusDiv) {
+                    statusDiv.style.display = 'none';
+                }
+            }
+        }
+        
+        /**
+         * Loads and displays all currently linked authentication providers/emails
+         * Shows which email addresses are currently linked to this Firebase account
+         */
+        async function loadLinkedEmails() {
+            const user = auth.currentUser;
+            if (!user) {
+                return;
+            }
+            
+            const linkedEmailsList = document.getElementById('linkedEmailsList');
+            if (!linkedEmailsList) return;
+            
+            linkedEmailsList.innerHTML = '';
+            
+            // Get all linked providers
+            const providerData = user.providerData;
+            
+            if (providerData && providerData.length > 0) {
+                providerData.forEach(profile => {
+                    const li = document.createElement('li');
+                    li.style.cssText = 'padding: 8px 12px; margin-bottom: 8px; background: white; border-radius: 6px; border: 1px solid #d0e0ff; display: flex; align-items: center; gap: 10px;';
+                    
+                    // Determine provider icon
+                    let icon = '📧';
+                    let providerName = 'Email/Password';
+                    if (profile.providerId === 'google.com') {
+                        icon = '🔵';
+                        providerName = 'Google';
+                    } else if (profile.providerId === 'password') {
+                        icon = '🔑';
+                        providerName = 'Email/Password';
+                    }
+                    
+                    li.innerHTML = `
+                        <span style="font-size: 1.2em;">${icon}</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; color: #1f3b73;">${profile.email || 'לא זמין'}</div>
+                            <div style="font-size: 0.8em; color: #666;">${providerName}</div>
+                        </div>
+                    `;
+                    linkedEmailsList.appendChild(li);
+                });
+            } else {
+                linkedEmailsList.innerHTML = '<li style="color: #888; font-style: italic;">אין כתובות מייל משויכות</li>';
+            }
+        }
+        
+        /**
+         * Links a new email/password combination to the current user's account
+         * Uses Firebase's linkWithCredential to add an additional authentication method
+         * This allows users to sign in with multiple email addresses to the same account
+         */
+        async function linkNewEmail() {
+            const user = auth.currentUser;
+            if (!user) {
+                showLinkEmailStatus('אנא התחבר תחילה.', 'error');
+                return;
+            }
+            
+            const emailInput = document.getElementById('newLinkedEmail');
+            const passwordInput = document.getElementById('newLinkedEmailPassword');
+            
+            if (!emailInput || !passwordInput) {
+                console.error('Email/password input elements not found');
+                showLinkEmailStatus('שגיאה: לא נמצאו שדות הקלט. נסה לרענן את הדף.', 'error');
+                return;
+            }
+            
+            const newEmail = emailInput.value.trim();
+            const newPassword = passwordInput.value;
+            
+            // Validate inputs
+            if (!newEmail || !newPassword) {
+                showLinkEmailStatus('אנא מלא את כל השדות.', 'error');
+                return;
+            }
+            
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(newEmail)) {
+                showLinkEmailStatus('כתובת המייל אינה תקינה.', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showLinkEmailStatus('הסיסמה חייבת להיות לפחות 6 תווים.', 'error');
+                return;
+            }
+            
+            try {
+                // Create email/password credential
+                // This credential will be linked to the current user's account
+                const credential = firebase.auth.EmailAuthProvider.credential(newEmail, newPassword);
+                
+                // Link the credential to the current user
+                // After this, the user can sign in with either the original method OR this new email/password
+                // Both will authenticate to the same UID
+                await user.linkWithCredential(credential);
+                
+                // Success! Show success message
+                showLinkEmailStatus(`✓ כתובת המייל ${newEmail} שויכה בהצלחה! עכשיו תוכל להתחבר עם מייל זה.`, 'success');
+                
+                // Clear form
+                emailInput.value = '';
+                passwordInput.value = '';
+                
+                // Reload the list of linked emails
+                await loadLinkedEmails();
+                
+                console.log('Successfully linked new email:', newEmail);
+            } catch (error) {
+                console.error('Error linking new email:', error);
+                
+                // Handle specific error cases with user-friendly messages
+                let errorMessage = 'שגיאה בשיוך המייל: ';
+                
+                if (error.code === 'auth/provider-already-linked') {
+                    errorMessage += 'המייל כבר משויך לחשבון זה.';
+                } else if (error.code === 'auth/email-already-in-use') {
+                    errorMessage += 'כתובת המייל הזו כבר בשימוש בחשבון אחר. כל מייל יכול להיות משויך רק לחשבון אחד.';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage += 'כתובת המייל אינה תקינה.';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage += 'הסיסמה חלשה מדי. השתמש בסיסמה חזקה יותר.';
+                } else if (error.code === 'auth/requires-recent-login') {
+                    errorMessage += 'נדרשת התחברות מחודשת. אנא צא ממערכת והתחבר שוב, ולאחר מכן נסה שוב.';
+                } else if (error.code === 'auth/credential-already-in-use') {
+                    errorMessage += 'פרטי ההתחברות האלה כבר משויכים לחשבון אחר.';
+                } else {
+                    errorMessage += error.message || 'שגיאה לא ידועה.';
+                }
+                
+                showLinkEmailStatus(errorMessage, 'error');
+            }
+        }
+        
+        /**
+         * Shows a status message in the link email modal
+         * @param {string} message - The message to display
+         * @param {string} type - 'success' or 'error'
+         */
+        function showLinkEmailStatus(message, type) {
+            const statusDiv = document.getElementById('linkEmailStatus');
+            if (!statusDiv) return;
+            
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                statusDiv.style.background = 'linear-gradient(135deg, #d4edda, #c3e6cb)';
+                statusDiv.style.color = '#155724';
+                statusDiv.style.border = '1px solid #c3e6cb';
+            } else {
+                statusDiv.style.background = 'linear-gradient(135deg, #f8d7da, #f5c6cb)';
+                statusDiv.style.color = '#721c24';
+                statusDiv.style.border = '1px solid #f5c6cb';
+            }
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
         function isMobileViewport() {
             const hasCoarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false;
             const minDimension = Math.min(window.innerWidth, window.innerHeight);
