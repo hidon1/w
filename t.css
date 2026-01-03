@@ -485,7 +485,7 @@ body.dark-mode .stage-nav-button:hover {
     margin-top: 0;
     margin-bottom: 5px;
     font-family: 'Playfair Display', serif;
-    font-size: calc(var(--font-size-base) * 1.2);
+    font-size: calc(var(--font-size-base) * 1.0);
     font-weight: 700;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
     transition: color var(--animation-speed);
@@ -772,6 +772,12 @@ body.dark-mode .modal-content {
     border-bottom: 2px solid var(--border-color);
     padding-bottom: 10px;
     transition: color var(--animation-speed);
+}
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 10px;
 }
 
 .modal-graph-container {
