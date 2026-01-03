@@ -408,25 +408,74 @@
             </div>
         </div>
         <div id="accessControlModal" class="modal">
-            <div class="modal-content project-modal-content">
+            <div class="modal-content access-modal-content">
                 <span class="close-button" onclick="closeAccessControlModal()">&times;</span>
-                <h3>ניהול גישה</h3>
-                <p style="margin-top:0;">מנהל החשבון יכול לשלוח הזמנה במייל עם הרשאות צפייה/עריכה ולקשר לפרויקט ספציפי או לכל הפרויקטים.</p>
-                <label for="inviteEmailInput">אימייל מוזמן:</label>
-                <input type="email" id="inviteEmailInput" placeholder="user@example.com">
-                <label for="inviteProjectSelect">פרויקט לשיתוף:</label>
-                <select id="inviteProjectSelect">
-                    <option value="all">כל הפרויקטים</option>
-                </select>
-                <div class="permissions-grid" style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;">
-                    <label><input type="checkbox" id="inviteAllowEdit"> אפשר עריכה</label>
-                    <label><input type="checkbox" id="inviteFinanceAccess"> גישת כספים</label>
+                <h3><i class="fas fa-users-cog"></i> ניהול גישה למערכת</h3>
+                
+                <!-- Add New User Section -->
+                <div class="access-section add-user-section">
+                    <h4><i class="fas fa-user-plus"></i> הוסף משתמש חדש</h4>
+                    <p class="section-description">הזן את כתובת המייל של המשתמש והגדר הרשאות גישה לפרויקטים</p>
+                    
+                    <div class="form-group">
+                        <label for="newUserEmail"><i class="fas fa-envelope"></i> כתובת מייל:</label>
+                        <input type="email" id="newUserEmail" placeholder="user@example.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="userProjectAccess"><i class="fas fa-folder-open"></i> גישה לפרויקטים:</label>
+                        <select id="userProjectAccess">
+                            <option value="all">כל הפרויקטים</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-key"></i> הרשאות:</label>
+                        <div class="permissions-container">
+                            <div class="permission-option">
+                                <input type="radio" id="permView" name="userPermission" value="view" checked>
+                                <label for="permView">
+                                    <i class="fas fa-eye"></i>
+                                    <span class="perm-title">צפייה בלבד</span>
+                                    <span class="perm-desc">המשתמש יוכל לצפות בנתונים בלבד</span>
+                                </label>
+                            </div>
+                            <div class="permission-option">
+                                <input type="radio" id="permEdit" name="userPermission" value="edit">
+                                <label for="permEdit">
+                                    <i class="fas fa-edit"></i>
+                                    <span class="perm-title">עריכה</span>
+                                    <span class="perm-desc">המשתמש יוכל לצפות ולערוך נתונים</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="userFinanceAccess">
+                            <i class="fas fa-dollar-sign"></i> גישה לניהול כספים
+                        </label>
+                    </div>
+                    
+                    <button class="btn-primary" onclick="grantUserAccess()">
+                        <i class="fas fa-user-check"></i> הענק גישה
+                    </button>
                 </div>
-                <button onclick="createAccessInvite()">צור הזמנה וקישור</button>
-                <div id="inviteLinkOutput" style="margin-top:10px;font-size:0.9em;word-break:break-all;"></div>
-                <hr>
-                <h4 style="margin-top:0;">הזמנות פעילות</h4>
-                <ul id="inviteList" class="project-list"></ul>
+                
+                <hr class="section-divider">
+                
+                <!-- Active Users Section -->
+                <div class="access-section active-users-section">
+                    <h4><i class="fas fa-users"></i> משתמשים עם גישה פעילה</h4>
+                    <div class="users-list-container">
+                        <ul id="activeUsersList" class="active-users-list"></ul>
+                        <div id="noUsersMessage" class="no-users-message" style="display:none;">
+                            <i class="fas fa-info-circle"></i>
+                            <p>אין משתמשים עם גישה כרגע</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="manageEmailsModal" class="modal">
@@ -1173,93 +1222,193 @@
                 openLoginModal();
                 return;
             }
-            populateAccessProjectSelect();
-            loadAccessInvites();
-            if (inviteLinkOutput) {
-                inviteLinkOutput.textContent = '';
-            }
+            populateUserProjectSelect();
+            loadActiveUsers();
+            clearAccessForm();
             closeSidebar();
+            document.querySelector('.container').style.display = 'none';
+            document.querySelector('.top-section-wrapper').style.display = 'none';
+            fixedDashboardSection.style.display = 'none';
             accessControlModal.style.display = 'flex';
         }
+        
         function closeAccessControlModal() {
-            if (accessControlModal) accessControlModal.style.display = 'none';
+            if (accessControlModal) {
+                accessControlModal.style.display = 'none';
+                showMainContent();
+            }
         }
-        function populateAccessProjectSelect() {
-            if (!inviteProjectSelect) return;
-            const currentValue = inviteProjectSelect.value;
-            inviteProjectSelect.innerHTML = '<option value="all">כל הפרויקטים</option>';
+        
+        function populateUserProjectSelect() {
+            const select = document.getElementById('userProjectAccess');
+            if (!select) return;
+            const currentValue = select.value;
+            select.innerHTML = '<option value="all">כל הפרויקטים</option>';
             Object.keys(projects).forEach(id => {
                 const option = document.createElement('option');
                 option.value = id;
                 option.textContent = projects[id].name;
-                inviteProjectSelect.appendChild(option);
+                select.appendChild(option);
             });
             if (currentValue) {
-                inviteProjectSelect.value = currentValue;
+                select.value = currentValue;
             }
         }
-        async function createAccessInvite() {
+        
+        function clearAccessForm() {
+            const emailInput = document.getElementById('newUserEmail');
+            const projectSelect = document.getElementById('userProjectAccess');
+            const viewRadio = document.getElementById('permView');
+            const financeCheckbox = document.getElementById('userFinanceAccess');
+            
+            if (emailInput) emailInput.value = '';
+            if (projectSelect) projectSelect.value = 'all';
+            if (viewRadio) viewRadio.checked = true;
+            if (financeCheckbox) financeCheckbox.checked = false;
+        }
+        async function grantUserAccess() {
             const user = auth.currentUser;
             if (!user) {
-                alert('נדרש להתחבר כדי ליצור הזמנה.');
+                alert('נדרש להתחבר כדי להעניק גישה.');
                 return;
             }
-            const targetEmail = inviteEmailInput?.value.trim();
-            const projectId = inviteProjectSelect?.value || 'all';
-            const allowEdit = !!(inviteAllowEdit?.checked);
-            const allowFinance = !!(inviteFinanceAccess?.checked);
+            
+            const emailInput = document.getElementById('newUserEmail');
+            const projectSelect = document.getElementById('userProjectAccess');
+            const editRadio = document.getElementById('permEdit');
+            const financeCheckbox = document.getElementById('userFinanceAccess');
+            
+            const targetEmail = emailInput?.value.trim();
+            const projectId = projectSelect?.value || 'all';
+            const allowEdit = editRadio?.checked || false;
+            const allowFinance = financeCheckbox?.checked || false;
+            
             if (!targetEmail) {
-                alert('אנא הזן כתובת מייל לשיתוף.');
+                alert('אנא הזן כתובת מייל.');
                 return;
             }
+            
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(targetEmail)) {
+                alert('כתובת המייל אינה תקינה.');
+                return;
+            }
+            
             try {
-                const docRef = await db.collection('projectAccessInvites').add({
+                // Store user access directly in Firestore
+                await db.collection('userAccess').add({
                     ownerUid: user.uid,
                     ownerEmail: user.email || '',
-                    inviteeEmail: targetEmail,
+                    userEmail: targetEmail,
                     projectId: projectId === 'all' ? null : projectId,
-                    allowEdit,
-                    allowFinance,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    allowEdit: allowEdit,
+                    allowFinance: allowFinance,
+                    status: 'active',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                const link = `${window.location.origin}${window.location.pathname}?invite=${docRef.id}`;
-                if (inviteLinkOutput) {
-                    inviteLinkOutput.textContent = `קישור שנוצר: ${link}`;
-                }
-                await loadAccessInvites();
+                
+                alert(`גישה הוענקה בהצלחה ל-${targetEmail}`);
+                clearAccessForm();
+                await loadActiveUsers();
             } catch (err) {
-                console.error('שגיאה ביצירת הזמנה', err);
-                alert('יצירת ההזמנה נכשלה. נסה שוב.');
+                console.error('שגיאה בהענקת גישה', err);
+                alert('הענקת הגישה נכשלה. נסה שוב.');
             }
         }
-        async function loadAccessInvites() {
+        
+        async function loadActiveUsers() {
             const user = auth.currentUser;
-            if (!user || !inviteList) return;
+            const usersList = document.getElementById('activeUsersList');
+            const noUsersMsg = document.getElementById('noUsersMessage');
+            
+            if (!user || !usersList) return;
+            
             try {
-                const snapshot = await db.collection('projectAccessInvites')
+                const snapshot = await db.collection('userAccess')
                     .where('ownerUid', '==', user.uid)
+                    .where('status', '==', 'active')
                     .orderBy('createdAt', 'desc')
                     .get();
-                inviteList.innerHTML = '';
+                
+                usersList.innerHTML = '';
+                
+                if (snapshot.empty) {
+                    if (noUsersMsg) noUsersMsg.style.display = 'block';
+                    return;
+                }
+                
+                if (noUsersMsg) noUsersMsg.style.display = 'none';
+                
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const li = document.createElement('li');
+                    li.className = 'user-access-item';
+                    
+                    const projectName = data.projectId ? (projects[data.projectId]?.name || data.projectId) : 'כל הפרויקטים';
+                    const permissionText = data.allowEdit ? 'עריכה' : 'צפייה בלבד';
+                    const financeText = data.allowFinance ? 'כולל כספים' : 'ללא כספים';
+                    
                     li.innerHTML = `
-                        <span>${data.inviteeEmail} - ${data.projectId ? (projects[data.projectId]?.name || data.projectId) : 'כל הפרויקטים'} (${data.allowEdit ? 'עריכה' : 'צפייה'}, ${data.allowFinance ? 'כולל כספים' : 'ללא כספים'})</span>
-                        <div class="project-actions">
-                            <button onclick="copyInviteLink('${doc.id}')">קישור</button>
+                        <div class="user-info">
+                            <div class="user-email">
+                                <i class="fas fa-user"></i>
+                                <strong>${data.userEmail}</strong>
+                            </div>
+                            <div class="user-permissions">
+                                <span class="permission-badge ${data.allowEdit ? 'edit' : 'view'}">
+                                    <i class="fas ${data.allowEdit ? 'fa-edit' : 'fa-eye'}"></i>
+                                    ${permissionText}
+                                </span>
+                                <span class="permission-badge project">
+                                    <i class="fas fa-folder"></i>
+                                    ${projectName}
+                                </span>
+                                <span class="permission-badge ${data.allowFinance ? 'finance-yes' : 'finance-no'}">
+                                    <i class="fas fa-${data.allowFinance ? 'dollar-sign' : 'ban'}"></i>
+                                    ${financeText}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="user-actions">
+                            <button class="btn-edit" onclick="editUserAccess('${doc.id}')" title="ערוך הרשאות">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-delete" onclick="revokeUserAccess('${doc.id}', '${data.userEmail}')" title="שלול גישה">
+                                <i class="fas fa-user-times"></i>
+                            </button>
                         </div>
                     `;
-                    inviteList.appendChild(li);
+                    usersList.appendChild(li);
                 });
             } catch (err) {
-                console.error('שגיאה בטעינת הזמנות', err);
+                console.error('שגיאה בטעינת משתמשים', err);
             }
         }
-        function copyInviteLink(inviteId) {
-            const link = `${window.location.origin}${window.location.pathname}?invite=${inviteId}`;
-            navigator.clipboard?.writeText(link);
-            alert('הקישור הועתק.');
+        
+        async function revokeUserAccess(accessId, userEmail) {
+            if (!confirm(`האם לשלול את הגישה של ${userEmail}?`)) {
+                return;
+            }
+            
+            try {
+                await db.collection('userAccess').doc(accessId).update({
+                    status: 'revoked',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                alert('הגישה נשללה בהצלחה');
+                await loadActiveUsers();
+            } catch (err) {
+                console.error('שגיאה בשלילת גישה', err);
+                alert('שלילת הגישה נכשלה. נסה שוב.');
+            }
+        }
+        
+        async function editUserAccess(accessId) {
+            // TODO: Implement edit functionality
+            alert('עריכת הרשאות תתאפשר בקרוב');
         }
         function renderProjectList(yearFilter = 'all') {
             projectList.innerHTML = '';
