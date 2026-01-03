@@ -3419,7 +3419,12 @@
             });
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
-                    loginWithGoogle();
+                    try {
+                        loginWithGoogle();
+                    } catch (error) {
+                        console.error('Error calling loginWithGoogle:', error);
+                        alert('שגיאה בהתחברות: ' + error.message);
+                    }
                 });
             }
             if (logoutBtn) {
