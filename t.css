@@ -367,15 +367,16 @@ body.dark-mode .container {
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 15px;
-    margin-bottom: 20px;
-    padding: 10px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    margin-top: 12px;
+    margin-bottom: 16px;
+    padding: 8px;
     background: linear-gradient(135deg, #F8F0E3, #E6D7C3);
     border-radius: var(--border-radius);
     transition: all var(--animation-speed);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 body.dark-mode .stage-nav-container {
@@ -385,14 +386,14 @@ body.dark-mode .stage-nav-container {
 .stage-nav-button {
     background-color: var(--light-text-color);
     color: white;
-    padding: 10px 15px;
+    padding: 8px 12px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     cursor: pointer;
-    font-size: calc(var(--font-size-base) * 0.9);
+    font-size: calc(var(--font-size-base) * 0.85);
     font-weight: 700;
     transition: all 0.3s ease, transform 0.2s ease;
-    min-width: 100px;
+    min-width: 90px;
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -422,6 +423,36 @@ body.dark-mode .stage-nav-container {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.shared-access-notice {
+    display: none;
+    padding: 8px 12px;
+    margin-top: 6px;
+    border-radius: 10px;
+    background: #f0f4ff;
+    color: #1f3b73;
+    font-size: calc(var(--font-size-base) * 0.85);
+    border: 1px solid rgba(0,0,0,0.06);
+}
+
+.shared-access-notice.view-only {
+    background: #fff5f5;
+    color: #8b0000;
+    border-color: rgba(139,0,0,0.15);
+}
+
+body.view-only .editable,
+body.view-only .add-data-cube,
+body.view-only .add-project-btn,
+body.view-only .finance-item-actions button,
+body.view-only .finance-input-buttons button,
+body.view-only .add-income-btn,
+body.view-only .add-expense-btn,
+body.view-only .add-custom-property-btn,
+body.view-only .delete-custom-prop-btn {
+    pointer-events: none;
+    opacity: 0.5;
 }
 
 body.dark-mode .stage-nav-button {

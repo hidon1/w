@@ -50,6 +50,7 @@
             <li><button onclick="openFinanceYearlyModal();">דוח כספי לפי שנה</button></li>
             <li><button onclick="openInboxModal();">תיבת דואר</button></li>
             <li><button onclick="openRemindersModal();">תזכורות</button></li>
+            <li><button onclick="openAccessControlModal();">ניהול גישה</button></li>
             <li class="divider"></li>
             <li><button onclick="openInstructionsModal()">הוראות</button></li>
             <li><button onclick="openTimelineModal()">ציר זמן</button></li>
@@ -119,6 +120,7 @@
                 <h2 id="currentProjectName">פרויקט ראשי</h2>
                 <input type="text" id="editProjectNameInput" style="display:none;">
             </div>
+            <div id="sharedAccessNotice" class="shared-access-notice"></div>
             <div class="stage-nav-container" id="stageNavContainer"></div>
         </div>
     </div>
@@ -397,13 +399,35 @@
             </div>
         </div>
     </div>
-    <div id="projectSelectionModal" class="modal">
-        <div class="modal-content project-modal-content">
-            <span class="close-button" onclick="closeProjectSelectionModal()">&times;</span>
-            <h3>בחר פרויקט להשוואה</h3>
-            <ul id="comparisonProjectList" class="project-list"></ul>
+        <div id="projectSelectionModal" class="modal">
+            <div class="modal-content project-modal-content">
+                <span class="close-button" onclick="closeProjectSelectionModal()">&times;</span>
+                <h3>בחר פרויקט להשוואה</h3>
+                <ul id="comparisonProjectList" class="project-list"></ul>
+            </div>
         </div>
-    </div>
+        <div id="accessControlModal" class="modal">
+            <div class="modal-content project-modal-content">
+                <span class="close-button" onclick="closeAccessControlModal()">&times;</span>
+                <h3>ניהול גישה</h3>
+                <p style="margin-top:0;">מנהל החשבון יכול לשלוח הזמנה במייל עם הרשאות צפייה/עריכה ולקשר לפרויקט ספציפי או לכל הפרויקטים.</p>
+                <label for="inviteEmailInput">אימייל מוזמן:</label>
+                <input type="email" id="inviteEmailInput" placeholder="user@example.com">
+                <label for="inviteProjectSelect">פרויקט לשיתוף:</label>
+                <select id="inviteProjectSelect">
+                    <option value="all">כל הפרויקטים</option>
+                </select>
+                <div class="permissions-grid" style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;">
+                    <label><input type="checkbox" id="inviteAllowEdit"> אפשר עריכה</label>
+                    <label><input type="checkbox" id="inviteFinanceAccess"> גישת כספים</label>
+                </div>
+                <button onclick="createAccessInvite()">צור הזמנה וקישור</button>
+                <div id="inviteLinkOutput" style="margin-top:10px;font-size:0.9em;word-break:break-all;"></div>
+                <hr>
+                <h4 style="margin-top:0;">הזמנות פעילות</h4>
+                <ul id="inviteList" class="project-list"></ul>
+            </div>
+        </div>
     <script>
         const stagesConfig = {
             'wineDetails': {
@@ -599,6 +623,14 @@
         const customPropertyModal = document.getElementById('customPropertyModal');
         const customPropertyNameInput = document.getElementById('customPropertyNameInput');
         const deleteMetricBtn = document.getElementById('deleteMetricBtn');
+        const accessControlModal = document.getElementById('accessControlModal');
+        const inviteEmailInput = document.getElementById('inviteEmailInput');
+        const inviteProjectSelect = document.getElementById('inviteProjectSelect');
+        const inviteAllowEdit = document.getElementById('inviteAllowEdit');
+        const inviteFinanceAccess = document.getElementById('inviteFinanceAccess');
+        const inviteLinkOutput = document.getElementById('inviteLinkOutput');
+        const inviteList = document.getElementById('inviteList');
+        const sharedAccessNotice = document.getElementById('sharedAccessNotice');
         let currentMetricTypeForModal = { sectionId: '', metricId: '' };
         let currentEditableDetailElement = null;
         let graphComparisonMode = null;
@@ -611,6 +643,7 @@
         let currentX = 0;
         let cardOpen = false; // מצב הכרטיסיה: פתוח או סגור
         let editingFinanceEntryId = null;
+        let sharedAccessContext = { active: false, inviteId: null, ownerUid: null, allowEdit: false, allowFinance: false, allowedProjectId: null };
         if (newProjectNameInput) {
             newProjectNameInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -638,6 +671,48 @@
                     saveFinanceEdit();
                 }
             });
+        }
+        function isProjectAllowed(projectId) {
+            if (!sharedAccessContext.active) return true;
+            if (!sharedAccessContext.allowedProjectId) return true;
+            return sharedAccessContext.allowedProjectId === projectId;
+        }
+        function ensureProjectAccess(projectId) {
+            if (!isProjectAllowed(projectId)) {
+                alert('אין לך הרשאה לפרויקט זה לפי ההזמנה.');
+                return false;
+            }
+            return true;
+        }
+        function ensureEditPermission(projectId = currentProjectId) {
+            if (!ensureProjectAccess(projectId)) return false;
+            if (sharedAccessContext.active && !sharedAccessContext.allowEdit) {
+                alert('גישה זו היא לצפייה בלבד.');
+                return false;
+            }
+            return true;
+        }
+        function ensureFinancePermission(projectId = currentProjectId) {
+            if (!ensureProjectAccess(projectId)) return false;
+            if (sharedAccessContext.active && !sharedAccessContext.allowFinance) {
+                alert('אין לך הרשאת כספים בהזמנה זו.');
+                return false;
+            }
+            return true;
+        }
+        function updateSharedAccessNotice() {
+            if (!sharedAccessNotice) return;
+            document.body.classList.toggle('view-only', sharedAccessContext.active && !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance);
+            if (sharedAccessContext.active) {
+                sharedAccessNotice.style.display = 'block';
+                sharedAccessNotice.classList.toggle('view-only', !sharedAccessContext.allowEdit);
+                const scopeText = sharedAccessContext.allowedProjectId ? 'פרויקט ספציפי' : 'כל הפרויקטים';
+                const mode = sharedAccessContext.allowEdit ? 'עריכה' : 'צפייה בלבד';
+                const finance = sharedAccessContext.allowFinance ? 'כולל כספים' : 'ללא גישה לכספים';
+                sharedAccessNotice.textContent = `גישה משותפת (${scopeText}) - ${mode}, ${finance}`;
+            } else {
+                sharedAccessNotice.style.display = 'none';
+            }
         }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
@@ -811,7 +886,7 @@
                 });
             }
         }
-        window.onload = () => {
+        window.onload = async () => {
             // Load stagesConfig from localStorage if available
             const savedStagesConfig = localStorage.getItem('stagesConfig');
             if (savedStagesConfig) {
@@ -828,10 +903,12 @@
                 }
             }
             
+            await handleInviteFromUrl();
             loadDarkModeState();
             populateYearSelects();
             setDefaultYearFilter();
             renderAllMainContent();
+            updateSharedAccessNotice();
             requestNotificationPermission();
             setInterval(checkReminders, 60000);
             checkReminders();
@@ -1014,6 +1091,10 @@
             return loaded;
         }
         function saveAllProjects() {
+            if (sharedAccessContext.active && !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance) {
+                console.warn('מצב צפייה בלבד - לא נשמרו שינויים');
+                return;
+            }
             localStorage.setItem('projects', JSON.stringify(projects));
             localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig)); // Save stagesConfig too
             try {
@@ -1046,9 +1127,107 @@
             const selectedYear = projectYearFilter.value;
             renderProjectList(selectedYear);
         }
+        function openAccessControlModal() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('התחבר כדי לנהל הרשאות שיתוף.');
+                openLoginModal();
+                return;
+            }
+            populateAccessProjectSelect();
+            loadAccessInvites();
+            if (inviteLinkOutput) {
+                inviteLinkOutput.textContent = '';
+            }
+            closeSidebar();
+            accessControlModal.style.display = 'flex';
+        }
+        function closeAccessControlModal() {
+            if (accessControlModal) accessControlModal.style.display = 'none';
+        }
+        function populateAccessProjectSelect() {
+            if (!inviteProjectSelect) return;
+            const currentValue = inviteProjectSelect.value;
+            inviteProjectSelect.innerHTML = '<option value="all">כל הפרויקטים</option>';
+            Object.keys(projects).forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = projects[id].name;
+                inviteProjectSelect.appendChild(option);
+            });
+            if (currentValue) {
+                inviteProjectSelect.value = currentValue;
+            }
+        }
+        async function createAccessInvite() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('נדרש להתחבר כדי ליצור הזמנה.');
+                return;
+            }
+            const targetEmail = inviteEmailInput?.value.trim();
+            const projectId = inviteProjectSelect?.value || 'all';
+            const allowEdit = !!(inviteAllowEdit?.checked);
+            const allowFinance = !!(inviteFinanceAccess?.checked);
+            if (!targetEmail) {
+                alert('אנא הזן כתובת מייל לשיתוף.');
+                return;
+            }
+            try {
+                const docRef = await db.collection('projectAccessInvites').add({
+                    ownerUid: user.uid,
+                    ownerEmail: user.email || '',
+                    inviteeEmail: targetEmail,
+                    projectId: projectId === 'all' ? null : projectId,
+                    allowEdit,
+                    allowFinance,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                const link = `${window.location.origin}${window.location.pathname}?invite=${docRef.id}`;
+                if (inviteLinkOutput) {
+                    inviteLinkOutput.textContent = `קישור שנוצר: ${link}`;
+                }
+                await loadAccessInvites();
+            } catch (err) {
+                console.error('שגיאה ביצירת הזמנה', err);
+                alert('יצירת ההזמנה נכשלה. נסה שוב.');
+            }
+        }
+        async function loadAccessInvites() {
+            const user = auth.currentUser;
+            if (!user || !inviteList) return;
+            try {
+                const snapshot = await db.collection('projectAccessInvites')
+                    .where('ownerUid', '==', user.uid)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+                inviteList.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${data.inviteeEmail} - ${data.projectId ? (projects[data.projectId]?.name || data.projectId) : 'כל הפרויקטים'} (${data.allowEdit ? 'עריכה' : 'צפייה'}, ${data.allowFinance ? 'כולל כספים' : 'ללא כספים'})</span>
+                        <div class="project-actions">
+                            <button onclick="copyInviteLink('${doc.id}')">קישור</button>
+                        </div>
+                    `;
+                    inviteList.appendChild(li);
+                });
+            } catch (err) {
+                console.error('שגיאה בטעינת הזמנות', err);
+            }
+        }
+        function copyInviteLink(inviteId) {
+            const link = `${window.location.origin}${window.location.pathname}?invite=${inviteId}`;
+            navigator.clipboard?.writeText(link);
+            alert('הקישור הועתק.');
+        }
         function renderProjectList(yearFilter = 'all') {
             projectList.innerHTML = '';
             let projectsToDisplay = Object.keys(projects).map(id => ({ id, ...projects[id] }));
+            if (sharedAccessContext.active && sharedAccessContext.allowedProjectId) {
+                projectsToDisplay = projectsToDisplay.filter(p => p.id === sharedAccessContext.allowedProjectId);
+            }
             if (yearFilter !== 'all') {
                 projectsToDisplay = projectsToDisplay.filter(project => {
                     const vintageYearEntries = project.wineDetails.vintageYear;
@@ -1127,6 +1306,9 @@
             });
         }
         function toggleProjectClosed(projectId) {
+            if (!ensureEditPermission(projectId)) {
+                return;
+            }
             projects[projectId].isClosed = !projects[projectId].isClosed;
             saveAllProjects();
             filterProjectsByYear();
@@ -1142,6 +1324,9 @@
          * @param {string} [manualName] optional name for backward compatibility when modal is unavailable
          */
         function confirmAddNewProject(manualName) {
+            if (!ensureEditPermission()) {
+                return;
+            }
             // Allow creating projects even without authentication for offline usage
             // Projects will be saved to localStorage and synced to Firebase when user logs in
             const nameFromModal = newProjectNameInput ? newProjectNameInput.value.trim() : '';
@@ -1163,6 +1348,9 @@
             }
         }
         function switchProject(id) {
+            if (!ensureProjectAccess(id)) {
+                return;
+            }
             if (projects[id].isClosed) {
                 alert('לא ניתן לעבוד על פרויקט סגור. פתח אותו קודם.');
                 return;
@@ -1174,6 +1362,9 @@
             closeProjectManagementModal();
         }
         function deleteProject(id) {
+            if (!ensureEditPermission(id)) {
+                return;
+            }
             if (confirm('האם אתה בטוח שברצונך למחוק את הפרויקט "${projects[id].name}"? כל הנתונים יימחקו לצמיתות.')) {
                 delete projects[id];
                 if (currentProjectId === id) {
@@ -1843,6 +2034,9 @@
             }
         }
         function openFinanceModal() {
+            if (!ensureFinancePermission()) {
+                return;
+            }
             if (projects[currentProjectId].isClosed) {
                 alert('הפרויקט סגור. פתח אותו כדי לנהל כספים.');
                 return;
@@ -1859,6 +2053,9 @@
             showMainContent();
         }
         function addFinanceEntry(type) {
+            if (!ensureFinancePermission()) {
+                return;
+            }
             const amount = parseFloat(financeAmountInput.value);
             const notes = financeNotesInput.value.trim();
             if (isNaN(amount) || amount <= 0) {
@@ -1948,6 +2145,9 @@
             }
         }
         function deleteFinanceEntry(id) {
+            if (!ensureFinancePermission()) {
+                return;
+            }
             if (confirm('האם אתה בטוח שברצונך למחוק תנועה כספית זו?')) {
                 const initialLength = projects[currentProjectId].finance.length;
                 projects[currentProjectId].finance = projects[currentProjectId].finance.filter(entry => entry.id !== id);
@@ -1958,6 +2158,9 @@
             }
         }
         function saveFinanceEdit() {
+            if (!ensureFinancePermission()) {
+                return;
+            }
             if (editingFinanceEntryId === null) {
                 closeFinanceEditModal();
                 return;
@@ -1988,6 +2191,9 @@
             if (financeEditNotesInput) financeEditNotesInput.value = '';
         }
         function openCurrentProjectFinanceReportModal() {
+            if (!ensureFinancePermission()) {
+                return;
+            }
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
@@ -2051,6 +2257,9 @@
             }
         }
         function openGlobalFinanceReportModal() {
+            if (!ensureFinancePermission()) {
+                return;
+            }
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
@@ -2105,6 +2314,9 @@
             }
         }
         function openFinanceYearlyModal() {
+            if (!ensureFinancePermission()) {
+                return;
+            }
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
@@ -2295,6 +2507,9 @@
                 alert('הפרויקט סגור. פתח אותו כדי לערוך.');
                 return;
             }
+            if (!ensureEditPermission()) {
+                return;
+            }
             const propName = customPropertyNameInput ? customPropertyNameInput.value.trim() : '';
             if (propName) {
                 const propId = `customProp_${Date.now()}`;
@@ -2314,6 +2529,9 @@
         function deleteCustomProperty(propId, skipConfirm = false) {
             if (projects[currentProjectId].isClosed) {
                 alert('הפרויקט סגור. פתח אותו כדי לערוך.');
+                return;
+            }
+            if (!ensureEditPermission()) {
                 return;
             }
             if (!skipConfirm && !confirm('האם אתה בטוח שברצונך למחוק שדה מותאם אישית זה?')) {
@@ -2336,6 +2554,9 @@
             const newClickHandler = () => {
                 if (projects[currentProjectId].isClosed) {
                     alert('הפרויקט סגור. פתח אותו כדי לערוך.');
+                    return;
+                }
+                if (!ensureEditPermission()) {
                     return;
                 }
                 if (currentEditableDetailElement && currentEditableDetailElement.displaySpan !== displaySpan) {
@@ -2469,6 +2690,9 @@
             renderPreviousStageOverview();
         }
         function updateProjectDetailValue(section, metricId, newValue) {
+            if (!ensureEditPermission()) {
+                return;
+            }
             let metricDataArray;
             if (section === 'wineDetails') {
                 const predefinedMetricConfig = stagesConfig.wineDetails.metrics[metricId];
@@ -2836,6 +3060,9 @@
             if (event.target === financeEditModal) {
                 closeFinanceEditModal();
             }
+            if (event.target === accessControlModal) {
+                closeAccessControlModal();
+            }
             if (event.target === sidebarOverlay) {
                 closeSidebar();
             }
@@ -2847,6 +3074,9 @@
             document.getElementById('addMetricModal').style.display = 'none';
         }
         function addNewMetric() {
+            if (!ensureEditPermission()) {
+                return;
+            }
             const name = document.getElementById('addMetricName').value.trim();
             if (name) {
                 // Generate unique metric ID
@@ -2882,6 +3112,9 @@
             }
         }
         function deleteCustomMetric(stageId, metricId, skipConfirm = false) {
+            if (!ensureEditPermission()) {
+                return;
+            }
             if (!stageId || !metricId) return;
             if (!stagesConfig[stageId] || !stagesConfig[stageId].customMetrics || !stagesConfig[stageId].customMetrics[metricId]) return;
             if (!skipConfirm && !confirm('למחוק את המדד המותאם? פעולה זו תמחק גם את הנתונים שלו.')) return;
@@ -2988,7 +3221,51 @@
                 console.error('שגיאה בטעינת מצב מפיירבייס:', err);
             }
         }
-        
+        async function loadSharedStateByOwner(ownerUid) {
+            try {
+                const docRef = db.collection('wineMonitoringStates').doc(ownerUid);
+                const docSnap = await docRef.get();
+                if (docSnap.exists) {
+                    const data = docSnap.data();
+                    applyStateToUI(data.state);
+                } else {
+                    alert('הנתונים של בעל החשבון אינם זמינים.');
+                }
+            } catch (err) {
+                console.error('שגיאה בטעינת נתונים משותפים:', err);
+                alert('שגיאה בטעינת השיתוף.');
+            }
+        }
+        async function handleInviteFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const inviteId = params.get('invite');
+            if (!inviteId) return;
+            try {
+                const inviteDoc = await db.collection('projectAccessInvites').doc(inviteId).get();
+                if (!inviteDoc.exists) {
+                    alert('הזמנה לא נמצאה.');
+                    return;
+                }
+                const invite = inviteDoc.data();
+                sharedAccessContext = {
+                    active: true,
+                    inviteId,
+                    ownerUid: invite.ownerUid,
+                    allowEdit: !!invite.allowEdit,
+                    allowFinance: !!invite.allowFinance,
+                    allowedProjectId: invite.projectId || null
+                };
+                await loadSharedStateByOwner(invite.ownerUid);
+                if (sharedAccessContext.allowedProjectId && projects[sharedAccessContext.allowedProjectId]) {
+                    currentProjectId = sharedAccessContext.allowedProjectId;
+                    localStorage.setItem('currentProjectId', currentProjectId);
+                }
+                document.body.classList.toggle('view-only', !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance);
+                updateSharedAccessNotice();
+            } catch (err) {
+                console.error('שגיאה בקריאת הזמנה', err);
+            }
+        }
         // Real-time synchronization listener
         let realtimeUnsubscribe = null;
         function setupRealtimeSync(user) {
