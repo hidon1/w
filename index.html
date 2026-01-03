@@ -3428,10 +3428,54 @@
                 alert('שגיאה בטעינת השיתוף.');
             }
         }
+        async function checkUserAccess() {
+            const user = auth.currentUser;
+            if (!user || !user.email) return;
+            
+            try {
+                // Check if current user has been granted access to any owner's data
+                const snapshot = await db.collection('userAccess')
+                    .where('userEmail', '==', user.email)
+                    .where('status', '==', 'active')
+                    .get();
+                
+                if (!snapshot.empty) {
+                    // User has access - load the first active access grant
+                    const accessDoc = snapshot.docs[0];
+                    const access = accessDoc.data();
+                    
+                    sharedAccessContext = {
+                        active: true,
+                        accessId: accessDoc.id,
+                        ownerUid: access.ownerUid,
+                        allowEdit: !!access.allowEdit,
+                        allowFinance: !!access.allowFinance,
+                        allowedProjectId: access.projectId || null
+                    };
+                    
+                    await loadSharedStateByOwner(access.ownerUid);
+                    
+                    if (sharedAccessContext.allowedProjectId && projects[sharedAccessContext.allowedProjectId]) {
+                        currentProjectId = sharedAccessContext.allowedProjectId;
+                        localStorage.setItem('currentProjectId', currentProjectId);
+                    }
+                    
+                    document.body.classList.toggle('view-only', !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance);
+                    updateSharedAccessNotice();
+                }
+            } catch (err) {
+                console.error('שגיאה בבדיקת גישה', err);
+            }
+        }
+        
         async function handleInviteFromUrl() {
             const params = new URLSearchParams(window.location.search);
             const inviteId = params.get('invite');
-            if (!inviteId) return;
+            if (!inviteId) {
+                // No invite in URL, check for direct user access
+                await checkUserAccess();
+                return;
+            }
             try {
                 const inviteDoc = await db.collection('projectAccessInvites').doc(inviteId).get();
                 if (!inviteDoc.exists) {
