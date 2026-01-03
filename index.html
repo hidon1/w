@@ -3420,6 +3420,8 @@
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
                     try {
+                        // Note: loginWithGoogle() handles async errors internally via .catch() handlers
+                        // This try-catch only catches synchronous errors during function invocation
                         loginWithGoogle();
                     } catch (error) {
                         console.error('Error calling loginWithGoogle:', error);
