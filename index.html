@@ -3671,6 +3671,17 @@
         }
         
         /**
+         * Validates email address format
+         * @param {string} email - Email address to validate
+         * @returns {boolean} - True if email is valid, false otherwise
+         */
+        function isValidEmail(email) {
+            // Email validation regex pattern
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        /**
          * Opens the Manage Emails modal for linking multiple email addresses
          * This allows users to add additional email/password combinations to their account
          * All linked emails will share the same UID and allow login to the same account
@@ -3732,19 +3743,22 @@
                     const li = document.createElement('li');
                     li.style.cssText = 'padding: 8px 12px; margin-bottom: 8px; background: white; border-radius: 6px; border: 1px solid #d0e0ff; display: flex; align-items: center; gap: 10px;';
                     
-                    // Determine provider icon
-                    let icon = '📧';
+                    // Determine provider icon using FontAwesome for cross-platform consistency
+                    let iconClass = 'fas fa-envelope';
+                    let iconColor = '#666';
                     let providerName = 'Email/Password';
                     if (profile.providerId === 'google.com') {
-                        icon = '🔵';
+                        iconClass = 'fab fa-google';
+                        iconColor = '#4285f4';
                         providerName = 'Google';
                     } else if (profile.providerId === 'password') {
-                        icon = '🔑';
+                        iconClass = 'fas fa-key';
+                        iconColor = '#f4b400';
                         providerName = 'Email/Password';
                     }
                     
                     li.innerHTML = `
-                        <span style="font-size: 1.2em;">${icon}</span>
+                        <i class="${iconClass}" style="font-size: 1.2em; color: ${iconColor};"></i>
                         <div style="flex: 1;">
                             <div style="font-weight: bold; color: #1f3b73;">${profile.email || 'לא זמין'}</div>
                             <div style="font-size: 0.8em; color: #666;">${providerName}</div>
@@ -3787,9 +3801,8 @@
                 return;
             }
             
-            // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(newEmail)) {
+            // Validate email format using shared validation function
+            if (!isValidEmail(newEmail)) {
                 showLinkEmailStatus('כתובת המייל אינה תקינה.', 'error');
                 return;
             }
