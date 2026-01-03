@@ -3407,7 +3407,6 @@
             const logoutBtn = document.getElementById('logoutBtn');
             const changeSitePasswordBtn = document.getElementById('changeSitePasswordBtn');
             const authStatus = document.getElementById('authStatus');
-            const googleProvider = new firebase.auth.GoogleAuthProvider();
             auth.getRedirectResult().then((result) => {
                 if (result.user) {
                     console.log('User signed in via redirect');
@@ -3419,13 +3418,8 @@
                 alert('שגיאה בהתחברות: ' + error.message);
             });
             if (loginBtn) {
-                loginBtn.addEventListener('click', async () => {
-                    try {
-                        await auth.signInWithPopup(googleProvider);
-                    } catch (err) {
-                        console.error(err);
-                        alert('שגיאה בהתחברות: ' + err.message);
-                    }
+                loginBtn.addEventListener('click', () => {
+                    loginWithGoogle();
                 });
             }
             if (logoutBtn) {
