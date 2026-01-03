@@ -110,6 +110,19 @@
         flex: 1;
         justify-content: flex-start;
     }
+    .dashboard-item {
+        min-width: 50px;
+        max-width: 80px;
+        padding: 4px 6px;
+    }
+    
+    .dashboard-item h3 {
+        font-size: calc(var(--font-size-base) * 0.55);
+    }
+    
+    .dashboard-item p {
+        font-size: calc(var(--font-size-base) * 0.75);
+    }
     
     .add-data-cube {
         width: 40px;
@@ -150,6 +163,13 @@
     
     .pull-handle {
         display: none; /* Floating button handles toggling */
+    }
+    .card-fab {
+        top: 50%;
+        right: 15px;
+        left: auto;
+        bottom: auto;
+        transform: translateY(-50%);
     }
 }
 
