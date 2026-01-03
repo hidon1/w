@@ -905,6 +905,15 @@ body.dark-mode .input-group input[type="number"], body.dark-mode .input-group in
     animation: fadeInModal 0.3s ease-out;
 }
 
+/* Higher z-index for modals that open on top of other modals */
+#newProjectModal,
+#customPropertyModal,
+#addMetricModal,
+#financeEditModal,
+#datePickerModal {
+    z-index: 1100;
+}
+
 @keyframes fadeInModal {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -3054,24 +3063,6 @@ body.dark-mode .login-modal-content .email-form input {
         height: 42px;
         font-size: 18px;
         z-index: 1110;
-    }
-    .add-data-cube {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 8px;
-        flex-shrink: 0;
-    }
-    .add-data-cube span {
-        display: none;
-    }
-    .add-data-cube i {
-        margin: 0;
-        font-size: calc(var(--font-size-base) * 1.2);
     }
     .dashboard-item h3 {
         font-size: calc(var(--font-size-base) * 0.6);
