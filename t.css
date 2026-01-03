@@ -93,20 +93,27 @@
         font-size: calc(var(--font-size-base) * 0.9);
     }
     
-    /* Dashboard: Add metric button above items in portrait */
+    /* Dashboard: Add metric button inline with header on mobile */
     .dashboard-section {
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
         align-items: center;
         padding: 8px 10px;
+        gap: 8px;
     }
     
     .dashboard-section h2 {
-        width: 100%;
+        grid-column: 1;
+        grid-row: 1;
         font-size: calc(var(--font-size-base) * 1);
-        margin-bottom: 5px;
+        margin: 0;
+        text-align: center;
     }
     
     .add-data-cube {
+        grid-column: 2;
+        grid-row: 1;
         width: 40px;
         height: 40px;
         border-radius: 50%;
@@ -114,9 +121,13 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 5px auto;
+        margin: 0;
         flex-shrink: 0;
-        order: -1; /* Position above dashboard grid */
+    }
+    
+    .dashboard-grid {
+        grid-column: 1 / -1;
+        grid-row: 2;
     }
     
     .add-data-cube span {
@@ -156,6 +167,85 @@
         width: 42px;
         height: 42px;
         font-size: 18px;
+    }
+    
+    /* Modal improvements for mobile */
+    .modal {
+        padding: 10px;
+        z-index: 1000; /* Ensure modals are above dashboard */
+    }
+    
+    .modal-content {
+        width: 95%;
+        max-width: 95vw;
+        max-height: 85vh;
+        padding: 20px 15px;
+        overflow-y: auto;
+    }
+    
+    .modal-content h3 {
+        font-size: calc(var(--font-size-base) * 1.2);
+        margin-bottom: 15px;
+        padding-right: 30px; /* Space for close button */
+    }
+    
+    .modal-content label {
+        font-size: calc(var(--font-size-base) * 0.9);
+    }
+    
+    .modal-content input[type="text"],
+    .modal-content input[type="number"],
+    .modal-content input[type="email"],
+    .modal-content input[type="password"],
+    .modal-content input[type="datetime-local"],
+    .modal-content textarea,
+    .modal-content select {
+        width: 100%;
+        font-size: calc(var(--font-size-base) * 0.95);
+        padding: 10px;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+    }
+    
+    .modal-content button {
+        font-size: calc(var(--font-size-base) * 0.95);
+        padding: 12px 16px;
+        min-height: 44px; /* Touch-friendly */
+        width: 100%; /* Full width buttons on mobile */
+        margin-bottom: 8px;
+    }
+    
+    .modal-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .modal-actions button {
+        width: 100%;
+    }
+    
+    /* Project modal specific */
+    .project-modal-content {
+        padding: 25px 15px;
+    }
+    
+    .project-modal-content input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Login modal adjustments for mobile */
+    .login-modal-content {
+        width: 90%;
+        max-width: 90vw;
+        padding: 30px 20px;
+    }
+    
+    .login-modal-content .google-btn {
+        width: 100%;
+        justify-content: center;
     }
 }
 
@@ -214,6 +304,82 @@
 
 * {
     box-sizing: border-box;
+}
+
+/* Reset and ensure all buttons and inputs have proper styling */
+button {
+    font-family: 'Noto Sans Hebrew', 'Heebo', sans-serif;
+    cursor: pointer;
+    border: none;
+    outline: none;
+}
+
+input, textarea, select {
+    font-family: 'Noto Sans Hebrew', 'Heebo', sans-serif;
+    outline: none;
+}
+
+button:focus, input:focus, textarea:focus, select:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+body.dark-mode button:focus, 
+body.dark-mode input:focus, 
+body.dark-mode textarea:focus, 
+body.dark-mode select:focus {
+    outline-color: var(--dark-primary-color);
+}
+
+/* Checkbox styling */
+input[type="checkbox"]:not(.switch input) {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--card-background);
+    cursor: pointer;
+    position: relative;
+    vertical-align: middle;
+    margin-left: 5px;
+    transition: all 0.3s ease;
+}
+
+input[type="checkbox"]:not(.switch input):checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+input[type="checkbox"]:not(.switch input):checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+body.dark-mode input[type="checkbox"]:not(.switch input) {
+    border-color: var(--dark-border-color);
+    background-color: var(--dark-card-background);
+}
+
+body.dark-mode input[type="checkbox"]:not(.switch input):checked {
+    background-color: var(--dark-primary-color);
+    border-color: var(--dark-primary-color);
+}
+
+/* Label styling for checkboxes */
+label {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
 }
 
 body {
@@ -745,6 +911,15 @@ body.dark-mode .input-group input[type="number"], body.dark-mode .input-group in
     justify-content: center;
     align-items: center;
     animation: fadeInModal 0.3s ease-out;
+}
+
+/* Higher z-index for modals that open on top of other modals */
+#newProjectModal,
+#customPropertyModal,
+#addMetricModal,
+#financeEditModal,
+#datePickerModal {
+    z-index: 1100;
 }
 
 @keyframes fadeInModal {
@@ -2896,24 +3071,6 @@ body.dark-mode .login-modal-content .email-form input {
         height: 42px;
         font-size: 18px;
         z-index: 1110;
-    }
-    .add-data-cube {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 8px;
-        flex-shrink: 0;
-    }
-    .add-data-cube span {
-        display: none;
-    }
-    .add-data-cube i {
-        margin: 0;
-        font-size: calc(var(--font-size-base) * 1.2);
     }
     .dashboard-item h3 {
         font-size: calc(var(--font-size-base) * 0.6);
