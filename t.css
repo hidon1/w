@@ -320,7 +320,15 @@ input, textarea, select {
 }
 
 button:focus, input:focus, textarea:focus, select:focus {
-    outline: none;
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+body.dark-mode button:focus, 
+body.dark-mode input:focus, 
+body.dark-mode textarea:focus, 
+body.dark-mode select:focus {
+    outline-color: var(--dark-primary-color);
 }
 
 /* Checkbox styling */
