@@ -3600,7 +3600,6 @@
             const logoutBtn = document.getElementById('logoutBtn');
             const changeSitePasswordBtn = document.getElementById('changeSitePasswordBtn');
             const authStatus = document.getElementById('authStatus');
-            const googleProvider = new firebase.auth.GoogleAuthProvider();
             auth.getRedirectResult().then((result) => {
                 if (result.user) {
                     console.log('User signed in via redirect');
@@ -3612,12 +3611,14 @@
                 alert('שגיאה בהתחברות: ' + error.message);
             });
             if (loginBtn) {
-                loginBtn.addEventListener('click', async () => {
+                loginBtn.addEventListener('click', () => {
                     try {
-                        await auth.signInWithPopup(googleProvider);
-                    } catch (err) {
-                        console.error(err);
-                        alert('שגיאה בהתחברות: ' + err.message);
+                        // Note: loginWithGoogle() handles async errors internally via .catch() handlers
+                        // This try-catch only catches synchronous errors during function invocation
+                        loginWithGoogle();
+                    } catch (error) {
+                        console.error('Error calling loginWithGoogle:', error);
+                        alert('שגיאה בהתחברות: ' + error.message);
                     }
                 });
             }
