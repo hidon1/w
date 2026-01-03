@@ -93,22 +93,44 @@
         font-size: calc(var(--font-size-base) * 0.9);
     }
     
-    /* Dashboard: Add metric button next to items */
+    /* Dashboard: Add metric button above items in portrait */
     .dashboard-section {
-        flex-direction: row;
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: center;
         padding: 8px 10px;
     }
     
     .dashboard-section h2 {
-        flex-basis: 100%;
+        width: 100%;
         font-size: calc(var(--font-size-base) * 1);
         margin-bottom: 5px;
     }
     
+    .add-data-cube {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 5px auto;
+        flex-shrink: 0;
+        order: -1; /* Position above dashboard grid */
+    }
+    
+    .add-data-cube span {
+        display: none; /* Hide text on mobile */
+    }
+    
+    .add-data-cube i {
+        margin: 0;
+        font-size: calc(var(--font-size-base) * 1.2);
+    }
+    
     .dashboard-grid {
-        flex: 1;
-        justify-content: flex-start;
+        width: 100%;
+        justify-content: center;
     }
     .dashboard-item {
         min-width: 50px;
@@ -123,35 +145,14 @@
     .dashboard-item p {
         font-size: calc(var(--font-size-base) * 0.75);
     }
-    
-    .add-data-cube {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 5px;
-        flex-shrink: 0;
-    }
-    
-    .add-data-cube span {
-        display: none; /* Hide text on mobile */
-    }
-    
-    .add-data-cube i {
-        margin: 0;
-        font-size: calc(var(--font-size-base) * 1.2);
-    }
     .card-fab {
         display: flex;
         align-items: center;
         justify-content: center;
-        bottom: 20px;
+        top: 35px;
         left: 15px;
         right: auto;
-        top: auto;
+        bottom: auto;
         width: 42px;
         height: 42px;
         font-size: 18px;
@@ -783,9 +784,9 @@ body.dark-mode .modal-content {
     font-weight: bold;
     transition: color 0.3s ease;
     position: absolute;
-    top: 10px;
-    right: 20px; /* Changed from left to right to avoid overlap */
-    left: auto; /* Override float left */
+    top: 5px;
+    left: 10px;
+    right: auto;
 }
 
 .close-button:hover, .close-button:focus {
@@ -2107,6 +2108,7 @@ body.dark-mode .project-details-card:hover::-webkit-scrollbar-track {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    margin-top: 30px;
     font-size: calc(var(--font-size-base) * 1);
     font-weight: bold;
     color: var(--primary-color);
@@ -2886,10 +2888,10 @@ body.dark-mode .login-modal-content .email-form input {
         display: flex;
         align-items: center;
         justify-content: center;
-        bottom: 20px;
+        top: 35px;
         left: 15px;
         right: auto;
-        top: auto;
+        bottom: auto;
         width: 42px;
         height: 42px;
         font-size: 18px;
