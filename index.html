@@ -1847,6 +1847,9 @@
             attachAutosaveListenersToStageInputs();
         }
         
+        // WeakSet to track inputs with autosave listeners attached
+        const autosaveListenersAttached = new WeakSet();
+        
         /**
          * Attach autosave listeners to current stage input fields
          */
@@ -1862,8 +1865,8 @@
                 const metricId = input.id.replace('Input', '');
                 
                 // Skip if already has autosave listener
-                if (input.dataset.autosaveAttached === 'true') return;
-                input.dataset.autosaveAttached = 'true';
+                if (autosaveListenersAttached.has(input)) return;
+                autosaveListenersAttached.add(input);
                 
                 // Add autosave on blur (when user leaves the field)
                 input.addEventListener('blur', () => {
