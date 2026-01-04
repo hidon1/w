@@ -79,7 +79,7 @@
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <button class="card-fab" id="cardFab" aria-label="פתח כרטיס פרויקט">
-        <span class="card-fab-icon" aria-hidden="true">☰</span>
+        <img class="card-fab-icon" src="image_00b206.png" alt="" aria-hidden="true">
         <span class="sr-only">פתח כרטיס פרויקט</span>
     </button>
     <div class="login-modal" id="loginModal">
@@ -661,7 +661,6 @@
         const editProjectNameInput = document.getElementById('editProjectNameInput');
         const projectDetailsCard = document.getElementById('projectDetailsCard');
         const cardFab = document.getElementById('cardFab');
-        const cardFabIcon = cardFab ? cardFab.querySelector('.card-fab-icon') : null;
         const stageNavContainer = document.getElementById('stageNavContainer');
         const stageOverviewContainer = document.getElementById('stageOverviewContainer');
         const stepCardsGrid = document.getElementById('stepCardsGrid');
@@ -4448,10 +4447,11 @@
         }
         function updateCardFabState() {
             if (!cardFab) return;
-            if (cardFabIcon) {
-                cardFabIcon.textContent = cardOpen ? '×' : '☰';
+            // Always update the entire button content to avoid stale references
+            if (cardOpen) {
+                cardFab.innerHTML = '<span class="card-fab-icon" aria-hidden="true">×</span><span class="sr-only">סגור כרטיס פרויקט</span>';
             } else {
-                cardFab.textContent = cardOpen ? '×' : '☰';
+                cardFab.innerHTML = '<img class="card-fab-icon" src="image_00b206.png" alt="" aria-hidden="true"><span class="sr-only">פתח כרטיס פרויקט</span>';
             }
             cardFab.setAttribute('aria-label', cardOpen ? 'סגור כרטיס פרויקט' : 'פתח כרטיס פרויקט');
         }
