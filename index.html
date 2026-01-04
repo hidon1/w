@@ -2957,10 +2957,20 @@
                     inputElement.focus();
                     currentEditableDetailElement.inputElement = inputElement;
                     currentEditableDetailElement.otherInput = otherInput;
-                    inputElement.addEventListener('blur', saveEditableDetail);
+                    
+                    // For select, we want to save immediately on change
                     inputElement.addEventListener('change', saveEditableDetail);
-                    otherInput.addEventListener('blur', saveEditableDetail);
-                    otherInput.addEventListener('change', saveEditableDetail);
+                    // For the "other" input, use similar delayed save as text inputs
+                    let otherSaveScheduled = false;
+                    const scheduleOtherSave = () => {
+                        if (otherSaveScheduled) return;
+                        otherSaveScheduled = true;
+                        setTimeout(() => {
+                            saveEditableDetail();
+                            otherSaveScheduled = false;
+                        }, 100);
+                    };
+                    otherInput.addEventListener('blur', scheduleOtherSave);
                 } else {
                     inputElement = document.createElement('input');
                     inputElement.type = metricConfig.type === 'number' ? 'text' : metricConfig.type;
@@ -2970,13 +2980,28 @@
                     inputElement.focus();
                     inputElement.select();
                     currentEditableDetailElement.inputElement = inputElement;
+                    
+                    // Use a flag to prevent double-saving
+                    let saveScheduled = false;
+                    const scheduleSave = () => {
+                        if (saveScheduled) return;
+                        saveScheduled = true;
+                        // Small delay to allow the user to finish typing on mobile
+                        setTimeout(() => {
+                            saveEditableDetail();
+                            saveScheduled = false;
+                        }, 100);
+                    };
+                    
                     inputElement.addEventListener('keypress', (e) => {
                         if (e.key === 'Enter') {
+                            // Save immediately on Enter key
                             saveEditableDetail();
                         }
                     });
-                    inputElement.addEventListener('blur', saveEditableDetail);
-                    inputElement.addEventListener('change', saveEditableDetail);
+                    // Use blur event for saving when user leaves the field
+                    // Small delay helps prevent premature saves on mobile keyboards
+                    inputElement.addEventListener('blur', scheduleSave);
                 }
                 displaySpan.style.display = 'none';
             };
@@ -3005,17 +3030,39 @@
             const oldValue = displaySpan.textContent === '--' ? '' : displaySpan.textContent;
             if (newValue !== oldValue && (metricConfig.type === 'number' ? !isNaN(newValue) : newValue !== "")) {
                 updateProjectDetailValue(section, metricId, newValue);
+                // Update display value without full card refresh
+                const latestValue = getLatestProjectDetailValue(section, metricId);
+                displaySpan.textContent = latestValue;
             }
             if (inputElement) {
                 inputElement.remove();
             }
             displaySpan.style.display = 'block';
             currentEditableDetailElement = null;
-            updateProjectDetailsCard();
+            // Only update dashboard if this is the current stage, but don't refresh the entire card
             if (section === currentStageId) {
                 updateDashboardForCurrentStage();
             }
             renderPreviousStageOverview();
+        }
+        
+        function getLatestProjectDetailValue(section, metricId) {
+            let entries;
+            if (section === 'wineDetails') {
+                const predefinedMetricConfig = stagesConfig.wineDetails.metrics[metricId];
+                if (predefinedMetricConfig) {
+                    entries = projects[currentProjectId].wineDetails[metricId];
+                } else {
+                    const customProp = projects[currentProjectId].wineDetails.customProperties.find(prop => prop.id === metricId);
+                    entries = customProp ? customProp.history : null;
+                }
+            } else {
+                entries = projects[currentProjectId].stages[section][metricId];
+            }
+            if (entries && entries.length > 0) {
+                return entries[entries.length - 1].value;
+            }
+            return '--';
         }
         function updateProjectDetailValue(section, metricId, newValue) {
             if (!ensureEditPermission()) {
