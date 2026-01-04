@@ -114,8 +114,8 @@
     .add-data-cube {
         grid-column: 2;
         grid-row: 1;
-        width: 40px;
-        height: 40px;
+        width: 35px;
+        height: 35px;
         border-radius: 50%;
         padding: 0;
         display: flex;
@@ -136,7 +136,7 @@
     
     .add-data-cube i {
         margin: 0;
-        font-size: calc(var(--font-size-base) * 1.2);
+        font-size: calc(var(--font-size-base) * 1);
     }
     
     .dashboard-grid {
@@ -144,17 +144,17 @@
         justify-content: center;
     }
     .dashboard-item {
-        min-width: 50px;
-        max-width: 80px;
+        min-width: 45px;
+        max-width: 75px;
         padding: 4px 6px;
     }
     
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.55);
+        font-size: calc(var(--font-size-base) * 0.5);
     }
     
     .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.75);
+        font-size: calc(var(--font-size-base) * 0.7);
     }
     .card-fab {
         display: flex;
@@ -246,6 +246,15 @@
     .login-modal-content .google-btn {
         width: 100%;
         justify-content: center;
+    }
+    
+    /* Hide password field on mobile for simpler first-time login */
+    .login-modal-content .email-form #sitePasswordInput {
+        display: none;
+    }
+    
+    .login-modal-content .email-form .buttons .login-btn {
+        display: none;
     }
 }
 
