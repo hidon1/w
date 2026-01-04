@@ -517,6 +517,16 @@
                 <div id="linkEmailStatus" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none; font-size: 0.9em;"></div>
             </div>
         </div>
+        <div id="confirmationModal" class="modal">
+            <div class="modal-content confirmation-modal-content">
+                <h3 id="confirmationTitle">אישור</h3>
+                <p id="confirmationMessage">האם אתה בטוח?</p>
+                <div class="modal-actions">
+                    <button id="confirmYesBtn" class="btn-danger">כן</button>
+                    <button id="confirmNoBtn" class="btn-secondary">לא</button>
+                </div>
+            </div>
+        </div>
     <script>
         const stagesConfig = {
             'wineDetails': {
@@ -2161,7 +2171,7 @@
             historyModal.style.display = 'none';
             comparisonProjectId = null;
         }
-        function handleDeleteMetric() {
+        async function handleDeleteMetric() {
             if (!currentMetricTypeForModal) return;
             const { sectionId, metricId } = currentMetricTypeForModal;
             const { isCustomStageMetric, isCustomWineMetric } = getCustomMetricFlags(sectionId, metricId);
@@ -2169,7 +2179,11 @@
                 alert('ניתן למחוק רק מדדים מותאמים אישית.');
                 return;
             }
-            if (!confirm('האם אתה בטוח שברצונך למחוק מדד זה? פעולה זו תמחק גם את ההיסטוריה שלו.')) {
+            const confirmed = await showConfirmation(
+                'האם אתה בטוח שברצונך למחוק מדד זה? פעולה זו תמחק גם את ההיסטוריה שלו.',
+                'מחיקת מדד'
+            );
+            if (!confirmed) {
                 return;
             }
             if (isCustomWineMetric) {
@@ -2181,8 +2195,12 @@
             updateDashboardForCurrentStage();
             renderPreviousStageOverview();
         }
-        function undoUpdate(sectionId, metricId, indexToRemove) {
-            if (!confirm('האם אתה בטוח שברצונך לבטל את העדכון הזה?')) {
+        async function undoUpdate(sectionId, metricId, indexToRemove) {
+            const confirmed = await showConfirmation(
+                'האם אתה בטוח שברצונך לבטל את העדכון הזה?',
+                'ביטול עדכון'
+            );
+            if (!confirmed) {
                 return;
             }
             let metricDataArray;
@@ -2333,11 +2351,15 @@
                 setTimeout(() => financeEditAmountInput?.focus(), 0);
             }
         }
-        function deleteFinanceEntry(id) {
+        async function deleteFinanceEntry(id) {
             if (!ensureFinancePermission()) {
                 return;
             }
-            if (confirm('האם אתה בטוח שברצונך למחוק תנועה כספית זו?')) {
+            const confirmed = await showConfirmation(
+                'האם אתה בטוח שברצונך למחוק תנועה כספית זו?',
+                'מחיקת תנועה'
+            );
+            if (confirmed) {
                 const initialLength = projects[currentProjectId].finance.length;
                 projects[currentProjectId].finance = projects[currentProjectId].finance.filter(entry => entry.id !== id);
                 if (projects[currentProjectId].finance.length < initialLength) {
@@ -4082,6 +4104,52 @@
                     statusDiv.style.display = 'none';
                 }, 5000);
             }
+        }
+        
+        /**
+         * Show a confirmation dialog (mobile-friendly alternative to confirm())
+         * @param {string} message - The confirmation message
+         * @param {string} title - Optional title (defaults to "אישור")
+         * @returns {Promise<boolean>} - Resolves to true if confirmed, false otherwise
+         */
+        function showConfirmation(message, title = 'אישור') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmationModal');
+                const titleEl = document.getElementById('confirmationTitle');
+                const messageEl = document.getElementById('confirmationMessage');
+                const yesBtn = document.getElementById('confirmYesBtn');
+                const noBtn = document.getElementById('confirmNoBtn');
+                
+                if (!modal || !titleEl || !messageEl || !yesBtn || !noBtn) {
+                    // Fallback to confirm() if modal elements not found
+                    resolve(confirm(message));
+                    return;
+                }
+                
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                modal.style.display = 'flex';
+                
+                const handleYes = () => {
+                    modal.style.display = 'none';
+                    cleanup();
+                    resolve(true);
+                };
+                
+                const handleNo = () => {
+                    modal.style.display = 'none';
+                    cleanup();
+                    resolve(false);
+                };
+                
+                const cleanup = () => {
+                    yesBtn.removeEventListener('click', handleYes);
+                    noBtn.removeEventListener('click', handleNo);
+                };
+                
+                yesBtn.addEventListener('click', handleYes);
+                noBtn.addEventListener('click', handleNo);
+            });
         }
         
         function isMobileViewport() {
