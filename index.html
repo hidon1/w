@@ -48,7 +48,7 @@
             <li><button onclick="openCurrentProjectFinanceReportModal();">דוח כספי</button></li>
             <li><button onclick="openGlobalFinanceReportModal();">דוח כספי כולל</button></li>
             <li><button onclick="openFinanceYearlyModal();">דוח כספי לפי שנה</button></li>
-            <li><button onclick="openInboxModal();">תיבת דואר</button></li>
+            <li><button onclick="openInboxModal();">תיבת דואר <span id="inboxBadge" class="inbox-badge" style="display:none;">0</span></button></li>
             <li><button onclick="openRemindersModal();">תזכורות</button></li>
             <li><button onclick="openAccessControlModal();">ניהול גישה</button></li>
             <li><button onclick="openManageEmailsModal();">ניהול כתובות מייל</button></li>
@@ -78,6 +78,21 @@
         </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <!-- Reminder Popup Notification -->
+    <div id="reminderPopupNotification" class="reminder-popup-notification" style="display:none;">
+        <div class="reminder-popup-content">
+            <div class="reminder-popup-icon">
+                <i class="fas fa-bell"></i>
+            </div>
+            <div class="reminder-popup-text">
+                <h4>תזכורת!</h4>
+                <p id="reminderPopupText"></p>
+            </div>
+            <button class="reminder-popup-close" onclick="closeReminderPopup()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
     <button class="card-fab" id="cardFab" aria-label="פתח כרטיס פרויקט">
         <img class="card-fab-icon" src="image_00b206.png" alt="" aria-hidden="true">
         <span class="sr-only">פתח כרטיס פרויקט</span>
@@ -341,6 +356,19 @@
                 <input type="text" id="reminderText" placeholder="טקסט התזכורת">
                 <input type="datetime-local" id="reminderDateTime">
                 <label><input type="checkbox" id="reminderPopup"> הצג כהודעה קופצת בדפדפן</label>
+                <div class="sound-selection">
+                    <label for="reminderSound">צליל תזכורת:</label>
+                    <select id="reminderSound">
+                        <option value="none">ללא צליל</option>
+                        <option value="alarm1" selected>שעון מעורר 1</option>
+                        <option value="alarm2">שעון מעורר 2</option>
+                        <option value="bell">פעמון</option>
+                        <option value="chime">צלצול עדין</option>
+                    </select>
+                    <button type="button" onclick="previewReminderSound()" class="preview-sound-btn">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                </div>
                 <button onclick="addReminder()">הוסף תזכורת</button>
             </div>
             <ul id="remindersList" class="reminders-list"></ul>
@@ -875,17 +903,127 @@
             const metricDisplayName = stagesConfig[currentMetricTypeForModal.sectionId]?.metrics[currentMetricTypeForModal.metricId]?.name || 'מדד';
             openHistoryModal(currentMetricTypeForModal.sectionId, currentMetricTypeForModal.metricId, metricDisplayName);
         }
+        
+        // Sound definitions using Web Audio API
+        const reminderSounds = {
+            none: null,
+            alarm1: { frequency: 800, pattern: [200, 100, 200, 100, 200, 300] },
+            alarm2: { frequency: 600, pattern: [150, 100, 150, 100, 400, 200] },
+            bell: { frequency: 1000, pattern: [300, 200, 300, 400] },
+            chime: { frequency: 1200, pattern: [100, 50, 100, 50, 100, 200] }
+        };
+        
+        let audioContext = null;
+        let currentReminderAudio = null;
+        
+        function playReminderSound(soundType) {
+            if (soundType === 'none' || !reminderSounds[soundType]) return;
+            
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                const sound = reminderSounds[soundType];
+                let currentTime = audioContext.currentTime;
+                
+                sound.pattern.forEach((duration, index) => {
+                    if (index % 2 === 0) { // Play on even indices
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.frequency.value = sound.frequency + (index * 50);
+                        oscillator.type = 'sine';
+                        
+                        gainNode.gain.setValueAtTime(0.3, currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + duration / 1000);
+                        
+                        oscillator.start(currentTime);
+                        oscillator.stop(currentTime + duration / 1000);
+                    }
+                    currentTime += duration / 1000;
+                });
+            } catch (e) {
+                console.error('Error playing sound:', e);
+            }
+        }
+        
+        function previewReminderSound() {
+            const soundSelect = document.getElementById('reminderSound');
+            if (soundSelect) {
+                playReminderSound(soundSelect.value);
+            }
+        }
+        
+        function showReminderPopup(text) {
+            const popup = document.getElementById('reminderPopupNotification');
+            const popupText = document.getElementById('reminderPopupText');
+            
+            if (popup && popupText) {
+                popupText.textContent = text;
+                popup.style.display = 'block';
+                
+                // Auto-hide after 10 seconds
+                setTimeout(() => {
+                    closeReminderPopup();
+                }, 10000);
+            }
+        }
+        
+        function closeReminderPopup() {
+            const popup = document.getElementById('reminderPopupNotification');
+            if (popup) {
+                popup.style.display = 'none';
+            }
+            // Stop any playing audio
+            if (currentReminderAudio) {
+                currentReminderAudio = null;
+            }
+        }
+        
+        function updateInboxBadge() {
+            const badge = document.getElementById('inboxBadge');
+            if (badge) {
+                const unreadCount = inbox.length;
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    badge.style.display = 'inline-flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+        
         function checkReminders() {
             const now = new Date();
             reminders.forEach(reminder => {
                 const reminderTime = new Date(reminder.datetime);
                 if (reminderTime <= now && !reminder.notified) {
                     reminder.notified = true;
-                    if (reminder.popup && 'Notification' in window && Notification.permission === 'granted') {
-                        new Notification(reminder.text);
+                    
+                    // Play sound if selected
+                    if (reminder.sound && reminder.sound !== 'none') {
+                        playReminderSound(reminder.sound);
                     }
+                    
+                    // Show popup notification in app
+                    showReminderPopup(reminder.text);
+                    
+                    // Show browser notification if enabled
+                    if (reminder.popup && 'Notification' in window && Notification.permission === 'granted') {
+                        new Notification('תזכורת: ' + reminder.text, {
+                            icon: 'image_00b206.png',
+                            body: new Date(reminder.datetime).toLocaleString('he-IL'),
+                            requireInteraction: true
+                        });
+                    }
+                    
                     inbox.push(reminder);
                     renderInboxList();
+                    updateInboxBadge();
                 }
             });
             localStorage.setItem('reminders', JSON.stringify(reminders));
@@ -896,12 +1034,16 @@
             const text = reminderTextInput.value.trim();
             const datetime = reminderDateTimeInput.value;
             const popup = reminderPopupInput.checked;
+            const soundSelect = document.getElementById('reminderSound');
+            const sound = soundSelect ? soundSelect.value : 'alarm1';
+            
             if (text && datetime) {
-                reminders.push({ id: Date.now(), text, datetime, popup, notified: false });
+                reminders.push({ id: Date.now(), text, datetime, popup, sound, notified: false });
                 localStorage.setItem('reminders', JSON.stringify(reminders));
                 reminderTextInput.value = '';
                 reminderDateTimeInput.value = '';
                 reminderPopupInput.checked = false;
+                if (soundSelect) soundSelect.value = 'alarm1';
                 renderRemindersList();
                 checkReminders();
             } else {
@@ -912,11 +1054,16 @@
             remindersList.innerHTML = '';
             reminders.forEach(reminder => {
                 if (!reminder.notified) {
+                    const soundLabel = reminder.sound === 'none' ? 'ללא צליל' :
+                                      reminder.sound === 'alarm1' ? '🔔 שעון 1' :
+                                      reminder.sound === 'alarm2' ? '🔔 שעון 2' :
+                                      reminder.sound === 'bell' ? '🔔 פעמון' :
+                                      reminder.sound === 'chime' ? '🔔 צלצול' : '';
                     const li = document.createElement('li');
                     li.innerHTML = `
                         <div class="reminder-details">
                             <div class="text">${reminder.text}</div>
-                            <div class="datetime">${new Date(reminder.datetime).toLocaleString('he-IL')}</div>
+                            <div class="datetime">${new Date(reminder.datetime).toLocaleString('he-IL')} ${soundLabel}</div>
                         </div>
                         <div class="reminder-actions">
                             <button onclick="deleteReminder(${reminder.id})">מחק</button>
@@ -958,11 +1105,13 @@
                 `;
                 inboxList.appendChild(li);
             });
+            updateInboxBadge();
         }
         function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
             localStorage.setItem('inbox', JSON.stringify(inbox));
             renderInboxList();
+            updateInboxBadge();
         }
         function openRemindersModal() {
             closeSidebar();
@@ -1008,6 +1157,7 @@
             setDefaultYearFilter();
             renderAllMainContent();
             updateSharedAccessNotice();
+            updateInboxBadge();
             requestNotificationPermission();
             setInterval(checkReminders, 60000);
             checkReminders();

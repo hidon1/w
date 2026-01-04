@@ -54,24 +54,34 @@
         display: block; /* Show close button on mobile */
     }
     .stage-nav-container {
-        flex-direction: column;
-        gap: 10px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 6px;
+        justify-content: center;
     }
     .stage-nav-container > div {
-        width: 100%;
+        width: auto;
         display: flex;
         justify-content: center;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 4px;
     }
     .wine-icon-container {
         order: -1;
-        margin-bottom: 10px;
+        margin-bottom: 4px;
+        width: 100%;
+    }
+    .wine-icon-container img {
+        width: 40px;
     }
     .stage-nav-button {
-        min-width: 70px;
-        padding: 5px 6px;
-        font-size: calc(var(--font-size-base) * 0.55);
+        min-width: 48px;
+        max-width: 80px;
+        padding: 4px 5px;
+        font-size: calc(var(--font-size-base) * 0.52);
+        flex: 1 1 calc(33% - 4px);
+        border-radius: 6px;
     }
     .close-button {
         top: 20px;
@@ -1406,6 +1416,33 @@ body.dark-mode .sidebar ul li a:hover, body.dark-mode .sidebar ul li button:hove
     background-color: var(--border-color);
     margin: 15px 20px;
     transition: background-color var(--animation-speed);
+}
+
+/* Inbox badge styles */
+.inbox-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    margin-right: 8px;
+    background: linear-gradient(135deg, #F44336, #D32F2F);
+    color: white;
+    font-size: calc(var(--font-size-base) * 0.75);
+    font-weight: 700;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(244, 67, 54, 0.4);
+    animation: pulseBadge 2s infinite;
+}
+
+@keyframes pulseBadge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+body.dark-mode .inbox-badge {
+    background: linear-gradient(135deg, #EF5350, #E53935);
 }
 
 body.dark-mode .sidebar .divider {
@@ -2818,6 +2855,186 @@ body.dark-mode .add-reminder-form input, body.dark-mode .add-reminder-form texta
 .add-reminder-form button:hover {
     background: linear-gradient(135deg, var(--secondary-color), #8B0000);
     transform: translateY(-2px);
+}
+
+/* Sound selection styles */
+.sound-selection {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.sound-selection label {
+    font-weight: 700;
+    color: var(--text-color);
+    font-size: calc(var(--font-size-base) * 0.9);
+}
+
+.sound-selection select {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: calc(var(--font-size-base) * 1);
+    background-color: var(--card-background);
+    color: var(--text-color);
+}
+
+body.dark-mode .sound-selection select {
+    background-color: var(--dark-card-background);
+    color: var(--dark-text-color);
+    border-color: var(--dark-border-color);
+}
+
+.preview-sound-btn {
+    background: linear-gradient(135deg, var(--accent-color), #FFB366);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.preview-sound-btn:hover {
+    background: linear-gradient(135deg, #FFB366, #FFC999);
+    transform: scale(1.1);
+}
+
+/* Reminder popup notification styles */
+.reminder-popup-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    animation: slideDownPopup 0.5s ease-out;
+}
+
+@keyframes slideDownPopup {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.reminder-popup-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: linear-gradient(135deg, #4CAF50, #66BB6A);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    min-width: 300px;
+    max-width: 500px;
+}
+
+.reminder-popup-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    animation: bellRing 0.5s ease infinite;
+}
+
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(15deg); }
+    50% { transform: rotate(0deg); }
+    75% { transform: rotate(-15deg); }
+}
+
+.reminder-popup-text {
+    flex: 1;
+}
+
+.reminder-popup-text h4 {
+    margin: 0 0 5px 0;
+    font-size: calc(var(--font-size-base) * 1.2);
+    color: white;
+}
+
+.reminder-popup-text p {
+    margin: 0;
+    font-size: calc(var(--font-size-base) * 1);
+    opacity: 0.95;
+}
+
+.reminder-popup-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    font-size: 18px;
+    transition: all 0.3s ease;
+}
+
+.reminder-popup-close:hover {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .reminder-popup-notification {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+    }
+    
+    @keyframes slideDownPopup {
+        from {
+            opacity: 0;
+            transform: translateY(-100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .reminder-popup-content {
+        min-width: auto;
+        max-width: none;
+        padding: 12px 15px;
+    }
+    
+    .reminder-popup-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+    
+    .sound-selection {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .preview-sound-btn {
+        align-self: flex-start;
+    }
 }
 
 .auth-section {
