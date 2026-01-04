@@ -1597,6 +1597,7 @@
                     }
                 });
                 editProjectNameInput.addEventListener('blur', saveProjectName);
+                editProjectNameInput.addEventListener('change', saveProjectName);
                 editProjectNameInput._eventListenersAdded = true;
             }
         }
@@ -4141,9 +4142,13 @@
                 messageEl.textContent = message;
                 modal.style.display = 'flex';
                 
+                // Focus management - focus the first button
+                setTimeout(() => noBtn.focus(), 100);
+                
                 const cleanup = () => {
                     yesBtn.removeEventListener('click', handleYes);
                     noBtn.removeEventListener('click', handleNo);
+                    modal.removeEventListener('keydown', handleKeyDown);
                 };
                 
                 const handleYes = () => {
@@ -4158,8 +4163,32 @@
                     resolve(false);
                 };
                 
+                // Keyboard navigation: Escape to cancel, Tab trapping
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Escape') {
+                        handleNo();
+                    } else if (e.key === 'Tab') {
+                        // Tab trapping between the two buttons
+                        const focusableElements = [yesBtn, noBtn];
+                        const currentIndex = focusableElements.indexOf(document.activeElement);
+                        
+                        if (e.shiftKey) {
+                            // Shift+Tab - go backwards
+                            e.preventDefault();
+                            const newIndex = currentIndex <= 0 ? focusableElements.length - 1 : currentIndex - 1;
+                            focusableElements[newIndex].focus();
+                        } else {
+                            // Tab - go forwards
+                            e.preventDefault();
+                            const newIndex = currentIndex >= focusableElements.length - 1 ? 0 : currentIndex + 1;
+                            focusableElements[newIndex].focus();
+                        }
+                    }
+                };
+                
                 yesBtn.addEventListener('click', handleYes);
                 noBtn.addEventListener('click', handleNo);
+                modal.addEventListener('keydown', handleKeyDown);
             });
         }
         
