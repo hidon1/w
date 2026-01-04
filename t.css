@@ -93,43 +93,46 @@
         font-size: calc(var(--font-size-base) * 0.9);
     }
     
-    /* Dashboard: Add metric button inline with header on mobile */
+    /* Dashboard: Add metric button above indicators on mobile */
     .dashboard-section {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-template-rows: auto auto;
+        display: grid !important;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
         align-items: center;
         padding: 8px 10px;
-        gap: 8px;
+        gap: 4px;
     }
     
     .dashboard-section h2 {
-        grid-column: 2;
-        grid-row: 1;
+        grid-column: 1 !important;
+        grid-row: 2 !important;
         font-size: calc(var(--font-size-base) * 1.1);
         margin: 0;
         text-align: center;
-        line-height: 1.8em;
+        line-height: 1.4em;
     }
     
     .add-data-cube {
-        grid-column: 1;
-        grid-row: 1;
+        grid-column: 1 !important;
+        grid-row: 1 !important;
         width: 1.8em;
         height: 1.8em;
         border-radius: 50%;
         padding: 0;
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
         margin: 0;
-        margin-right: 8px;
+        margin-right: auto;
+        margin-left: 8px;
         flex-shrink: 0;
+        order: -1;
+        justify-self: start;
     }
     
     .dashboard-grid {
-        grid-column: 1 / -1;
-        grid-row: 2;
+        grid-column: 1 !important;
+        grid-row: 3 !important;
     }
     
     .add-data-cube span {
