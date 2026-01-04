@@ -4448,14 +4448,11 @@
         }
         function updateCardFabState() {
             if (!cardFab) return;
-            if (cardFabIcon) {
-                if (cardOpen) {
-                    cardFabIcon.outerHTML = '<span class="card-fab-icon" aria-hidden="true">×</span>';
-                } else {
-                    cardFabIcon.outerHTML = '<img class="card-fab-icon" src="image_00b206.png" alt="" aria-hidden="true">';
-                }
+            // Always update the entire button content to avoid stale references
+            if (cardOpen) {
+                cardFab.innerHTML = '<span class="card-fab-icon" aria-hidden="true">×</span><span class="sr-only">סגור כרטיס פרויקט</span>';
             } else {
-                cardFab.innerHTML = cardOpen ? '×' : '<img class="card-fab-icon" src="image_00b206.png" alt="" aria-hidden="true">';
+                cardFab.innerHTML = '<img class="card-fab-icon" src="image_00b206.png" alt="" aria-hidden="true"><span class="sr-only">פתח כרטיס פרויקט</span>';
             }
             cardFab.setAttribute('aria-label', cardOpen ? 'סגור כרטיס פרויקט' : 'פתח כרטיס פרויקט');
         }

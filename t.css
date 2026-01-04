@@ -815,7 +815,7 @@ body.dark-mode .input-group {
 }
 
 .input-group input[type="number"], .input-group input[type="text"], .input-group select, .input-group textarea {
-    width: calc(100% - 12px);
+    width: calc(100% - 16px);
     padding: 6px 8px;
     margin-bottom: 8px;
     border: 1px solid var(--border-color);
