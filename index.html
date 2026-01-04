@@ -4125,26 +4125,35 @@
          */
         function showConfirmation(message, title = 'אישור') {
             return new Promise((resolve) => {
-                const modal = document.getElementById('confirmationModal');
-                const titleEl = document.getElementById('confirmationTitle');
-                const messageEl = document.getElementById('confirmationMessage');
-                const yesBtn = document.getElementById('confirmYesBtn');
-                const noBtn = document.getElementById('confirmNoBtn');
-                
-                if (!modal || !titleEl || !messageEl || !yesBtn || !noBtn) {
-                    // Log error if modal elements not found
-                    console.error('רכיבי מודל האישור לא נמצאו');
-                    // Resolve to false (safer than true for confirmations)
-                    resolve(false);
-                    return;
-                }
-                
-                titleEl.textContent = title;
-                messageEl.textContent = message;
-                modal.style.display = 'flex';
-                
-                // Focus management - focus the "No" button (safer default for confirmations)
-                setTimeout(() => noBtn.focus(), 100);
+                try {
+                    const modal = document.getElementById('confirmationModal');
+                    const titleEl = document.getElementById('confirmationTitle');
+                    const messageEl = document.getElementById('confirmationMessage');
+                    const yesBtn = document.getElementById('confirmYesBtn');
+                    const noBtn = document.getElementById('confirmNoBtn');
+                    
+                    if (!modal || !titleEl || !messageEl || !yesBtn || !noBtn) {
+                        // Log specific missing elements for debugging
+                        const missing = [];
+                        if (!modal) missing.push('confirmationModal');
+                        if (!titleEl) missing.push('confirmationTitle');
+                        if (!messageEl) missing.push('confirmationMessage');
+                        if (!yesBtn) missing.push('confirmYesBtn');
+                        if (!noBtn) missing.push('confirmNoBtn');
+                        console.error('רכיבי מודל האישור לא נמצאו:', missing.join(', '));
+                        // Resolve to false (safer than true for confirmations)
+                        resolve(false);
+                        return;
+                    }
+                    
+                    titleEl.textContent = title;
+                    messageEl.textContent = message;
+                    modal.style.display = 'flex';
+                    
+                    // Focus management - delay allows modal to render before focusing
+                    // This prevents focus issues on slower devices
+                    const FOCUS_DELAY_MS = 100;
+                    setTimeout(() => noBtn.focus(), FOCUS_DELAY_MS);
                 
                 const cleanup = () => {
                     yesBtn.removeEventListener('click', handleYes);
@@ -4190,6 +4199,11 @@
                 yesBtn.addEventListener('click', handleYes);
                 noBtn.addEventListener('click', handleNo);
                 modal.addEventListener('keydown', handleKeyDown);
+                } catch (error) {
+                    // Handle any unexpected errors during modal setup
+                    console.error('שגיאה בהצגת מודל האישור:', error);
+                    resolve(false);
+                }
             });
         }
         
