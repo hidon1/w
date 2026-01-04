@@ -2995,11 +2995,12 @@
                     
                     inputElement.addEventListener('keypress', (e) => {
                         if (e.key === 'Enter') {
-                            e.preventDefault();
+                            // Save immediately on Enter key
                             saveEditableDetail();
                         }
                     });
-                    // Only use blur for saving, not change (which fires on every keystroke on some mobile keyboards)
+                    // Use blur event for saving when user leaves the field
+                    // Small delay helps prevent premature saves on mobile keyboards
                     inputElement.addEventListener('blur', scheduleSave);
                 }
                 displaySpan.style.display = 'none';
