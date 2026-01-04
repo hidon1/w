@@ -788,7 +788,7 @@ body.dark-mode .dashboard-item h3 {
     background: linear-gradient(135deg, #fdfdfd, #f0f0f0);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: 20px;
+    padding: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
@@ -807,20 +807,20 @@ body.dark-mode .input-group {
 
 .input-group label {
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     font-weight: 700;
     color: var(--light-text-color);
-    font-size: calc(var(--font-size-base) * 1);
+    font-size: calc(var(--font-size-base) * 0.85);
     transition: color var(--animation-speed);
 }
 
 .input-group input[type="number"], .input-group input[type="text"], .input-group select, .input-group textarea {
-    width: calc(100% - 20px);
-    padding: 12px;
-    margin-bottom: 15px;
+    width: calc(100% - 12px);
+    padding: 6px 8px;
+    margin-bottom: 8px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: calc(var(--font-size-base) * 1);
+    border-radius: 6px;
+    font-size: calc(var(--font-size-base) * 0.85);
     color: var(--text-color);
     transition: all 0.3s ease, background-color var(--animation-speed), color var(--animation-speed);
     background-color: var(--card-background);
@@ -841,11 +841,11 @@ body.dark-mode .input-group input[type="number"], body.dark-mode .input-group in
 .input-group button {
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     color: white;
-    padding: 12px 20px;
+    padding: 8px 14px;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: calc(var(--font-size-base) * 1);
+    font-size: calc(var(--font-size-base) * 0.85);
     font-weight: 400; /* Thinner font */
     transition: all 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
     align-self: flex-end;
@@ -853,7 +853,7 @@ body.dark-mode .input-group input[type="number"], body.dark-mode .input-group in
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     user-select: none;
-    min-height: 44px; /* Minimum touch target size */
+    min-height: 36px; /* Minimum touch target size */
 }
 .delete-metric-btn {
     background: linear-gradient(135deg, #f44336, #d32f2f);
@@ -1255,6 +1255,11 @@ body.dark-mode .history-list li {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     user-select: none;
+}
+.card-fab-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
 }
 .card-fab:hover,
 .card-fab:active {

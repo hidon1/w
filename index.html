@@ -79,7 +79,7 @@
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <button class="card-fab" id="cardFab" aria-label="פתח כרטיס פרויקט">
-        <span class="card-fab-icon" aria-hidden="true">☰</span>
+        <img class="card-fab-icon" src="image_00b206.png" alt="" aria-hidden="true">
         <span class="sr-only">פתח כרטיס פרויקט</span>
     </button>
     <div class="login-modal" id="loginModal">
@@ -4449,9 +4449,13 @@
         function updateCardFabState() {
             if (!cardFab) return;
             if (cardFabIcon) {
-                cardFabIcon.textContent = cardOpen ? '×' : '☰';
+                if (cardOpen) {
+                    cardFabIcon.outerHTML = '<span class="card-fab-icon" aria-hidden="true">×</span>';
+                } else {
+                    cardFabIcon.outerHTML = '<img class="card-fab-icon" src="image_00b206.png" alt="" aria-hidden="true">';
+                }
             } else {
-                cardFab.textContent = cardOpen ? '×' : '☰';
+                cardFab.innerHTML = cardOpen ? '×' : '<img class="card-fab-icon" src="image_00b206.png" alt="" aria-hidden="true">';
             }
             cardFab.setAttribute('aria-label', cardOpen ? 'סגור כרטיס פרויקט' : 'פתח כרטיס פרויקט');
         }
