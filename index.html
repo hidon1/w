@@ -86,10 +86,15 @@
                 }
                 
                 // Get FCM token
-                fcmToken = await messaging.getToken({
-                    vapidKey: 'BLBx-cC_P_g8u_9xK7P_XGE9OfJzCYhfYhPXLpSpKqC0VGdR9JoXIpLmRqiRqpKqAXv5R7PIqxKqIxEq9nqIyqw' // You'll need to generate this from Firebase Console
-                });
+                // Note: VAPID key needs to be generated from Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+                const newToken = await messaging.getToken();
                 
+                // Only update if token changed
+                if (newToken === fcmToken) {
+                    return fcmToken;
+                }
+                
+                fcmToken = newToken;
                 console.log('FCM Token:', fcmToken);
                 
                 // Save token to Firestore for the current user
@@ -1213,6 +1218,22 @@
             reminders = reminders.filter(r => r.id !== id);
             localStorage.setItem('reminders', JSON.stringify(reminders));
             renderRemindersList();
+            
+            // Also delete from Firestore to prevent orphaned push notifications
+            deleteReminderFromFirestore(id);
+        }
+        
+        // Delete scheduled reminder from Firestore
+        async function deleteReminderFromFirestore(id) {
+            try {
+                const user = auth.currentUser;
+                if (!user) return;
+                
+                await db.collection('scheduledReminders').doc(id.toString()).delete();
+                console.log('FCM: Deleted scheduled reminder from Firestore:', id);
+            } catch (error) {
+                console.error('FCM: Error deleting reminder from Firestore:', error);
+            }
         }
         function openInboxModal() {
             closeSidebar();

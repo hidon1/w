@@ -1,5 +1,9 @@
 // Firebase Messaging Service Worker
 // This handles background push notifications when the app is closed
+//
+// Note: Firebase configuration is required in the service worker for FCM to work.
+// This is the standard approach as per Firebase documentation.
+// The API key has domain restrictions configured in Firebase Console.
 
 importScripts('https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/11.0.1/firebase-messaging-compat.js');
