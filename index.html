@@ -914,7 +914,6 @@
         };
         
         let audioContext = null;
-        let currentReminderAudio = null;
         
         function playReminderSound(soundType) {
             if (soundType === 'none' || !reminderSounds[soundType]) return;
@@ -977,10 +976,6 @@
             const popup = document.getElementById('reminderPopupNotification');
             if (popup) {
                 popup.style.display = 'none';
-            }
-            // Stop any playing audio
-            if (currentReminderAudio) {
-                currentReminderAudio = null;
             }
         }
         
