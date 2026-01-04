@@ -86,12 +86,13 @@
         <div class="login-modal-content">
             <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
             <h2>ברוכים הבאים!</h2>
-            <p>כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
+            <p class="login-description-desktop">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
+            <p class="login-description-mobile">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, התחבר עם חשבון Google שלך. הנתונים שלך יישמרו באופן מאובטח ותוכל לגשת אליהם מכל מכשיר.</p>
             <button class="google-btn" onclick="loginWithGoogle()">
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
                 התחבר עם Google
             </button>
-            <div class="email-form">
+            <div class="email-form desktop-only-login">
                 <input type="email" id="siteEmailInput" placeholder="אימייל" required>
                 <input type="password" id="sitePasswordInput" placeholder="סיסמה לאתר" required>
                 <div class="buttons">

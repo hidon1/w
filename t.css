@@ -247,6 +247,20 @@
         width: 100%;
         justify-content: center;
     }
+    
+    /* Hide email/password login on mobile, show only Google OAuth */
+    .desktop-only-login {
+        display: none !important;
+    }
+    
+    /* Show mobile description, hide desktop description */
+    .login-description-mobile {
+        display: block !important;
+    }
+    
+    .login-description-desktop {
+        display: none !important;
+    }
 }
 
 /* Mobile landscape mode */
@@ -2894,6 +2908,15 @@ body.dark-mode .login-modal-content {
     margin-bottom: 30px;
     line-height: 1.5;
     transition: color var(--animation-speed);
+}
+
+/* Show desktop description by default, hide mobile description */
+.login-description-mobile {
+    display: none;
+}
+
+.login-description-desktop {
+    display: block;
 }
 
 .login-modal-content .google-btn {
