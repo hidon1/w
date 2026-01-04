@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת ניטור יין</title>
-     <link rel="icon" href="image_00b206.png" type="image/png">
+    <link rel="icon" href="image_00b206.png" type="image/png">
+    <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Playfair+Display:wght@400;700&family=Noto+Sans+Hebrew:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -15,6 +16,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-messaging-compat.js"></script>
     <link rel="stylesheet" href="t.css">
     <script>
         const firebaseConfig = {
@@ -29,6 +31,107 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        
+        // Initialize Firebase Cloud Messaging
+        let messaging = null;
+        let fcmToken = null;
+        
+        // Check if FCM is supported (Android browser)
+        function isAndroidDevice() {
+            return /Android/i.test(navigator.userAgent);
+        }
+        
+        async function initializeFCM() {
+            try {
+                // Only initialize FCM on Android devices
+                if (!isAndroidDevice()) {
+                    console.log('FCM: Not an Android device, skipping FCM initialization');
+                    return;
+                }
+                
+                if (!('serviceWorker' in navigator)) {
+                    console.log('FCM: Service Workers not supported');
+                    return;
+                }
+                
+                // Register the service worker
+                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                console.log('FCM: Service Worker registered:', registration);
+                
+                messaging = firebase.messaging();
+                
+                // Use the registered service worker for FCM
+                messaging.useServiceWorker(registration);
+                
+            } catch (error) {
+                console.error('FCM initialization error:', error);
+            }
+        }
+        
+        async function requestFCMToken() {
+            try {
+                if (!messaging) {
+                    await initializeFCM();
+                }
+                
+                if (!messaging) {
+                    return null;
+                }
+                
+                // Request notification permission
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    console.log('FCM: Notification permission denied');
+                    return null;
+                }
+                
+                // Get FCM token
+                // Note: VAPID key needs to be generated from Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+                const newToken = await messaging.getToken();
+                
+                // Only update if token changed
+                if (newToken === fcmToken) {
+                    return fcmToken;
+                }
+                
+                fcmToken = newToken;
+                console.log('FCM Token:', fcmToken);
+                
+                // Save token to Firestore for the current user
+                const user = auth.currentUser;
+                if (user && fcmToken) {
+                    await db.collection('fcmTokens').doc(user.uid).set({
+                        token: fcmToken,
+                        device: 'android',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                }
+                
+                return fcmToken;
+            } catch (error) {
+                console.error('FCM token request error:', error);
+                return null;
+            }
+        }
+        
+        // Handle foreground messages
+        function setupFCMForegroundHandler() {
+            if (!messaging) return;
+            
+            messaging.onMessage((payload) => {
+                console.log('FCM Foreground message:', payload);
+                
+                // Show in-app notification
+                if (payload.notification) {
+                    showReminderPopup(payload.notification.body || payload.data?.text || 'תזכורת חדשה');
+                    
+                    // Play sound if specified
+                    if (payload.data?.sound) {
+                        playReminderSound(payload.data.sound);
+                    }
+                }
+            });
+        }
     </script>
 </head>
 <body>
@@ -1033,7 +1136,8 @@
             const sound = soundSelect ? soundSelect.value : 'alarm1';
             
             if (text && datetime) {
-                reminders.push({ id: Date.now(), text, datetime, popup, sound, notified: false });
+                const reminder = { id: Date.now(), text, datetime, popup, sound, notified: false };
+                reminders.push(reminder);
                 localStorage.setItem('reminders', JSON.stringify(reminders));
                 reminderTextInput.value = '';
                 reminderDateTimeInput.value = '';
@@ -1041,8 +1145,50 @@
                 if (soundSelect) soundSelect.value = 'alarm1';
                 renderRemindersList();
                 checkReminders();
+                
+                // Save reminder to Firestore for server-side push notifications (Android only)
+                if (isAndroidDevice()) {
+                    saveReminderToFirestore(reminder);
+                }
             } else {
                 alert('אנא הזן טקסט ותאריך/שעה.');
+            }
+        }
+        
+        // Save reminder to Firestore for server-side push notification triggering
+        async function saveReminderToFirestore(reminder) {
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    console.log('FCM: User not logged in, cannot save reminder for push notifications');
+                    return;
+                }
+                
+                // Ensure we have an FCM token
+                if (!fcmToken) {
+                    await requestFCMToken();
+                }
+                
+                if (!fcmToken) {
+                    console.log('FCM: No FCM token available');
+                    return;
+                }
+                
+                // Save the reminder to Firestore with scheduled time
+                await db.collection('scheduledReminders').doc(reminder.id.toString()).set({
+                    userId: user.uid,
+                    fcmToken: fcmToken,
+                    text: reminder.text,
+                    scheduledTime: new Date(reminder.datetime),
+                    sound: reminder.sound,
+                    popup: reminder.popup,
+                    notified: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                console.log('FCM: Reminder saved for push notification:', reminder.id);
+            } catch (error) {
+                console.error('FCM: Error saving reminder to Firestore:', error);
             }
         }
         function renderRemindersList() {
@@ -1072,6 +1218,22 @@
             reminders = reminders.filter(r => r.id !== id);
             localStorage.setItem('reminders', JSON.stringify(reminders));
             renderRemindersList();
+            
+            // Also delete from Firestore to prevent orphaned push notifications
+            deleteReminderFromFirestore(id);
+        }
+        
+        // Delete scheduled reminder from Firestore
+        async function deleteReminderFromFirestore(id) {
+            try {
+                const user = auth.currentUser;
+                if (!user) return;
+                
+                await db.collection('scheduledReminders').doc(id.toString()).delete();
+                console.log('FCM: Deleted scheduled reminder from Firestore:', id);
+            } catch (error) {
+                console.error('FCM: Error deleting reminder from Firestore:', error);
+            }
         }
         function openInboxModal() {
             closeSidebar();
@@ -1154,6 +1316,14 @@
             updateSharedAccessNotice();
             updateInboxBadge();
             requestNotificationPermission();
+            
+            // Initialize FCM for Android push notifications
+            if (isAndroidDevice()) {
+                initializeFCM().then(() => {
+                    setupFCMForegroundHandler();
+                });
+            }
+            
             setInterval(checkReminders, 60000);
             checkReminders();
             const user = auth.currentUser;
@@ -3974,6 +4144,11 @@
                     
                     // Set up real-time synchronization
                     setupRealtimeSync(user);
+                    
+                    // Request FCM token for push notifications (Android only)
+                    if (isAndroidDevice()) {
+                        requestFCMToken();
+                    }
                     
                     closeLoginModal();
                     

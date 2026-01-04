@@ -88,19 +88,30 @@
         left: 20px;
     }
     
-    /* Mobile portrait: 2 cards per row */
+    /* Mobile portrait: 3 cards per row - horizontal layout */
     .input-section {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
     }
     
     /* Smaller text in input groups for mobile */
     .input-group label {
-        font-size: calc(var(--font-size-base) * 0.85);
+        font-size: calc(var(--font-size-base) * 0.6);
+    }
+    
+    .input-group input, .input-group select {
+        font-size: calc(var(--font-size-base) * 0.65);
+        padding: 3px 4px;
+    }
+    
+    .input-group button {
+        font-size: calc(var(--font-size-base) * 0.6);
+        padding: 3px 6px;
+        min-height: 24px;
     }
     
     .input-group h5 {
-        font-size: calc(var(--font-size-base) * 0.9);
+        font-size: calc(var(--font-size-base) * 0.75);
     }
     
     /* Dashboard: Add metric button above indicators on mobile */
@@ -156,20 +167,21 @@
     .dashboard-grid {
         width: 100%;
         justify-content: center;
+        gap: 4px;
     }
     .dashboard-item {
-        min-width: 35px;
-        max-width: 60px;
+        min-width: 30px;
+        max-width: 50px;
         padding: 2px 3px;
-        min-height: 35px;
+        min-height: 28px;
     }
     
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.42);
+        font-size: calc(var(--font-size-base) * 0.38);
     }
     
     .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.58);
+        font-size: calc(var(--font-size-base) * 0.5);
     }
     .card-fab {
         display: flex;
@@ -730,7 +742,7 @@ body.dark-mode .stage-nav-button:hover {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px;
+    gap: 6px;
     width: 100%;
     max-width: 1000px;
 }
@@ -739,34 +751,34 @@ body.dark-mode .stage-nav-button:hover {
     background-color: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(5px);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: var(--border-radius);
-    padding: 6px 8px;
+    border-radius: 8px;
+    padding: 4px 6px;
     text-align: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
-    flex: 1;
-    min-width: 60px;
-    max-width: 90px;
+    flex: 0 1 auto;
+    min-width: 45px;
+    max-width: 70px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    min-height: 50px;
+    min-height: 35px;
 }
 
 .dashboard-item:hover {
-    transform: translateY(-5px) scale(1.02);
+    transform: translateY(-3px) scale(1.02);
     background-color: rgba(255, 255, 255, 0.25);
 }
 
 .dashboard-item h3 {
     margin-top: 0;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     color: var(--accent-color);
     font-family: 'Noto Sans Hebrew', sans-serif;
-    font-size: calc(var(--font-size-base) * 0.65);
-    font-weight: 700;
+    font-size: calc(var(--font-size-base) * 0.5);
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -774,8 +786,8 @@ body.dark-mode .stage-nav-button:hover {
 }
 
 .dashboard-item p {
-    font-size: calc(var(--font-size-base) * 0.9);
-    font-weight: 700;
+    font-size: calc(var(--font-size-base) * 0.7);
+    font-weight: 600;
     color: white;
     margin: 0;
     font-family: 'Playfair Display', serif;
@@ -788,25 +800,28 @@ body.dark-mode .dashboard-item h3 {
 
 .input-section {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 25px;
-    margin-bottom: 40px;
-    padding-top: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 25px;
+    padding-top: 15px;
 }
 
 .input-group {
     background: linear-gradient(135deg, #fdfdfd, #f0f0f0);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: 12px;
+    padding: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
     transition: transform 0.3s ease, all var(--animation-speed);
 }
 
 .input-group:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -817,20 +832,22 @@ body.dark-mode .input-group {
 
 .input-group label {
     display: block;
-    margin-bottom: 6px;
-    font-weight: 700;
+    margin-bottom: 0;
+    font-weight: 600;
     color: var(--light-text-color);
-    font-size: calc(var(--font-size-base) * 0.85);
+    font-size: calc(var(--font-size-base) * 0.7);
     transition: color var(--animation-speed);
+    flex: 0 0 100%;
 }
 
 .input-group input[type="number"], .input-group input[type="text"], .input-group select, .input-group textarea {
-    width: calc(100% - 16px);
-    padding: 6px 8px;
-    margin-bottom: 8px;
+    flex: 1;
+    min-width: 0;
+    padding: 4px 6px;
+    margin-bottom: 0;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: calc(var(--font-size-base) * 0.85);
+    border-radius: 4px;
+    font-size: calc(var(--font-size-base) * 0.75);
     color: var(--text-color);
     transition: all 0.3s ease, background-color var(--animation-speed), color var(--animation-speed);
     background-color: var(--card-background);
@@ -851,19 +868,19 @@ body.dark-mode .input-group input[type="number"], body.dark-mode .input-group in
 .input-group button {
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     color: white;
-    padding: 8px 14px;
+    padding: 4px 10px;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: calc(var(--font-size-base) * 0.85);
+    font-size: calc(var(--font-size-base) * 0.7);
     font-weight: 400; /* Thinner font */
     transition: all 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
-    align-self: flex-end;
     /* Ensure touch events work */
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     user-select: none;
-    min-height: 36px; /* Minimum touch target size */
+    min-height: 28px; /* Smaller button */
+    flex-shrink: 0;
 }
 .delete-metric-btn {
     background: linear-gradient(135deg, #f44336, #d32f2f);
@@ -3331,16 +3348,19 @@ body.dark-mode .login-modal-content .email-form input {
         z-index: 1110;
     }
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.42);
+        font-size: calc(var(--font-size-base) * 0.38);
         white-space: normal;
         word-break: break-word;
     }
     .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.58);
+        font-size: calc(var(--font-size-base) * 0.5);
     }
     .input-section {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    .input-group {
+        padding: 5px;
     }
 }
 
@@ -3431,10 +3451,10 @@ body.dark-mode .add-metric-modal-content input {
         display: none !important; /* Hide on desktop */
     }
     
-    /* Input section: 4 data cubes per row instead of 2 */
+    /* Input section: 5 data cubes per row - horizontal layout with smaller items */
     .input-section {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 15px;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
     }
     
     .input-group {
@@ -3444,7 +3464,7 @@ body.dark-mode .add-metric-modal-content input {
     /* Dashboard: lower height and horizontal layout (button next to cubes) */
     .dashboard-section {
         flex-direction: row;
-        padding: 8px 15px;
+        padding: 6px 12px;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
@@ -3452,12 +3472,14 @@ body.dark-mode .add-metric-modal-content input {
     
     .dashboard-section h2 {
         flex-basis: 100%; /* Full width for title */
-        margin-bottom: 5px;
+        margin-bottom: 3px;
+        font-size: calc(var(--font-size-base) * 0.85);
     }
     
     .dashboard-grid {
         flex: 1;
         justify-content: flex-start;
+        gap: 5px;
     }
     
     .add-data-cube {
