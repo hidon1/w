@@ -2844,7 +2844,9 @@
                     currentEditableDetailElement.inputElement = inputElement;
                     currentEditableDetailElement.otherInput = otherInput;
                     inputElement.addEventListener('blur', saveEditableDetail);
+                    inputElement.addEventListener('change', saveEditableDetail);
                     otherInput.addEventListener('blur', saveEditableDetail);
+                    otherInput.addEventListener('change', saveEditableDetail);
                 } else {
                     inputElement = document.createElement('input');
                     inputElement.type = metricConfig.type === 'number' ? 'text' : metricConfig.type;
@@ -2860,6 +2862,7 @@
                         }
                     });
                     inputElement.addEventListener('blur', saveEditableDetail);
+                    inputElement.addEventListener('change', saveEditableDetail);
                 }
                 displaySpan.style.display = 'none';
             };
