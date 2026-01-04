@@ -1205,6 +1205,66 @@
                 // Firebase not available, skip cloud save
             }
         }
+        
+        /**
+         * Persist projects to localStorage (alias for saveAllProjects)
+         */
+        function persistProjects() {
+            saveAllProjects();
+        }
+        
+        /**
+         * Save a project detail value and persist immediately
+         * @param {string} metricId - The metric ID (e.g., 'wineName', 'vintageYear')
+         * @param {string} value - The value to save
+         */
+        function saveProjectDetailValue(metricId, value) {
+            if (!currentProjectId || !projects[currentProjectId]) return;
+            if (!projects[currentProjectId].wineDetails) {
+                projects[currentProjectId].wineDetails = {};
+            }
+            
+            // Initialize array if doesn't exist
+            if (!projects[currentProjectId].wineDetails[metricId]) {
+                projects[currentProjectId].wineDetails[metricId] = [];
+            }
+            
+            // Add new entry with timestamp
+            const timestamp = new Date().toLocaleString('he-IL');
+            projects[currentProjectId].wineDetails[metricId].push({ value, timestamp });
+            
+            // Persist immediately
+            persistProjects();
+        }
+        
+        /**
+         * Save a stage metric value and persist immediately
+         * @param {string} sectionId - The stage/section ID (e.g., 'stage1', 'stage2')
+         * @param {string} metricId - The metric ID (e.g., 'brix', 'ph')
+         * @param {string} value - The value to save
+         */
+        function saveStageMetricValue(sectionId, metricId, value) {
+            if (!currentProjectId || !projects[currentProjectId]) return;
+            if (!projects[currentProjectId].stages) {
+                projects[currentProjectId].stages = {};
+            }
+            if (!projects[currentProjectId].stages[sectionId]) {
+                projects[currentProjectId].stages[sectionId] = {};
+            }
+            
+            // Initialize array if doesn't exist
+            if (!projects[currentProjectId].stages[sectionId][metricId]) {
+                projects[currentProjectId].stages[sectionId][metricId] = [];
+            }
+            
+            // Add new entry with timestamp
+            const timestamp = new Date().toLocaleString('he-IL');
+            projects[currentProjectId].stages[sectionId][metricId].push({ value, timestamp });
+            
+            // Persist immediately
+            persistProjects();
+        }
+        
         function updateProjectDisplay() {
             currentProjectNameDisplay.textContent = projects[currentProjectId].name;
             editProjectNameInput.value = projects[currentProjectId].name;
@@ -1782,7 +1842,50 @@
             }
             updateDashboardForCurrentStage();
             renderPreviousStageOverview();
+            
+            // Add autosave listeners for current stage inputs
+            attachAutosaveListenersToStageInputs();
         }
+        
+        /**
+         * Attach autosave listeners to current stage input fields
+         */
+        function attachAutosaveListenersToStageInputs() {
+            if (!currentStageInputSection) return;
+            
+            const inputGroups = currentStageInputSection.querySelectorAll('.input-group');
+            inputGroups.forEach(group => {
+                const input = group.querySelector('input[id$="Input"], select[id$="Input"]');
+                if (!input) return;
+                
+                // Extract metricId from input id (remove "Input" suffix)
+                const metricId = input.id.replace('Input', '');
+                
+                // Skip if already has autosave listener
+                if (input.dataset.autosaveAttached === 'true') return;
+                input.dataset.autosaveAttached = 'true';
+                
+                // Add autosave on blur (when user leaves the field)
+                input.addEventListener('blur', () => {
+                    const value = input.value.trim();
+                    if (value) {
+                        // Trigger the existing update function
+                        updateMetricValue(currentStageId, metricId);
+                    }
+                });
+                
+                // For select elements, also save on change
+                if (input.tagName === 'SELECT') {
+                    input.addEventListener('change', () => {
+                        const value = input.value;
+                        if (value && value !== 'other_input_field') {
+                            updateMetricValue(currentStageId, metricId);
+                        }
+                    });
+                }
+            });
+        }
+        
         function updateMetricValue(stageId, metricId) {
             let inputElement;
             let value;
@@ -2739,7 +2842,7 @@
                 alert('אנא הזן שם לשדה המותאם אישית.');
             }
         }
-        function deleteCustomProperty(propId, skipConfirm = false) {
+        async function deleteCustomProperty(propId, skipConfirm = false) {
             if (projects[currentProjectId].isClosed) {
                 alert('הפרויקט סגור. פתח אותו כדי לערוך.');
                 return;
@@ -2747,8 +2850,14 @@
             if (!ensureEditPermission()) {
                 return;
             }
-            if (!skipConfirm && !confirm('האם אתה בטוח שברצונך למחוק שדה מותאם אישית זה?')) {
-                return;
+            if (!skipConfirm) {
+                const confirmed = await showConfirmation(
+                    'האם אתה בטוח שברצונך למחוק שדה מותאם אישית זה?',
+                    'מחיקת שדה'
+                );
+                if (!confirmed) {
+                    return;
+                }
             }
             projects[currentProjectId].wineDetails.customProperties = projects[currentProjectId].wineDetails.customProperties.filter(prop => prop.id !== propId);
             saveAllProjects();
@@ -3709,26 +3818,28 @@
         function skipLogin() {
             closeLoginModal();
         }
+        function isMobileDevice() {
+            // Check for touch support
+            const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            // Check screen size
+            const isSmallScreen = window.innerWidth <= 768;
+            // Check user agent as fallback
+            const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            // Consider it mobile if it has touch AND small screen, OR matches mobile UA
+            return (hasTouch && isSmallScreen) || mobileUA;
+        }
+        
         function loginWithGoogle() {
             const googleProvider = new firebase.auth.GoogleAuthProvider();
-            // Detect mobile using multiple methods for better reliability
-            const isMobile = (function() {
-                // Check for touch support
-                const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-                // Check screen size
-                const isSmallScreen = window.innerWidth <= 768;
-                // Check user agent as fallback
-                const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                
-                // Consider it mobile if it has touch AND small screen, OR matches mobile UA
-                return (hasTouch && isSmallScreen) || mobileUA;
-            })();
             
             googleProvider.setCustomParameters({
                 prompt: 'select_account'
             });
             
-            if (isMobile) {
+            auth.useDeviceLanguage();
+            
+            if (isMobileDevice()) {
                 // On mobile, use redirect for better UX (no popup issues)
                 auth.signInWithRedirect(googleProvider);
             } else {
@@ -4205,6 +4316,19 @@
                     resolve(false);
                 }
             });
+        }
+        
+        /**
+         * Generic confirmation dialog wrapper - alias for showConfirmation
+         * @param {string} title - The dialog title
+         * @param {string} message - The confirmation message
+         * @param {Function} onConfirm - Callback function to execute on confirmation
+         */
+        async function openConfirmation(title, message, onConfirm) {
+            const confirmed = await showConfirmation(message, title);
+            if (confirmed && typeof onConfirm === 'function') {
+                onConfirm();
+            }
         }
         
         function isMobileViewport() {

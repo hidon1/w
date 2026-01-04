@@ -106,16 +106,17 @@
     .dashboard-section h2 {
         grid-column: 1;
         grid-row: 1;
-        font-size: calc(var(--font-size-base) * 1);
+        font-size: calc(var(--font-size-base) * 1.1);
         margin: 0;
         text-align: center;
+        line-height: 1.8em;
     }
     
     .add-data-cube {
         grid-column: 2;
         grid-row: 1;
-        width: var(--mobile-add-button-size);
-        height: var(--mobile-add-button-size);
+        width: 1.8em;
+        height: 1.8em;
         border-radius: 50%;
         padding: 0;
         display: flex;
@@ -137,7 +138,7 @@
     
     .add-data-cube i {
         margin: 0;
-        font-size: calc(var(--font-size-base) * 1.2);
+        font-size: calc(var(--font-size-base) * 1);
     }
     
     .dashboard-grid {
@@ -145,18 +146,18 @@
         justify-content: center;
     }
     .dashboard-item {
-        min-width: 45px;
-        max-width: 70px;
-        padding: 3px 5px;
-        min-height: 45px;
+        min-width: 40px;
+        max-width: 65px;
+        padding: 2px 4px;
+        min-height: 40px;
     }
     
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.5);
+        font-size: calc(var(--font-size-base) * 0.48);
     }
     
     .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.7);
+        font-size: calc(var(--font-size-base) * 0.65);
     }
     .card-fab {
         display: flex;
@@ -262,6 +263,13 @@
     
     .login-description-desktop {
         display: none !important;
+    }
+}
+
+/* Further reduce font size on very small screens */
+@media (max-width: 380px) {
+    :root {
+        --font-size-base: 15px;
     }
 }
 
