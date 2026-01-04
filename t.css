@@ -106,7 +106,7 @@
     .dashboard-section h2 {
         grid-column: 1 !important;
         grid-row: 2 !important;
-        font-size: calc(var(--font-size-base) * 1.1);
+        font-size: calc(var(--font-size-base) * 0.95);
         margin: 0;
         text-align: center;
         line-height: 1.4em;
@@ -114,9 +114,9 @@
     
     .add-data-cube {
         grid-column: 1 !important;
-        grid-row: 1 !important;
-        width: 1.8em;
-        height: 1.8em;
+        grid-row: 2 !important;
+        width: calc(var(--font-size-base) * 1.4);
+        height: calc(var(--font-size-base) * 1.4);
         border-radius: 50%;
         padding: 0;
         display: flex !important;
@@ -126,7 +126,6 @@
         margin-right: auto;
         margin-left: 8px;
         flex-shrink: 0;
-        order: -1;
         justify-self: start;
     }
     
@@ -141,7 +140,7 @@
     
     .add-data-cube i {
         margin: 0;
-        font-size: calc(var(--font-size-base) * 1);
+        font-size: calc(var(--font-size-base) * 0.7);
     }
     
     .dashboard-grid {
@@ -149,18 +148,18 @@
         justify-content: center;
     }
     .dashboard-item {
-        min-width: 40px;
-        max-width: 65px;
-        padding: 2px 4px;
-        min-height: 40px;
+        min-width: 35px;
+        max-width: 60px;
+        padding: 2px 3px;
+        min-height: 35px;
     }
     
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.48);
+        font-size: calc(var(--font-size-base) * 0.42);
     }
     
     .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.65);
+        font-size: calc(var(--font-size-base) * 0.58);
     }
     .card-fab {
         display: flex;
@@ -3110,9 +3109,12 @@ body.dark-mode .login-modal-content .email-form input {
         z-index: 1110;
     }
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.6);
+        font-size: calc(var(--font-size-base) * 0.42);
         white-space: normal;
         word-break: break-word;
+    }
+    .dashboard-item p {
+        font-size: calc(var(--font-size-base) * 0.58);
     }
     .input-section {
         grid-template-columns: repeat(2, 1fr);
