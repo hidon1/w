@@ -517,7 +517,7 @@
                 <div id="linkEmailStatus" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none; font-size: 0.9em;"></div>
             </div>
         </div>
-        <div id="confirmationModal" class="modal">
+        <div id="confirmationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle" aria-describedby="confirmationMessage">
             <div class="modal-content confirmation-modal-content">
                 <h3 id="confirmationTitle">אישור</h3>
                 <p id="confirmationMessage">האם אתה בטוח?</p>
@@ -3281,6 +3281,12 @@
             if (event.target === manageEmailsModal) {
                 closeManageEmailsModal();
             }
+            const confirmationModal = document.getElementById('confirmationModal');
+            if (event.target === confirmationModal) {
+                // Close confirmation modal by clicking "No"
+                const noBtn = document.getElementById('confirmNoBtn');
+                if (noBtn) noBtn.click();
+            }
             if (event.target === sidebarOverlay) {
                 closeSidebar();
             }
@@ -4124,8 +4130,10 @@
                 const noBtn = document.getElementById('confirmNoBtn');
                 
                 if (!modal || !titleEl || !messageEl || !yesBtn || !noBtn) {
-                    // Fallback to confirm() if modal elements not found
-                    resolve(confirm(message));
+                    // Log error and reject if modal elements not found
+                    console.error('Confirmation modal elements not found. Required elements: confirmationModal, confirmationTitle, confirmationMessage, confirmYesBtn, confirmNoBtn');
+                    // Resolve to false (safer than true for confirmations)
+                    resolve(false);
                     return;
                 }
                 
