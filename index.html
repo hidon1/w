@@ -4141,6 +4141,11 @@
                 messageEl.textContent = message;
                 modal.style.display = 'flex';
                 
+                const cleanup = () => {
+                    yesBtn.removeEventListener('click', handleYes);
+                    noBtn.removeEventListener('click', handleNo);
+                };
+                
                 const handleYes = () => {
                     modal.style.display = 'none';
                     cleanup();
@@ -4151,11 +4156,6 @@
                     modal.style.display = 'none';
                     cleanup();
                     resolve(false);
-                };
-                
-                const cleanup = () => {
-                    yesBtn.removeEventListener('click', handleYes);
-                    noBtn.removeEventListener('click', handleNo);
                 };
                 
                 yesBtn.addEventListener('click', handleYes);
