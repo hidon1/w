@@ -519,6 +519,7 @@
         </div>
         <div id="confirmationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle" aria-describedby="confirmationMessage" tabindex="-1">
             <div class="modal-content confirmation-modal-content">
+                <span class="close-button" onclick="document.getElementById('confirmNoBtn').click()">&times;</span>
                 <h3 id="confirmationTitle">אישור</h3>
                 <p id="confirmationMessage">האם אתה בטוח?</p>
                 <div class="modal-actions">
@@ -4131,8 +4132,8 @@
                 const noBtn = document.getElementById('confirmNoBtn');
                 
                 if (!modal || !titleEl || !messageEl || !yesBtn || !noBtn) {
-                    // Log error and reject if modal elements not found
-                    console.error('רכיבי מודל האישור לא נמצאו. רכיבים נדרשים: confirmationModal, confirmationTitle, confirmationMessage, confirmYesBtn, confirmNoBtn');
+                    // Log error if modal elements not found
+                    console.error('רכיבי מודל האישור לא נמצאו');
                     // Resolve to false (safer than true for confirmations)
                     resolve(false);
                     return;
@@ -4142,7 +4143,7 @@
                 messageEl.textContent = message;
                 modal.style.display = 'flex';
                 
-                // Focus management - focus the first button
+                // Focus management - focus the "No" button (safer default for confirmations)
                 setTimeout(() => noBtn.focus(), 100);
                 
                 const cleanup = () => {
