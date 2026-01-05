@@ -102,7 +102,7 @@
             <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
             <h2>ברוכים הבאים!</h2>
             <p class="login-description-desktop">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
-            <p class="login-description-mobile">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, התחבר עם חשבון Google שלך. הנתונים שלך יישמרו באופן מאובטח ותוכל לגשת אליהם מכל מכשיר.</p>
+            <p class="login-description-mobile">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלך יישמרו באופן מאובטח ותוכל לגשת אליהם מכל מכשיר.</p>
             <button class="google-btn" onclick="loginWithGoogle()">
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
                 התחבר עם Google
@@ -4109,16 +4109,17 @@
         function loginWithGoogle() {
             const googleProvider = new firebase.auth.GoogleAuthProvider();
             
-            googleProvider.setCustomParameters({
-                prompt: 'select_account'
-            });
-            
             auth.useDeviceLanguage();
             
             if (isMobileDevice()) {
-                // On mobile, use redirect for better UX (no popup issues)
+                // On mobile, don't prompt for account selection - automatically use the phone's connected Google account
+                // This provides a seamless login experience on mobile devices
                 auth.signInWithRedirect(googleProvider);
             } else {
+                // On desktop, always prompt for account selection
+                googleProvider.setCustomParameters({
+                    prompt: 'select_account'
+                });
                 // On desktop, try popup first with fallback to redirect
                 auth.signInWithPopup(googleProvider)
                     .then((result) => {
