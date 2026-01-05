@@ -1336,11 +1336,18 @@
         }
         function saveAllProjects() {
             if (sharedAccessContext.active && !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance) {
-                console.warn('מצב צפייה בלבד - לא נשמרו שינויים');
+                console.warn('View-only mode - changes not saved');
                 return;
             }
-            localStorage.setItem('projects', JSON.stringify(projects));
-            localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig)); // Save stagesConfig too
+            try {
+                localStorage.setItem('projects', JSON.stringify(projects));
+                localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig)); // Save stagesConfig too
+            } catch (storageErr) {
+                console.error('Error saving to localStorage:', storageErr);
+                if (storageErr.name === 'QuotaExceededError') {
+                    alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.');
+                }
+            }
             try {
                 if (auth && auth.currentUser) {
                     saveStateToFirebase();
@@ -1605,20 +1612,20 @@
             } catch (err) {
                 console.error('Error loading users:', err);
                 if (err.code === 'failed-precondition') {
-                    console.error('Firestore index required. Please create the index in Firebase console.');
+                    console.error('Firestore index required. Run: firebase deploy --only firestore:indexes');
                     if (noUsersMsg) {
-                        noUsersMsg.textContent = 'נדרש אינדקס ב-Firestore. אנא פרוס את האינדקסים: firebase deploy --only firestore:indexes';
+                        noUsersMsg.textContent = 'נדרש אינדקס ב-Firestore. אנא צור קשר עם מנהל המערכת.';
                         noUsersMsg.style.display = 'block';
                     }
                 } else if (err.code === 'permission-denied') {
                     console.error('Permission denied loading users. Check Firestore rules.');
                     if (noUsersMsg) {
-                        noUsersMsg.textContent = 'שגיאת הרשאה. ודא שחוקי האבטחה ב-Firestore מוגדרים כראוי.';
+                        noUsersMsg.textContent = 'שגיאת הרשאה. אנא צור קשר עם מנהל המערכת.';
                         noUsersMsg.style.display = 'block';
                     }
                 } else {
                     if (noUsersMsg) {
-                        noUsersMsg.textContent = 'שגיאה בטעינת משתמשים: ' + (err.message || 'נסה שוב');
+                        noUsersMsg.textContent = 'שגיאה בטעינת משתמשים. נסה שוב מאוחר יותר.';
                         noUsersMsg.style.display = 'block';
                     }
                 }
@@ -3736,27 +3743,6 @@
                 updateProjectDisplay();
             }
         }
-        async function saveStateToFirebase() {
-            const user = auth.currentUser;
-            if (!user) {
-                console.log('Not logged in – saving to localStorage only');
-                localStorage.setItem('projects', JSON.stringify(projects));
-                return;
-            }
-            const state = getCurrentAppState();
-            try {
-                await db.collection('wineMonitoringStates')
-                    .doc(user.uid)
-                    .set({
-                        state,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                console.log('State saved successfully to cloud and localStorage');
-                localStorage.setItem('projects', JSON.stringify(projects));
-            } catch (err) {
-                console.error('Error saving to Firebase:', err);
-            }
-        }
         async function loadStateFromFirebase(user) {
             try {
                 const docRef = db.collection('wineMonitoringStates').doc(user.uid);
@@ -3970,12 +3956,23 @@
             const user = auth.currentUser;
             if (!user) {
                 console.log('Not logged in – saving to localStorage only');
-                localStorage.setItem('projects', JSON.stringify(projects));
+                try {
+                    localStorage.setItem('projects', JSON.stringify(projects));
+                } catch (storageErr) {
+                    console.error('Error saving to localStorage:', storageErr);
+                    if (storageErr.name === 'QuotaExceededError') {
+                        alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.');
+                    }
+                }
                 return;
             }
             const state = getCurrentAppState();
             // Store timestamp for change detection
-            localStorage.setItem('lastSavedAt', state.savedAt);
+            try {
+                localStorage.setItem('lastSavedAt', state.savedAt);
+            } catch (storageErr) {
+                console.error('Error saving timestamp to localStorage:', storageErr);
+            }
             
             try {
                 await db.collection('wineMonitoringStates')
@@ -3985,11 +3982,22 @@
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 console.log('State saved successfully to cloud and localStorage');
-                localStorage.setItem('projects', JSON.stringify(projects));
+                try {
+                    localStorage.setItem('projects', JSON.stringify(projects));
+                } catch (storageErr) {
+                    console.error('Error saving to localStorage:', storageErr);
+                }
             } catch (err) {
                 console.error('Error saving to Firebase:', err);
                 // Still save to localStorage even if cloud save fails
-                localStorage.setItem('projects', JSON.stringify(projects));
+                try {
+                    localStorage.setItem('projects', JSON.stringify(projects));
+                } catch (storageErr) {
+                    console.error('Error saving to localStorage:', storageErr);
+                    if (storageErr.name === 'QuotaExceededError') {
+                        alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.');
+                    }
+                }
                 if (err.code === 'permission-denied') {
                     console.error('Permission denied. Check Firestore security rules.');
                 }
