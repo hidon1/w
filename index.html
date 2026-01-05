@@ -29,6 +29,21 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        
+        // Enable Firestore persistence for offline support and faster real-time sync
+        db.enablePersistence({ synchronizeTabs: true })
+            .then(() => {
+                console.log('Firestore persistence enabled - real-time sync optimized');
+            })
+            .catch((err) => {
+                if (err.code === 'failed-precondition') {
+                    // Multiple tabs open, persistence can only be enabled in one tab at a time
+                    console.log('Firestore persistence unavailable - multiple tabs open');
+                } else if (err.code === 'unimplemented') {
+                    // The current browser doesn't support persistence
+                    console.log('Firestore persistence not supported in this browser');
+                }
+            });
     </script>
 </head>
 <body>
@@ -3897,38 +3912,54 @@
         }
         // Real-time synchronization listener
         let realtimeUnsubscribe = null;
+        
         function setupRealtimeSync(user) {
+            // Clean up existing listener
+            if (realtimeUnsubscribe) {
+                realtimeUnsubscribe();
+                realtimeUnsubscribe = null;
+            }
+            
             if (!user) {
-                // Unsubscribe if user logs out
-                if (realtimeUnsubscribe) {
-                    realtimeUnsubscribe();
-                    realtimeUnsubscribe = null;
-                }
                 return;
             }
             
-            // Set up real-time listener for changes
-            const docRef = db.collection('wineMonitoringStates').doc(user.uid);
-            realtimeUnsubscribe = docRef.onSnapshot((doc) => {
-                if (doc.exists && doc.metadata && !doc.metadata.hasPendingWrites) {
-                    // This is a remote update (not from this device)
+            // Determine which UID to listen to - either own or shared owner's
+            const targetUid = sharedAccessContext.active && sharedAccessContext.ownerUid 
+                ? sharedAccessContext.ownerUid 
+                : user.uid;
+            
+            // Set up real-time listener for changes with immediate sync
+            const docRef = db.collection('wineMonitoringStates').doc(targetUid);
+            
+            // Use includeMetadataChanges for more immediate updates
+            realtimeUnsubscribe = docRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
+                if (doc.exists) {
                     const data = doc.data();
                     const remoteState = data.state;
-                    const localSavedAt = localStorage.getItem('lastSavedAt');
                     
-                    if (remoteState && remoteState.savedAt && remoteState.savedAt !== localSavedAt) {
-                        console.log('Received update from cloud - updating data');
-                        applyStateToUI(remoteState);
-                        localStorage.setItem('lastSavedAt', remoteState.savedAt);
+                    // Only update UI for remote changes (not local pending writes)
+                    if (!doc.metadata.hasPendingWrites && !doc.metadata.fromCache) {
+                        const localSavedAt = localStorage.getItem('lastSavedAt');
                         
-                        // Show a brief notification to user
-                        showSyncNotification();
+                        if (remoteState && remoteState.savedAt && remoteState.savedAt !== localSavedAt) {
+                            console.log('Received real-time update from cloud - updating data immediately');
+                            applyStateToUI(remoteState);
+                            localStorage.setItem('lastSavedAt', remoteState.savedAt);
+                            
+                            // Show a brief notification to user
+                            showSyncNotification();
+                        }
+                    } else if (doc.metadata.fromCache) {
+                        console.log('Data loaded from cache - waiting for server sync');
                     }
-                } else {
-                    console.log('Local update - not updating UI');
                 }
             }, (error) => {
-                console.error('Error listening for changes:', error);
+                console.error('Error listening for real-time changes:', error);
+                // Firebase SDK handles automatic reconnection - just log the status
+                if (error.code === 'unavailable') {
+                    console.log('Network unavailable - Firebase will auto-sync when connection restores');
+                }
             });
         }
         
@@ -4112,8 +4143,10 @@
             auth.useDeviceLanguage();
             
             if (isMobileDevice()) {
-                // On mobile, don't prompt for account selection - automatically use the phone's connected Google account
-                // This provides a seamless login experience on mobile devices
+                // On mobile, use redirect without any prompt parameter
+                // This allows the most seamless experience - the system will automatically
+                // use the primary Google account on the device if only one is logged in
+                // or show a minimal selection if multiple accounts are available
                 auth.signInWithRedirect(googleProvider);
             } else {
                 // On desktop, always prompt for account selection
