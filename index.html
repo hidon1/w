@@ -3707,13 +3707,14 @@
         function handleLocalStorageError(err) {
             console.error('Error saving to localStorage:', err);
             if (err.name === 'QuotaExceededError') {
-                alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.');
+                alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום על ידי מחיקת קבצים או נתונים מהדפדפן ונסה שוב.');
             } else if (err.name === 'SecurityError') {
                 // Private/incognito mode or security restrictions
-                alert('שגיאה: לא ניתן לשמור נתונים במצב פרטי. אנא השתמש במצב רגיל.');
+                alert('שגיאה: לא ניתן לשמור נתונים במצב גלישה פרטית. אנא פתח את האתר במצב רגיל או התחבר כדי לשמור בענן.');
             } else {
                 // Generic fallback for other errors
                 console.error('Unexpected localStorage error:', err.name, err.message);
+                // Note: Don't show alert for unexpected errors to avoid annoying users
             }
         }
         
