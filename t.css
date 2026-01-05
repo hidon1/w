@@ -263,9 +263,9 @@
         justify-content: center;
     }
     
-    /* Hide email/password login on mobile, show only Google OAuth */
+    /* Show email/password login on mobile as well */
     .desktop-only-login {
-        display: none !important;
+        display: flex !important;
     }
     
     /* Show mobile description, hide desktop description */
