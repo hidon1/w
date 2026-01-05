@@ -3703,10 +3703,17 @@
             };
         }
         // Helper function to handle localStorage quota exceeded errors
+        // Helper function to handle localStorage errors
         function handleLocalStorageError(err) {
             console.error('Error saving to localStorage:', err);
             if (err.name === 'QuotaExceededError') {
                 alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.');
+            } else if (err.name === 'SecurityError') {
+                // Private/incognito mode or security restrictions
+                alert('שגיאה: לא ניתן לשמור נתונים במצב פרטי. אנא השתמש במצב רגיל.');
+            } else {
+                // Generic fallback for other errors
+                console.error('Unexpected localStorage error:', err.name, err.message);
             }
         }
         
@@ -3986,7 +3993,7 @@
                 try {
                     localStorage.setItem('projects', JSON.stringify(projects));
                 } catch (storageErr) {
-                    console.error('Error saving to localStorage:', storageErr);
+                    handleLocalStorageError(storageErr);
                 }
             } catch (err) {
                 console.error('Error saving to Firebase:', err);
