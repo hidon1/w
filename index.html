@@ -1124,7 +1124,7 @@
             if ('Notification' in window) {
                 Notification.requestPermission().then(permission => {
                     if (permission === 'granted') {
-                        console.log('הודעות מאושרות.');
+                        console.log('Notifications permission granted.');
                     }
                 });
             }
@@ -3739,7 +3739,7 @@
         async function saveStateToFirebase() {
             const user = auth.currentUser;
             if (!user) {
-                console.log('לא מחובר – שומר רק בלוקאלי');
+                console.log('Not logged in – saving to localStorage only');
                 localStorage.setItem('projects', JSON.stringify(projects));
                 return;
             }
@@ -3751,10 +3751,10 @@
                         state,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                console.log('מצב נשמר בהצלחה בענן וגם ב‑localStorage');
+                console.log('State saved successfully to cloud and localStorage');
                 localStorage.setItem('projects', JSON.stringify(projects));
             } catch (err) {
-                console.error('שגיאה בשמירה לפיירבייס:', err);
+                console.error('Error saving to Firebase:', err);
             }
         }
         async function loadStateFromFirebase(user) {
@@ -3919,7 +3919,7 @@
                     const localSavedAt = localStorage.getItem('lastSavedAt');
                     
                     if (remoteState && remoteState.savedAt && remoteState.savedAt !== localSavedAt) {
-                        console.log('התקבל עדכון מהענן - מעדכן את הנתונים');
+                        console.log('Received update from cloud - updating data');
                         applyStateToUI(remoteState);
                         localStorage.setItem('lastSavedAt', remoteState.savedAt);
                         
@@ -3927,10 +3927,10 @@
                         showSyncNotification();
                     }
                 } else {
-                    console.log('עדכון מקומי - לא מעדכן UI');
+                    console.log('Local update - not updating UI');
                 }
             }, (error) => {
-                console.error('שגיאה בהאזנה לשינויים:', error);
+                console.error('Error listening for changes:', error);
             });
         }
         
@@ -4509,7 +4509,7 @@
                         if (!messageEl) missing.push('confirmationMessage');
                         if (!yesBtn) missing.push('confirmYesBtn');
                         if (!noBtn) missing.push('confirmNoBtn');
-                        console.error('רכיבי מודל האישור לא נמצאו:', missing.join(', '));
+                        console.error('Confirmation modal components not found:', missing.join(', '));
                         // Resolve to false (safer than true for confirmations)
                         resolve(false);
                         return;
@@ -4570,7 +4570,7 @@
                 modal.addEventListener('keydown', handleKeyDown);
                 } catch (error) {
                     // Handle any unexpected errors during modal setup
-                    console.error('שגיאה בהצגת מודל האישור:', error);
+                    console.error('Error showing confirmation modal:', error);
                     resolve(false);
                 }
             });
