@@ -151,6 +151,12 @@ Database indexes for efficient queries
 ### `ACCESS_MANAGEMENT.md`
 Detailed documentation of the access management system
 
+### `DEPLOYMENT_GUIDE.md`
+Step-by-step guide for deploying Firebase fixes and troubleshooting
+
+### `TESTING_GUIDE.md`
+Comprehensive test cases to validate Firebase functionality
+
 ## Migration Guide
 
 ### For Existing Systems
@@ -171,6 +177,38 @@ The old system continues working alongside the new system. You can:
 
 ## Troubleshooting
 
+### Recent Firebase Error Fixes (v2.1)
+
+The following Firebase errors have been resolved in version 2.1:
+
+#### 1. "Permission Denied" on userAccess Query
+**Fixed**: Users can now query their own access grants
+- Security rule added: `allow read: if isAuthenticated() && request.auth.email == resource.data.userEmail`
+- This allows users to check if they have been granted access
+
+#### 2. "Missing Index" Error
+**Fixed**: Added composite index for userAccess collection
+- Index fields: `userEmail` (ascending), `status` (ascending)
+- Deploy with: `firebase deploy --only firestore:indexes`
+
+#### 3. "No user from redirect" Console Message
+**Fixed**: Removed misleading console log
+- This was showing for normal cases when no redirect occurred
+- Now silent for normal authentication flows
+
+#### 4. Generic Error Messages
+**Fixed**: Specific error handling for common scenarios
+- `permission-denied`: Suggests checking Firestore rules
+- `failed-precondition`: Indicates missing index
+- `not-found`: Indicates missing document
+- All errors now have helpful user-facing messages
+
+#### 5. Offline Mode Issues
+**Fixed**: App now gracefully falls back to localStorage
+- Works offline without errors
+- Data syncs to Firebase when connection restored
+- No disruption to user experience
+
 ### "Permission Denied" Errors
 
 **Problem**: User gets permission errors when accessing data
@@ -180,6 +218,7 @@ The old system continues working alongside the new system. You can:
 2. Check user email exactly matches granted email
 3. Ensure access status is "active" in Firestore
 4. Verify required indexes are created
+5. See `DEPLOYMENT_GUIDE.md` for detailed instructions
 
 ### User Access Not Showing
 
@@ -233,7 +272,18 @@ Potential improvements for future versions:
 
 ## Version History
 
-### Version 2.0 (Current)
+### Version 2.1 (Latest - Error Fixes)
+- **Fixed Firebase authentication and permission errors**
+  - Added user read permission to check own access grants
+  - Added composite index for userAccess queries (userEmail + status)
+  - Improved error handling with specific error codes
+  - Added fallback to localStorage when Firebase operations fail
+  - Better user-friendly error messages
+  - Fixed "No user from redirect" console noise
+  - See `DEPLOYMENT_GUIDE.md` for deployment instructions
+  - See `TESTING_GUIDE.md` for test cases
+
+### Version 2.0
 - Streamlined access management UI
 - Direct email-based user management
 - Enhanced permission controls

@@ -1124,7 +1124,7 @@
             if ('Notification' in window) {
                 Notification.requestPermission().then(permission => {
                     if (permission === 'granted') {
-                        console.log('הודעות מאושרות.');
+                        console.log('Notifications permission granted.');
                     }
                 });
             }
@@ -1336,11 +1336,15 @@
         }
         function saveAllProjects() {
             if (sharedAccessContext.active && !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance) {
-                console.warn('מצב צפייה בלבד - לא נשמרו שינויים');
+                console.warn('View-only mode - changes not saved');
                 return;
             }
-            localStorage.setItem('projects', JSON.stringify(projects));
-            localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig)); // Save stagesConfig too
+            try {
+                localStorage.setItem('projects', JSON.stringify(projects));
+                localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig)); // Save stagesConfig too
+            } catch (storageErr) {
+                handleLocalStorageError(storageErr);
+            }
             try {
                 if (auth && auth.currentUser) {
                     saveStateToFirebase();
@@ -1529,8 +1533,12 @@
                 clearAccessForm();
                 await loadActiveUsers();
             } catch (err) {
-                console.error('שגיאה בהענקת גישה', err);
-                alert('הענקת הגישה נכשלה. נסה שוב.');
+                console.error('Error granting access:', err);
+                if (err.code === 'permission-denied') {
+                    alert('שגיאה: אין לך הרשאה להעניק גישה. ודא שהחוקים ב-Firestore מוגדרים כראוי.');
+                } else {
+                    alert('הענקת הגישה נכשלה: ' + (err.message || 'נסה שוב.'));
+                }
             }
         }
         
@@ -1599,7 +1607,25 @@
                     usersList.appendChild(li);
                 });
             } catch (err) {
-                console.error('שגיאה בטעינת משתמשים', err);
+                console.error('Error loading users:', err);
+                if (err.code === 'failed-precondition') {
+                    console.error('Firestore index required. Run: firebase deploy --only firestore:indexes');
+                    if (noUsersMsg) {
+                        noUsersMsg.textContent = 'נדרש אינדקס ב-Firestore. אנא צור קשר עם מנהל המערכת.';
+                        noUsersMsg.style.display = 'block';
+                    }
+                } else if (err.code === 'permission-denied') {
+                    console.error('Permission denied loading users. Check Firestore rules.');
+                    if (noUsersMsg) {
+                        noUsersMsg.textContent = 'שגיאת הרשאה. אנא צור קשר עם מנהל המערכת.';
+                        noUsersMsg.style.display = 'block';
+                    }
+                } else {
+                    if (noUsersMsg) {
+                        noUsersMsg.textContent = 'שגיאה בטעינת משתמשים. נסה שוב מאוחר יותר.';
+                        noUsersMsg.style.display = 'block';
+                    }
+                }
             }
         }
         
@@ -1617,8 +1643,14 @@
                 alert('הגישה נשללה בהצלחה');
                 await loadActiveUsers();
             } catch (err) {
-                console.error('שגיאה בשלילת גישה', err);
-                alert('שלילת הגישה נכשלה. נסה שוב.');
+                console.error('Error revoking access:', err);
+                if (err.code === 'permission-denied') {
+                    alert('שגיאת הרשאה: אין לך הרשאה לשלול גישה זו.');
+                } else if (err.code === 'not-found') {
+                    alert('רשומת הגישה לא נמצאה.');
+                } else {
+                    alert('שלילת הגישה נכשלה: ' + (err.message || 'נסה שוב'));
+                }
             }
         }
         
@@ -3670,6 +3702,37 @@
                 savedAt: new Date().toISOString()
             };
         }
+        // Helper function to handle localStorage quota exceeded errors
+        // Helper function to handle localStorage errors
+        function handleLocalStorageError(err) {
+            console.error('Error saving to localStorage:', err);
+            if (err.name === 'QuotaExceededError') {
+                alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום על ידי מחיקת קבצים או נתונים מהדפדפן ונסה שוב.');
+            } else if (err.name === 'SecurityError') {
+                // Private/incognito mode or security restrictions
+                alert('שגיאה: לא ניתן לשמור נתונים במצב גלישה פרטית. אנא פתח את האתר במצב רגיל או התחבר כדי לשמור בענן.');
+            } else {
+                // Generic fallback for other errors
+                console.error('Unexpected localStorage error:', err.name, err.message);
+                // Note: Don't show alert for unexpected errors to avoid annoying users
+            }
+        }
+        
+        // Helper function to safely load and render from localStorage
+        function loadAndRenderFromLocalStorage() {
+            const localProjects = localStorage.getItem('projects');
+            if (localProjects) {
+                try {
+                    projects = JSON.parse(localProjects);
+                    if (typeof renderAllMainContent === 'function') {
+                        renderAllMainContent();
+                    }
+                } catch (parseErr) {
+                    console.error('Error parsing localStorage projects:', parseErr);
+                }
+            }
+        }
+        
         function applyStateToUI(state) {
             if (!state) return;
             if (state.projects) {
@@ -3708,46 +3771,24 @@
                 updateProjectDisplay();
             }
         }
-        async function saveStateToFirebase() {
-            const user = auth.currentUser;
-            if (!user) {
-                console.log('לא מחובר – שומר רק בלוקאלי');
-                localStorage.setItem('projects', JSON.stringify(projects));
-                return;
-            }
-            const state = getCurrentAppState();
-            try {
-                await db.collection('wineMonitoringStates')
-                    .doc(user.uid)
-                    .set({
-                        state,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                console.log('מצב נשמר בהצלחה בענן וגם ב‑localStorage');
-                localStorage.setItem('projects', JSON.stringify(projects));
-            } catch (err) {
-                console.error('שגיאה בשמירה לפיירבייס:', err);
-            }
-        }
         async function loadStateFromFirebase(user) {
             try {
                 const docRef = db.collection('wineMonitoringStates').doc(user.uid);
                 const docSnap = await docRef.get();
                 if (!docSnap.exists) {
-                    console.log('אין מצב שמור למשתמש – נשתמש ב‑localStorage');
-                    const localProjects = localStorage.getItem('projects');
-                    if (localProjects) {
-                        projects = JSON.parse(localProjects);
-                        if (typeof renderAllMainContent === 'function') {
-                            renderAllMainContent();
-                        }
-                    }
+                    console.log('No saved state for user – using localStorage');
+                    loadAndRenderFromLocalStorage();
                     return;
                 }
                 const data = docSnap.data();
                 applyStateToUI(data.state);
             } catch (err) {
-                console.error('שגיאה בטעינת מצב מפיירבייס:', err);
+                console.error('Error loading state from Firebase:', err);
+                if (err.code === 'permission-denied') {
+                    console.error('Permission denied. Check Firestore security rules.');
+                }
+                // Fallback to localStorage
+                loadAndRenderFromLocalStorage();
             }
         }
         async function loadSharedStateByOwner(ownerUid) {
@@ -3761,8 +3802,12 @@
                     alert('הנתונים של בעל החשבון אינם זמינים.');
                 }
             } catch (err) {
-                console.error('שגיאה בטעינת נתונים משותפים:', err);
-                alert('שגיאה בטעינת השיתוף.');
+                console.error('Error loading shared data:', err);
+                if (err.code === 'permission-denied') {
+                    alert('שגיאת הרשאה: אין לך גישה לנתונים האלה. ודא שבעל החשבון העניק לך גישה.');
+                } else {
+                    alert('שגיאה בטעינת השיתוף: ' + (err.message || 'נסה שוב'));
+                }
             }
         }
         async function checkUserAccess() {
@@ -3801,7 +3846,13 @@
                     updateSharedAccessNotice();
                 }
             } catch (err) {
-                console.error('שגיאה בבדיקת גישה', err);
+                // Handle permission errors gracefully - user might not have shared access
+                if (err.code === 'permission-denied') {
+                    // This is expected for users without granted access - silently continue
+                    console.log('No shared access found for user');
+                } else {
+                    console.error('Error checking user access:', err);
+                }
             }
         }
         
@@ -3836,7 +3887,12 @@
                 document.body.classList.toggle('view-only', !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance);
                 updateSharedAccessNotice();
             } catch (err) {
-                console.error('שגיאה בקריאת הזמנה', err);
+                console.error('Error reading invite:', err);
+                if (err.code === 'permission-denied') {
+                    alert('שגיאת הרשאה בקריאת ההזמנה. ודא שהינך מחובר.');
+                } else {
+                    alert('שגיאה בקריאת ההזמנה: ' + (err.message || 'נסה שוב'));
+                }
             }
         }
         // Real-time synchronization listener
@@ -3861,7 +3917,7 @@
                     const localSavedAt = localStorage.getItem('lastSavedAt');
                     
                     if (remoteState && remoteState.savedAt && remoteState.savedAt !== localSavedAt) {
-                        console.log('התקבל עדכון מהענן - מעדכן את הנתונים');
+                        console.log('Received update from cloud - updating data');
                         applyStateToUI(remoteState);
                         localStorage.setItem('lastSavedAt', remoteState.savedAt);
                         
@@ -3869,10 +3925,10 @@
                         showSyncNotification();
                     }
                 } else {
-                    console.log('עדכון מקומי - לא מעדכן UI');
+                    console.log('Local update - not updating UI');
                 }
             }, (error) => {
-                console.error('שגיאה בהאזנה לשינויים:', error);
+                console.error('Error listening for changes:', error);
             });
         }
         
@@ -3911,13 +3967,21 @@
         async function saveStateToFirebase() {
             const user = auth.currentUser;
             if (!user) {
-                console.log('לא מחובר – שומר רק בלוקאלי');
-                localStorage.setItem('projects', JSON.stringify(projects));
+                console.log('Not logged in – saving to localStorage only');
+                try {
+                    localStorage.setItem('projects', JSON.stringify(projects));
+                } catch (storageErr) {
+                    handleLocalStorageError(storageErr);
+                }
                 return;
             }
             const state = getCurrentAppState();
             // Store timestamp for change detection
-            localStorage.setItem('lastSavedAt', state.savedAt);
+            try {
+                localStorage.setItem('lastSavedAt', state.savedAt);
+            } catch (storageErr) {
+                console.error('Error saving timestamp to localStorage:', storageErr);
+            }
             
             try {
                 await db.collection('wineMonitoringStates')
@@ -3926,10 +3990,23 @@
                         state,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                console.log('מצב נשמר בהצלחה בענן וגם ב‑localStorage');
-                localStorage.setItem('projects', JSON.stringify(projects));
+                console.log('State saved successfully to cloud and localStorage');
+                try {
+                    localStorage.setItem('projects', JSON.stringify(projects));
+                } catch (storageErr) {
+                    handleLocalStorageError(storageErr);
+                }
             } catch (err) {
-                console.error('שגיאה בשמירה לפיירבייס:', err);
+                console.error('Error saving to Firebase:', err);
+                // Still save to localStorage even if cloud save fails
+                try {
+                    localStorage.setItem('projects', JSON.stringify(projects));
+                } catch (storageErr) {
+                    handleLocalStorageError(storageErr);
+                }
+                if (err.code === 'permission-denied') {
+                    console.error('Permission denied. Check Firestore security rules.');
+                }
             }
         }
         window.addEventListener('load', () => {
@@ -3941,7 +4018,12 @@
                 if (result.user) {
                     console.log('User signed in via redirect');
                 } else {
-                    console.log('No user from redirect');
+                    // Normal case - no redirect happened
+                    // This occurs when:
+                    // 1. User is already authenticated from a previous session
+                    // 2. Popup authentication was used instead of redirect
+                    // 3. Page was loaded directly without going through auth flow
+                    // This is not an error
                 }
             }).catch((error) => {
                 console.error('Redirect sign-in error:', error);
@@ -4445,7 +4527,7 @@
                         if (!messageEl) missing.push('confirmationMessage');
                         if (!yesBtn) missing.push('confirmYesBtn');
                         if (!noBtn) missing.push('confirmNoBtn');
-                        console.error('רכיבי מודל האישור לא נמצאו:', missing.join(', '));
+                        console.error('Confirmation modal components not found:', missing.join(', '));
                         // Resolve to false (safer than true for confirmations)
                         resolve(false);
                         return;
@@ -4506,7 +4588,7 @@
                 modal.addEventListener('keydown', handleKeyDown);
                 } catch (error) {
                     // Handle any unexpected errors during modal setup
-                    console.error('שגיאה בהצגת מודל האישור:', error);
+                    console.error('Error showing confirmation modal:', error);
                     resolve(false);
                 }
             });
