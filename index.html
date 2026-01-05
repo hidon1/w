@@ -1343,10 +1343,7 @@
                 localStorage.setItem('projects', JSON.stringify(projects));
                 localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig)); // Save stagesConfig too
             } catch (storageErr) {
-                console.error('Error saving to localStorage:', storageErr);
-                if (storageErr.name === 'QuotaExceededError') {
-                    alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.');
-                }
+                handleLocalStorageError(storageErr);
             }
             try {
                 if (auth && auth.currentUser) {
@@ -3705,6 +3702,29 @@
                 savedAt: new Date().toISOString()
             };
         }
+        // Helper function to handle localStorage quota exceeded errors
+        function handleLocalStorageError(err) {
+            console.error('Error saving to localStorage:', err);
+            if (err.name === 'QuotaExceededError') {
+                alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.');
+            }
+        }
+        
+        // Helper function to safely load and render from localStorage
+        function loadAndRenderFromLocalStorage() {
+            const localProjects = localStorage.getItem('projects');
+            if (localProjects) {
+                try {
+                    projects = JSON.parse(localProjects);
+                    if (typeof renderAllMainContent === 'function') {
+                        renderAllMainContent();
+                    }
+                } catch (parseErr) {
+                    console.error('Error parsing localStorage projects:', parseErr);
+                }
+            }
+        }
+        
         function applyStateToUI(state) {
             if (!state) return;
             if (state.projects) {
@@ -3749,13 +3769,7 @@
                 const docSnap = await docRef.get();
                 if (!docSnap.exists) {
                     console.log('No saved state for user – using localStorage');
-                    const localProjects = localStorage.getItem('projects');
-                    if (localProjects) {
-                        projects = JSON.parse(localProjects);
-                        if (typeof renderAllMainContent === 'function') {
-                            renderAllMainContent();
-                        }
-                    }
+                    loadAndRenderFromLocalStorage();
                     return;
                 }
                 const data = docSnap.data();
@@ -3766,17 +3780,7 @@
                     console.error('Permission denied. Check Firestore security rules.');
                 }
                 // Fallback to localStorage
-                const localProjects = localStorage.getItem('projects');
-                if (localProjects) {
-                    try {
-                        projects = JSON.parse(localProjects);
-                        if (typeof renderAllMainContent === 'function') {
-                            renderAllMainContent();
-                        }
-                    } catch (parseErr) {
-                        console.error('Error parsing localStorage projects:', parseErr);
-                    }
-                }
+                loadAndRenderFromLocalStorage();
             }
         }
         async function loadSharedStateByOwner(ownerUid) {
@@ -3959,10 +3963,7 @@
                 try {
                     localStorage.setItem('projects', JSON.stringify(projects));
                 } catch (storageErr) {
-                    console.error('Error saving to localStorage:', storageErr);
-                    if (storageErr.name === 'QuotaExceededError') {
-                        alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.');
-                    }
+                    handleLocalStorageError(storageErr);
                 }
                 return;
             }
@@ -3993,10 +3994,7 @@
                 try {
                     localStorage.setItem('projects', JSON.stringify(projects));
                 } catch (storageErr) {
-                    console.error('Error saving to localStorage:', storageErr);
-                    if (storageErr.name === 'QuotaExceededError') {
-                        alert('שגיאה: אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.');
-                    }
+                    handleLocalStorageError(storageErr);
                 }
                 if (err.code === 'permission-denied') {
                     console.error('Permission denied. Check Firestore security rules.');
@@ -4012,7 +4010,11 @@
                 if (result.user) {
                     console.log('User signed in via redirect');
                 } else {
-                    // Normal case - no redirect happened, user may already be signed in
+                    // Normal case - no redirect happened
+                    // This occurs when:
+                    // 1. User is already authenticated from a previous session
+                    // 2. Popup authentication was used instead of redirect
+                    // 3. Page was loaded directly without going through auth flow
                     // This is not an error
                 }
             }).catch((error) => {
