@@ -3912,17 +3912,12 @@
         }
         // Real-time synchronization listener
         let realtimeUnsubscribe = null;
-        let sharedRealtimeUnsubscribe = null;
         
         function setupRealtimeSync(user) {
-            // Clean up existing listeners
+            // Clean up existing listener
             if (realtimeUnsubscribe) {
                 realtimeUnsubscribe();
                 realtimeUnsubscribe = null;
-            }
-            if (sharedRealtimeUnsubscribe) {
-                sharedRealtimeUnsubscribe();
-                sharedRealtimeUnsubscribe = null;
             }
             
             if (!user) {
@@ -3961,9 +3956,9 @@
                 }
             }, (error) => {
                 console.error('Error listening for real-time changes:', error);
-                // Attempt to reconnect after error
+                // Firebase SDK handles automatic reconnection - just log the status
                 if (error.code === 'unavailable') {
-                    console.log('Network unavailable - will sync when connection restores');
+                    console.log('Network unavailable - Firebase will auto-sync when connection restores');
                 }
             });
         }
