@@ -36,6 +36,7 @@
         overflow-y: auto; /* Make scrollable */
         /* Prevent animation on page load */
         animation: none !important;
+        will-change: left; /* Hint browser to optimize left position changes */
     }
     .pull-handle {
         right: -22px;
