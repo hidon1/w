@@ -117,6 +117,170 @@ New Firestore rules ensure:
 
 ## Firebase Deployment
 
+## Google Sign-In Setup
+
+This application uses Google Identity Services (GIS) for authentication with account picker functionality. This provides a modern, streamlined sign-in experience on both mobile and desktop devices.
+
+### Features
+
+- **Account Picker**: Displays all Google accounts signed in on the device
+- **Mobile-Optimized**: Works seamlessly on Android and iOS devices
+- **One-Click Sign-In**: Users can quickly select and sign in with any of their accounts
+- **Secure**: Uses OAuth 2.0 with ID tokens that can be verified server-side
+
+### Setting Up Google OAuth Client ID
+
+To enable Google Sign-In, you need to create an OAuth 2.0 Client ID in Google Cloud Console:
+
+#### 1. Create OAuth Client ID
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project (or create a new one)
+3. Navigate to **APIs & Services** > **Credentials**
+4. Click **Create Credentials** > **OAuth client ID**
+5. Select **Web application** as the application type
+6. Give it a name (e.g., "Wine Monitoring System - Web Client")
+
+#### 2. Configure Authorized Origins
+
+Add your domain(s) to the **Authorized JavaScript origins**:
+
+- For local development: `http://localhost`
+- For production: `https://your-domain.com`
+- For Firebase Hosting: `https://your-project.firebaseapp.com` and `https://your-project.web.app`
+
+**Important**: You must use HTTPS for production. HTTP is only allowed for `localhost`.
+
+#### 3. Configure Redirect URIs (Optional)
+
+If using redirect-based flows, add to **Authorized redirect URIs**:
+
+- `https://your-domain.com/callback`
+- Note: The GIS account picker doesn't require redirect URIs
+
+#### 4. Update Client ID in Code
+
+After creating the OAuth Client ID, copy it and replace the placeholder in `index.html`:
+
+```html
+<!-- Find this line in index.html -->
+<div id="g_id_onload"
+     data-client_id="YOUR_CLIENT_ID.apps.googleusercontent.com"
+     ...
+```
+
+Replace `YOUR_CLIENT_ID.apps.googleusercontent.com` with your actual Client ID.
+
+### Mobile Compatibility Notes
+
+#### Android (Chrome)
+
+- **Best Experience**: When Chrome is signed in to a Google account, the account picker will display all signed-in accounts
+- **One-Click Sign-In**: Users can select their account and sign in immediately
+- **Requirements**: 
+  - HTTPS required (except localhost)
+  - Domain must be in Authorized JavaScript origins
+
+#### iOS (Safari)
+
+- **ITP Support**: The `itp_support="true` parameter enables Intelligent Tracking Prevention compatibility
+- **User Interaction Required**: Safari may require a user tap/click before showing the account picker
+- **Cookie Requirements**: Third-party cookies must be enabled for Google sign-in
+- **HTTPS Required**: Must be served over HTTPS (except localhost)
+
+#### Cross-Platform Tips
+
+1. **HTTPS is Mandatory**: Always use HTTPS in production (Firebase Hosting provides this automatically)
+2. **Domain Whitelisting**: Ensure your domain is added to Authorized JavaScript origins
+3. **Testing**: Test on actual devices, not just emulators
+4. **Account Picker**: May not show if only one account is signed in (auto-selects)
+
+### WebView in Native Apps
+
+If you plan to embed this in a native iOS/Android app using WebView:
+
+#### Not Recommended Approach
+- Google discourages OAuth in embedded WebViews for security reasons
+- Many features may not work properly in WebViews
+
+#### Recommended Approaches
+
+**For Android:**
+- Use [Chrome Custom Tabs](https://developer.chrome.com/docs/android/custom-tabs/)
+- Or use [Google Sign-In for Android](https://developers.google.com/identity/sign-in/android/) SDK
+
+**For iOS:**
+- Use [SFSafariViewController](https://developer.apple.com/documentation/safariservices/sfsafariviewcontroller)
+- Or use [Google Sign-In for iOS](https://developers.google.com/identity/sign-in/ios/) SDK
+
+**Best Practice:**
+For native apps, use the platform-specific Google Sign-In SDKs and authenticate natively, then share the ID token with your web app if needed.
+
+### Server-Side Verification (Future Implementation)
+
+Currently, the ID token is used client-side with Firebase Authentication. For production deployments with custom backends:
+
+1. **Send ID Token to Backend**: The `handleGoogleSignIn` callback receives an ID token
+2. **Verify Token Server-Side**: Use Google's token verification libraries
+3. **Create Session**: After verification, create a server-side session
+
+Example backend verification (Node.js):
+
+```javascript
+const {OAuth2Client} = require('google-auth-library');
+const client = new OAuth2Client(CLIENT_ID);
+
+async function verify(token) {
+  const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: CLIENT_ID,
+  });
+  const payload = ticket.getPayload();
+  const userid = payload['sub'];
+  // Use userid to create session
+}
+```
+
+### Troubleshooting
+
+#### "Invalid Client" Error
+- Verify your Client ID is correct in `index.html`
+- Ensure the Client ID matches the one from Google Cloud Console
+
+#### Account Picker Not Showing
+- **Check Domain**: Ensure your domain is in Authorized JavaScript origins
+- **Check HTTPS**: Must use HTTPS (except localhost)
+- **Clear Cache**: Try clearing browser cache and cookies
+- **iOS Safari**: Tap the button to trigger the picker
+
+#### "Not a valid origin for the client"
+- Add your domain to Authorized JavaScript origins in Google Cloud Console
+- Include the protocol: `https://` (not just the domain name)
+- Wait a few minutes for changes to propagate
+
+#### Works on Desktop but Not Mobile
+- Verify HTTPS is being used
+- Check that cookies are enabled
+- Test in Chrome (Android) and Safari (iOS) specifically
+- Ensure domain is whitelisted in Google Cloud Console
+
+### Security Best Practices
+
+1. **Never Commit Client ID to Public Repos**: While Client IDs are not secret, it's best practice to use environment variables
+2. **Verify Tokens Server-Side**: Always verify ID tokens on your backend before trusting them
+3. **Use HTTPS**: Required for production, prevents token interception
+4. **Limit Authorized Origins**: Only add domains you control
+5. **Monitor Usage**: Check Google Cloud Console for suspicious activity
+
+### Additional Resources
+
+- [Google Identity Services Documentation](https://developers.google.com/identity/gsi/web)
+- [Account Chooser Flow](https://developers.google.com/identity/gsi/web/guides/offerings)
+- [Token Verification](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)
+- [Mobile Best Practices](https://developers.google.com/identity/gsi/web/guides/devices)
+
+## Firebase Deployment
+
 ### Prerequisites
 - Firebase CLI installed: `npm install -g firebase-tools`
 - Logged in to Firebase: `firebase login`
