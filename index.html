@@ -120,11 +120,16 @@
             <h2>ברוכים הבאים!</h2>
             <p class="login-description-desktop">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
             <p class="login-description-mobile">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלך יישמרו באופן מאובטח ותוכל לגשת אליהם מכל מכשיר.</p>
+            
+            <!-- Legacy Google Sign-In Button (Firebase Auth popup/redirect) -->
             <button class="google-btn" onclick="loginWithGoogle()">
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
                 התחבר עם Google
             </button>
+            
             <!-- Google Identity Services Sign-In Button with Account Picker -->
+            <!-- This provides a modern account picker experience on mobile and desktop -->
+            <!-- To use: Replace YOUR_CLIENT_ID with your OAuth 2.0 Client ID from Google Cloud Console -->
             <div id="g_id_onload"
                  data-client_id="YOUR_CLIENT_ID.apps.googleusercontent.com"
                  data-callback="handleGoogleSignIn"
@@ -4218,7 +4223,8 @@
             
             // For now, we'll use Firebase Auth to sign in with the credential
             // This demonstrates the integration while we're in client-side only mode
-            const credential = firebase.auth.GoogleAuthProvider.credential(idToken);
+            // The second parameter (accessToken) is optional and can be null for ID token only auth
+            const credential = firebase.auth.GoogleAuthProvider.credential(idToken, null);
             
             auth.signInWithCredential(credential)
                 .then((result) => {

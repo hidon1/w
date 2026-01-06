@@ -183,7 +183,7 @@ Replace `YOUR_CLIENT_ID.apps.googleusercontent.com` with your actual Client ID.
 
 #### iOS (Safari)
 
-- **ITP Support**: The `itp_support="true` parameter enables Intelligent Tracking Prevention compatibility
+- **ITP Support**: The `itp_support="true"` parameter enables Intelligent Tracking Prevention compatibility
 - **User Interaction Required**: Safari may require a user tap/click before showing the account picker
 - **Cookie Requirements**: Third-party cookies must be enabled for Google sign-in
 - **HTTPS Required**: Must be served over HTTPS (except localhost)
