@@ -32,6 +32,9 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         
+        // Site password prompt configuration - set to false to disable auto-prompt
+        const ENABLE_SITE_PASSWORD_PROMPT = false;
+        
         // Enable Firestore persistence for offline support and faster real-time sync
         db.enablePersistence({ synchronizeTabs: true })
             .then(() => {
@@ -179,7 +182,7 @@
         </div>
     </div>
     <div class="container">
-        <div class="project-details-card" id="projectDetailsCard">
+        <div class="project-details-card" id="projectDetailsCard" style="visibility:hidden;">
             <div class="pull-handle" onclick="toggleCard()">
                 <i class="fas fa-angle-double-right" id="pullHandleIcon"></i>
             </div>
@@ -1206,18 +1209,9 @@
             if (cardFab) {
                 cardFab.addEventListener('click', toggleCardFromFab);
             }
-            if (isMobileViewport()) {
-                cardOpen = false;
-                projectDetailsCard.style.left = '-280px';
-                projectDetailsCard.style.pointerEvents = 'none';
-                updateCardFabState();
-            }
-            setCardFabVisibility();
             
-            // Add transition after initial positioning to prevent flickering on page load
-            requestAnimationFrame(() => {
-                projectDetailsCard.style.transition = 'left 0.3s ease';
-            });
+            // Initialize card position to prevent flickering
+            initializeProjectDetailsCard();
         };
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
@@ -4108,7 +4102,7 @@
                 if (user) {
                     if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
                     if (loginBtn) loginBtn.style.display = 'none';
-                    if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'inline-block';
+                    if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = ENABLE_SITE_PASSWORD_PROMPT ? 'inline-block' : 'none';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     await loadStateFromFirebase(user);
                     
@@ -4118,7 +4112,7 @@
                     closeLoginModal();
                     
                     // Check if user signed in with Google and needs to set site password
-                    if (user.providerData && user.providerData.length > 0) {
+                    if (ENABLE_SITE_PASSWORD_PROMPT && user.providerData && user.providerData.length > 0) {
                         const googleProvider = user.providerData.find(p => p.providerId === 'google.com');
                         if (googleProvider) {
                             await checkAndPromptForSitePassword(user);
@@ -4243,6 +4237,11 @@
         }
         
         async function checkAndPromptForSitePassword(user) {
+            // Check if user has suppressed the prompt
+            if (localStorage.getItem('suppressSitePasswordPrompt') === '1') {
+                return;
+            }
+            
             try {
                 // Check if user has a site password set in Firestore
                 const userDoc = await db.collection('userSitePasswords').doc(user.uid).get();
@@ -4274,6 +4273,7 @@
         }
         
         function skipPasswordSetup() {
+            localStorage.setItem('suppressSitePasswordPrompt', '1');
             closePasswordSetupModal();
         }
         
@@ -4722,6 +4722,38 @@
             const minDimension = Math.min(window.innerWidth, window.innerHeight);
             return (hasCoarsePointer || window.innerWidth <= 900) && minDimension <= 900;
         }
+        
+        // Initialize project details card position to prevent flickering on page load
+        function initializeProjectDetailsCard() {
+            if (!projectDetailsCard) return;
+            
+            // Temporarily disable transition
+            projectDetailsCard.style.transition = 'none';
+            
+            if (isMobileViewport()) {
+                // Mobile: hide card off-screen
+                projectDetailsCard.style.left = '-280px';
+                projectDetailsCard.style.pointerEvents = 'none';
+                cardOpen = false;
+                if (typeof setCardFabVisibility === 'function') {
+                    setCardFabVisibility();
+                }
+                if (typeof updateCardFabState === 'function') {
+                    updateCardFabState();
+                }
+            } else {
+                // Desktop: show card on screen
+                projectDetailsCard.style.left = '15px';
+                projectDetailsCard.style.pointerEvents = 'auto';
+            }
+            
+            // Use requestAnimationFrame to restore transition and make visible
+            requestAnimationFrame(() => {
+                projectDetailsCard.style.transition = 'left 0.3s ease';
+                projectDetailsCard.style.visibility = 'visible';
+            });
+        }
+        
         function handleCardFabResize() {
             setCardFabVisibility();
             if (isMobileViewport()) {
