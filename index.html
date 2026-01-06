@@ -124,36 +124,32 @@
             <p class="login-description-desktop">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
             <p class="login-description-mobile">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלך יישמרו באופן מאובטח ותוכל לגשת אליהם מכל מכשיר.</p>
             
-            <!-- Legacy Google Sign-In Button (Firebase Auth popup/redirect) -->
+            <!-- Google Sign-In Button -->
             <button class="google-btn" onclick="loginWithGoogle()">
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
                 התחבר עם Google
             </button>
             
-            <!-- Google Identity Services Sign-In Button with Account Picker -->
-            <!-- This provides a modern account picker experience on mobile and desktop -->
-            <!-- To use: Replace YOUR_CLIENT_ID with your OAuth 2.0 Client ID from Google Cloud Console -->
-            <div id="g_id_onload"
-                 data-client_id="YOUR_CLIENT_ID.apps.googleusercontent.com"
-                 data-callback="handleGoogleSignIn"
-                 data-auto_prompt="false"
-                 data-itp_support="true">
-            </div>
-            <div class="g_id_signin"
-                 data-type="standard"
-                 data-size="large"
-                 data-theme="outline"
-                 data-text="signin_with"
-                 data-shape="rectangular"
-                 data-logo_alignment="left">
-            </div>
-            <div class="email-form desktop-only-login">
-                <input type="email" id="siteEmailInput" placeholder="אימייל" required>
-                <input type="password" id="sitePasswordInput" placeholder="סיסמה לאתר" required>
+            <!-- Registration Form (shown by default) -->
+            <div class="email-form" id="registrationForm">
+                <input type="email" id="registerEmailInput" placeholder="אימייל" required>
+                <input type="password" id="registerPasswordInput" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6">
                 <div class="buttons">
-                    <button class="login-btn" onclick="loginWithSitePassword()">התחבר</button>
+                    <button class="register-btn" onclick="registerWithEmailPassword()">הרשם</button>
                 </div>
+                <button class="toggle-form-btn" onclick="toggleLoginMode()">כבר רשום? התחבר כאן</button>
             </div>
+            
+            <!-- Login Form (hidden by default) -->
+            <div class="email-form" id="loginForm" style="display: none;">
+                <input type="email" id="loginEmailInput" placeholder="אימייל" required>
+                <input type="password" id="loginPasswordInput" placeholder="סיסמה" required>
+                <div class="buttons">
+                    <button class="login-btn" onclick="loginWithEmailPassword()">התחבר</button>
+                </div>
+                <button class="toggle-form-btn" onclick="toggleLoginMode()">עדיין לא נרשמת? הרשם כאן</button>
+            </div>
+            
             <button class="skip-btn" onclick="skipLogin()">המשך ללא התחברות</button>
         </div>
     </div>
@@ -947,10 +943,10 @@
         // Sound definitions using Web Audio API
         const reminderSounds = {
             none: null,
-            alarm1: { frequency: 800, pattern: [200, 100, 200, 100, 200, 300] },
-            alarm2: { frequency: 600, pattern: [150, 100, 150, 100, 400, 200] },
-            bell: { frequency: 1000, pattern: [300, 200, 300, 400] },
-            chime: { frequency: 1200, pattern: [100, 50, 100, 50, 100, 200] }
+            alarm1: { frequency: 800, pattern: [300, 150, 300, 150, 300, 450, 300, 150] }, // Made longer
+            alarm2: { frequency: 600, pattern: [250, 150, 250, 150, 600, 300, 250, 150] }, // Made longer
+            bell: { frequency: 1000, pattern: [450, 300, 450, 600, 450, 300] }, // Made longer
+            chime: { frequency: 1200, pattern: [150, 75, 150, 75, 150, 300, 150, 75] } // Made longer
         };
         
         let audioContext = null;
@@ -1032,12 +1028,16 @@
             }
         }
         
-        function checkReminders() {
+        async function checkReminders() {
             const now = new Date();
+            let remindersUpdated = false;
+            let inboxUpdated = false;
+            
             reminders.forEach(reminder => {
                 const reminderTime = new Date(reminder.datetime);
                 if (reminderTime <= now && !reminder.notified) {
                     reminder.notified = true;
+                    remindersUpdated = true;
                     
                     // Play sound if selected
                     if (reminder.sound && reminder.sound !== 'none') {
@@ -1057,15 +1057,136 @@
                     }
                     
                     inbox.push(reminder);
+                    inboxUpdated = true;
                     renderInboxList();
                     updateInboxBadge();
                 }
             });
-            localStorage.setItem('reminders', JSON.stringify(reminders));
-            localStorage.setItem('inbox', JSON.stringify(inbox));
-            renderRemindersList();
+            
+            if (remindersUpdated) {
+                localStorage.setItem('reminders', JSON.stringify(reminders));
+                await syncRemindersToFirebase();
+                renderRemindersList();
+            }
+            
+            if (inboxUpdated) {
+                localStorage.setItem('inbox', JSON.stringify(inbox));
+                await syncInboxToFirebase();
+            }
         }
-        function addReminder() {
+        async function syncRemindersToFirebase() {
+            const user = auth.currentUser;
+            if (!user) {
+                console.log('Not logged in – reminders saved to localStorage only');
+                return;
+            }
+            
+            try {
+                await db.collection('userReminders').doc(user.uid).set({
+                    reminders: reminders,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log('Reminders synced to Firebase successfully');
+            } catch (err) {
+                console.error('Error syncing reminders to Firebase:', err);
+            }
+        }
+        
+        async function loadRemindersFromFirebase() {
+            const user = auth.currentUser;
+            if (!user) {
+                // Load from localStorage
+                const localReminders = localStorage.getItem('reminders');
+                if (localReminders) {
+                    reminders = JSON.parse(localReminders);
+                }
+                return;
+            }
+            
+            try {
+                const docRef = db.collection('userReminders').doc(user.uid);
+                const docSnap = await docRef.get();
+                
+                if (docSnap.exists) {
+                    const data = docSnap.data();
+                    reminders = data.reminders || [];
+                    localStorage.setItem('reminders', JSON.stringify(reminders));
+                } else {
+                    // Load from localStorage as fallback
+                    const localReminders = localStorage.getItem('reminders');
+                    if (localReminders) {
+                        reminders = JSON.parse(localReminders);
+                        // Sync to Firebase for first time
+                        await syncRemindersToFirebase();
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading reminders from Firebase:', err);
+                // Fallback to localStorage
+                const localReminders = localStorage.getItem('reminders');
+                if (localReminders) {
+                    reminders = JSON.parse(localReminders);
+                }
+            }
+        }
+        
+        async function syncInboxToFirebase() {
+            const user = auth.currentUser;
+            if (!user) {
+                console.log('Not logged in – inbox saved to localStorage only');
+                return;
+            }
+            
+            try {
+                await db.collection('userInbox').doc(user.uid).set({
+                    inbox: inbox,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log('Inbox synced to Firebase successfully');
+            } catch (err) {
+                console.error('Error syncing inbox to Firebase:', err);
+            }
+        }
+        
+        async function loadInboxFromFirebase() {
+            const user = auth.currentUser;
+            if (!user) {
+                // Load from localStorage
+                const localInbox = localStorage.getItem('inbox');
+                if (localInbox) {
+                    inbox = JSON.parse(localInbox);
+                }
+                return;
+            }
+            
+            try {
+                const docRef = db.collection('userInbox').doc(user.uid);
+                const docSnap = await docRef.get();
+                
+                if (docSnap.exists) {
+                    const data = docSnap.data();
+                    inbox = data.inbox || [];
+                    localStorage.setItem('inbox', JSON.stringify(inbox));
+                } else {
+                    // Load from localStorage as fallback
+                    const localInbox = localStorage.getItem('inbox');
+                    if (localInbox) {
+                        inbox = JSON.parse(localInbox);
+                        // Sync to Firebase for first time
+                        await syncInboxToFirebase();
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading inbox from Firebase:', err);
+                // Fallback to localStorage
+                const localInbox = localStorage.getItem('inbox');
+                if (localInbox) {
+                    inbox = JSON.parse(localInbox);
+                }
+            }
+        }
+        
+        async function addReminder() {
             const text = reminderTextInput.value.trim();
             const datetime = reminderDateTimeInput.value;
             const popup = reminderPopupInput.checked;
@@ -1075,6 +1196,7 @@
             if (text && datetime) {
                 reminders.push({ id: Date.now(), text, datetime, popup, sound, notified: false });
                 localStorage.setItem('reminders', JSON.stringify(reminders));
+                await syncRemindersToFirebase();
                 reminderTextInput.value = '';
                 reminderDateTimeInput.value = '';
                 reminderPopupInput.checked = false;
@@ -1108,9 +1230,10 @@
                 }
             });
         }
-        function deleteReminder(id) {
+        async function deleteReminder(id) {
             reminders = reminders.filter(r => r.id !== id);
             localStorage.setItem('reminders', JSON.stringify(reminders));
+            await syncRemindersToFirebase();
             renderRemindersList();
         }
         function openInboxModal() {
@@ -1142,9 +1265,10 @@
             });
             updateInboxBadge();
         }
-        function deleteInbox(id) {
+        async function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
             localStorage.setItem('inbox', JSON.stringify(inbox));
+            await syncInboxToFirebase();
             renderInboxList();
             updateInboxBadge();
         }
@@ -2946,9 +3070,10 @@
                         const entries = prevStageData[metricId];
                         let displayValue = '--';
                         if (entries && entries.length > 0) {
+                            // Show the FIRST value instead of the last one
                             displayValue = metricConfig.type === 'number'
-                                ? entries[entries.length - 1].value.toFixed(metricConfig.precision)
-                                : entries[entries.length - 1].value;
+                                ? entries[0].value.toFixed(metricConfig.precision)
+                                : entries[0].value;
                         }
                         card.innerHTML += `<p>${metricConfig.name}: <span class="summary-value">${displayValue}</span></p>`;
                     });
@@ -4106,6 +4231,13 @@
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     await loadStateFromFirebase(user);
                     
+                    // Load reminders and inbox from Firebase
+                    await loadRemindersFromFirebase();
+                    await loadInboxFromFirebase();
+                    renderRemindersList();
+                    renderInboxList();
+                    updateInboxBadge();
+                    
                     // Set up real-time synchronization
                     setupRealtimeSync(user);
                     
@@ -4351,9 +4483,104 @@
             }
         }
         
+        /**
+         * Toggle between registration and login forms
+         */
+        function toggleLoginMode() {
+            const registrationForm = document.getElementById('registrationForm');
+            const loginForm = document.getElementById('loginForm');
+            
+            if (registrationForm && loginForm) {
+                if (registrationForm.style.display === 'none') {
+                    // Switch to registration mode
+                    registrationForm.style.display = 'flex';
+                    loginForm.style.display = 'none';
+                } else {
+                    // Switch to login mode
+                    registrationForm.style.display = 'none';
+                    loginForm.style.display = 'flex';
+                }
+            }
+        }
+        
+        /**
+         * Register a new user with email and password
+         */
+        async function registerWithEmailPassword() {
+            const email = document.getElementById('registerEmailInput').value.trim();
+            const password = document.getElementById('registerPasswordInput').value;
+            
+            if (!email || !password) {
+                alert('אנא מלא את כל השדות.');
+                return;
+            }
+            
+            if (!isValidEmail(email)) {
+                alert('כתובת המייל אינה תקינה.');
+                return;
+            }
+            
+            if (password.length < 6) {
+                alert('הסיסמה חייבת להיות לפחות 6 תווים.');
+                return;
+            }
+            
+            try {
+                // Create new user with email and password
+                await auth.createUserWithEmailAndPassword(email, password);
+                console.log('User registered successfully');
+                closeLoginModal();
+            } catch (error) {
+                console.error('Error during registration:', error);
+                if (error.code === 'auth/email-already-in-use') {
+                    alert('כתובת המייל כבר בשימוש. נסה להתחבר במקום.');
+                } else if (error.code === 'auth/weak-password') {
+                    alert('הסיסמה חלשה מדי. השתמש בסיסמה חזקה יותר.');
+                } else if (error.code === 'auth/invalid-email') {
+                    alert('כתובת המייל אינה תקינה.');
+                } else {
+                    alert('שגיאה ברישום: ' + error.message);
+                }
+            }
+        }
+        
+        /**
+         * Login with existing email and password
+         */
+        async function loginWithEmailPassword() {
+            const email = document.getElementById('loginEmailInput').value.trim();
+            const password = document.getElementById('loginPasswordInput').value;
+            
+            if (!email || !password) {
+                alert('אנא מלא את כל השדות.');
+                return;
+            }
+            
+            try {
+                // Sign in with email and password
+                await auth.signInWithEmailAndPassword(email, password);
+                console.log('User signed in successfully');
+                closeLoginModal();
+            } catch (error) {
+                console.error('Error during login:', error);
+                if (error.code === 'auth/user-not-found') {
+                    alert('משתמש לא נמצא. נסה להירשם תחילה.');
+                } else if (error.code === 'auth/wrong-password') {
+                    alert('סיסמא שגויה.');
+                } else if (error.code === 'auth/invalid-email') {
+                    alert('כתובת המייל אינה תקינה.');
+                } else {
+                    alert('שגיאה בהתחברות: ' + error.message);
+                }
+            }
+        }
+        
+        /**
+         * Legacy function for site password login (kept for compatibility with existing code)
+         */
         async function loginWithSitePassword() {
-            const email = document.getElementById('siteEmailInput').value;
-            const password = document.getElementById('sitePasswordInput').value;
+            const email = document.getElementById('siteEmailInput') ? document.getElementById('siteEmailInput').value : '';
+            const password = document.getElementById('sitePasswordInput') ? document.getElementById('sitePasswordInput').value : '';
             
             if (!email || !password) {
                 alert('אנא מלא את כל השדות.');
@@ -4368,7 +4595,7 @@
             } catch (error) {
                 console.error('Error during site password login:', error);
                 if (error.code === 'auth/user-not-found') {
-                    alert('משתמש לא נמצא. אנא התחבר תחילה דרך Google כדי ליצור חשבון.');
+                    alert('משתמש לא נמצא. נסה להירשם תחילה.');
                 } else if (error.code === 'auth/wrong-password') {
                     alert('סיסמא שגויה.');
                 } else {

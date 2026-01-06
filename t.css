@@ -3285,6 +3285,31 @@ body.dark-mode .login-modal-content .email-form input {
     text-decoration: underline;
 }
 
+.login-modal-content .toggle-form-btn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: calc(var(--font-size-base) * 0.9);
+    margin-top: 15px;
+    padding: 0;
+    transition: color 0.2s ease;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.login-modal-content .toggle-form-btn:hover {
+    color: var(--secondary-color);
+}
+
+body.dark-mode .login-modal-content .toggle-form-btn {
+    color: var(--dark-accent-color);
+}
+
+body.dark-mode .login-modal-content .toggle-form-btn:hover {
+    color: var(--dark-primary-color);
+}
+
 .add-data-cube {
     display: inline-block;
     background: linear-gradient(135deg, var(--accent-color), #FFB366);
