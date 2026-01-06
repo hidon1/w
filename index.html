@@ -1213,6 +1213,11 @@
                 updateCardFabState();
             }
             setCardFabVisibility();
+            
+            // Add transition after initial positioning to prevent flickering on page load
+            requestAnimationFrame(() => {
+                projectDetailsCard.style.transition = 'left 0.3s ease';
+            });
         };
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
