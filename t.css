@@ -32,7 +32,7 @@
         left: -280px; /* Card hidden by default - fully off-screen */
         height: auto; /* Changed from 300px to auto */
         max-height: 80vh; /* Allow taller card */
-        transition: left 0.3s ease;
+        /* Transition is added via JS after page load to prevent flickering */
         overflow-y: auto; /* Make scrollable */
         /* Prevent animation on page load */
         animation: none !important;
@@ -2158,7 +2158,7 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
     z-index: 998;
     font-family: 'Noto Sans Hebrew', sans-serif;
     text-align: right;
-    transition: left 0.3s ease;
+    /* Transition is added via JS after page load to prevent flickering */
     overflow-y: auto;
 }
 
