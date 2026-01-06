@@ -16,6 +16,8 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
     <link rel="stylesheet" href="t.css">
+    <!-- Google Identity Services (GIS) Library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyC8hWZ5XJGBQZx32m3VkL4JwPFe90qZAdQ",
@@ -118,10 +120,30 @@
             <h2>ברוכים הבאים!</h2>
             <p class="login-description-desktop">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
             <p class="login-description-mobile">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלך יישמרו באופן מאובטח ותוכל לגשת אליהם מכל מכשיר.</p>
+            
+            <!-- Legacy Google Sign-In Button (Firebase Auth popup/redirect) -->
             <button class="google-btn" onclick="loginWithGoogle()">
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
                 התחבר עם Google
             </button>
+            
+            <!-- Google Identity Services Sign-In Button with Account Picker -->
+            <!-- This provides a modern account picker experience on mobile and desktop -->
+            <!-- To use: Replace YOUR_CLIENT_ID with your OAuth 2.0 Client ID from Google Cloud Console -->
+            <div id="g_id_onload"
+                 data-client_id="YOUR_CLIENT_ID.apps.googleusercontent.com"
+                 data-callback="handleGoogleSignIn"
+                 data-auto_prompt="false"
+                 data-itp_support="true">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="outline"
+                 data-text="signin_with"
+                 data-shape="rectangular"
+                 data-logo_alignment="left">
+            </div>
             <div class="email-form desktop-only-login">
                 <input type="email" id="siteEmailInput" placeholder="אימייל" required>
                 <input type="password" id="sitePasswordInput" placeholder="סיסמה לאתר" required>
@@ -4164,6 +4186,55 @@
                         auth.signInWithRedirect(googleProvider);
                     });
             }
+        }
+        
+        /**
+         * Google Identity Services (GIS) callback handler
+         * This function is called when user selects an account from the GIS account picker
+         * The credential response contains the ID token which can be verified server-side
+         * 
+         * @param {Object} response - The credential response from Google
+         * @param {string} response.credential - The ID token (JWT) from Google
+         */
+        function handleGoogleSignIn(response) {
+            console.log('Google Sign-In via GIS - ID Token received');
+            
+            // The ID token is in response.credential
+            const idToken = response.credential;
+            
+            // In a production environment, you would send this ID token to your backend
+            // for verification and authentication. Example:
+            // 
+            // fetch('/api/auth/google', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //     },
+            //     body: JSON.stringify({ idToken: idToken })
+            // })
+            // .then(res => res.json())
+            // .then(data => {
+            //     // Handle successful authentication
+            //     console.log('User authenticated:', data);
+            // })
+            // .catch(err => {
+            //     console.error('Authentication error:', err);
+            // });
+            
+            // For now, we'll use Firebase Auth to sign in with the credential
+            // This demonstrates the integration while we're in client-side only mode
+            // The second parameter (accessToken) is optional and can be null for ID token only auth
+            const credential = firebase.auth.GoogleAuthProvider.credential(idToken, null);
+            
+            auth.signInWithCredential(credential)
+                .then((result) => {
+                    console.log('User signed in with GIS credential:', result.user);
+                    closeLoginModal();
+                })
+                .catch((error) => {
+                    console.error('Error signing in with GIS credential:', error);
+                    alert('שגיאה בהתחברות: ' + error.message);
+                });
         }
         
         async function checkAndPromptForSitePassword(user) {
