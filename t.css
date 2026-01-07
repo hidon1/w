@@ -64,7 +64,8 @@
     }
     .stage-nav-container > div {
         width: 100%;
-        display: flex;
+        display: flex !important; /* Force display */
+        visibility: visible !important; /* Force visibility */
         justify-content: center;
         flex-wrap: nowrap;
         gap: 6px;
@@ -72,16 +73,20 @@
     }
     .stage-nav-container > div:first-child {
         order: 0; /* Top row - first 3 stages */
+        display: flex !important; /* Ensure first row shows */
     }
     .wine-icon-container {
         order: 1; /* Middle - wine logo */
         width: 100%;
-        display: flex;
+        display: flex !important;
+        visibility: visible !important;
         justify-content: center;
         margin: 4px 0;
     }
     .stage-nav-container > div:last-child {
         order: 2; /* Bottom row - last 3 stages */
+        display: flex !important; /* Ensure second row shows */
+        visibility: visible !important;
     }
     .wine-icon-container img {
         width: 45px;
@@ -671,8 +676,8 @@ body.dark-mode .container {
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-wrap: nowrap;
-    overflow-x: auto;
+    flex-wrap: wrap; /* Changed from nowrap to wrap to allow all categories to display */
+    overflow-x: visible; /* Changed from auto to visible to show all categories */
     gap: 6px;
     margin-top: 12px;
     margin-bottom: 16px;
@@ -3920,6 +3925,7 @@ body.dark-mode .add-metric-modal-content input {
 @media (min-width: 769px) {
     .project-details-card {
         left: 15px;
+        visibility: visible !important; /* Force card to be visible on desktop */
     }
     .pull-handle {
         display: none;
@@ -3930,6 +3936,30 @@ body.dark-mode .add-metric-modal-content input {
     
     .sidebar-toggle-handle {
         display: none !important; /* Hide on desktop */
+    }
+    
+    /* Stage navigation: Display all 6 categories in one row on desktop */
+    .stage-nav-container {
+        flex-wrap: wrap; /* Allow wrapping if needed */
+        overflow-x: visible; /* Show all categories */
+    }
+    
+    .stage-nav-container > div {
+        width: auto; /* Let divs size naturally */
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+    
+    .wine-icon-container {
+        width: auto; /* Let wine icon size naturally */
+        order: 1; /* Keep wine icon in middle */
+    }
+    
+    .stage-nav-button {
+        flex: 0 1 auto; /* Allow buttons to size based on content */
+        min-width: 100px; /* Slightly wider on desktop */
+        font-size: calc(var(--font-size-base) * 0.85);
     }
     
     /* Input section: 4 data cubes per row instead of 2 */
