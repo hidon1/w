@@ -306,8 +306,8 @@
     
     /* Stage overview section - mobile specific styling */
     .stage-overview-container {
-        margin-top: 20px;
-        margin-bottom: 30px;
+        margin-top: 15px;
+        margin-bottom: 10px;
         padding: 15px 10px;
         background: linear-gradient(135deg, var(--card-background), #f0f0f0);
         border-radius: 12px;
@@ -895,7 +895,7 @@ body.dark-mode .dashboard-item h3 {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 25px;
-    margin-bottom: 40px;
+    margin-bottom: 15px;
     padding-top: 20px;
 }
 
@@ -2191,7 +2191,7 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
 }
 
 .stage-overview-container {
-    margin-bottom: 40px;
+    margin-bottom: 15px;
 }
 
 .stage-overview-container h4 {
