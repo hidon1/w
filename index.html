@@ -1565,7 +1565,14 @@
                 }
             }
             
-            await handleInviteFromUrl();
+            // Try to handle invite from URL, but don't let it block the UI initialization
+            try {
+                await handleInviteFromUrl();
+            } catch (e) {
+                console.error('Failed to handle invite from URL (Firebase may not be loaded):', e);
+            }
+            
+            // Always initialize the UI, even if Firebase isn't available
             loadDarkModeState();
             populateYearSelects();
             setDefaultYearFilter();
