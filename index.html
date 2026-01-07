@@ -5048,15 +5048,26 @@
             const deltaX = currentX - startX;
             if (deltaX > 50) {
                 // פתח לגמרי אם הזיז ימינה מספיק
+                if (cardHideTimeout) {
+                    clearTimeout(cardHideTimeout);
+                    cardHideTimeout = null;
+                }
+                projectDetailsCard.style.visibility = 'visible';
                 projectDetailsCard.style.left = '15px';
+                projectDetailsCard.style.pointerEvents = 'auto';
                 cardOpen = true;
             } else if (deltaX < -50) {
                 // סגור אם הזיז שמאלה מספיק
                 projectDetailsCard.style.left = '-280px';
+                projectDetailsCard.style.pointerEvents = 'none';
                 cardOpen = false;
+                hideCardAfterDelay();
             } else {
                 // חזור למצב הקודם
                 projectDetailsCard.style.left = cardOpen ? '15px' : '-280px';
+                if (!cardOpen) {
+                    hideCardAfterDelay();
+                }
             }
             
             // Update icon based on final state
@@ -5066,7 +5077,6 @@
             }
             updateCardFabState();
             setCardFabVisibility();
-            projectDetailsCard.style.pointerEvents = cardOpen ? 'auto' : 'none';
         }
         function updateCardFabState() {
             if (!cardFab) return;
