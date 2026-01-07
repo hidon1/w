@@ -57,33 +57,48 @@
     .stage-nav-container {
         flex-direction: row;
         flex-wrap: wrap;
-        gap: 4px;
-        padding: 6px;
+        gap: 6px;
+        padding: 8px 4px;
         justify-content: center;
+        align-items: center;
     }
     .stage-nav-container > div {
-        width: auto;
+        width: 100%;
         display: flex;
         justify-content: center;
-        flex-wrap: wrap;
-        gap: 4px;
+        flex-wrap: nowrap;
+        gap: 6px;
+        order: 1;
+    }
+    .stage-nav-container > div:first-child {
+        order: 0; /* Top row - first 3 stages */
     }
     .wine-icon-container {
-        order: -1;
-        margin-bottom: 4px;
+        order: 1; /* Middle - wine logo */
         width: 100%;
+        display: flex;
+        justify-content: center;
+        margin: 4px 0;
+    }
+    .stage-nav-container > div:last-child {
+        order: 2; /* Bottom row - last 3 stages */
     }
     .wine-icon-container img {
-        width: 40px;
+        width: 45px;
+        height: 45px;
     }
     .stage-nav-button {
-        min-width: 48px;
-        max-width: 80px;
-        padding: 4px 5px;
-        font-size: calc(var(--font-size-base) * 0.7);
-        flex: 1 1 calc(33% - 4px);
-        border-radius: 6px;
+        min-width: 50px;
+        max-width: none;
+        padding: 6px 8px;
+        font-size: calc(var(--font-size-base) * 0.68);
+        flex: 1 1 calc(33.333% - 4px);
+        border-radius: 8px;
         min-height: 44px; /* Ensure minimum touch target size on mobile */
+        line-height: 1.2;
+        text-align: center;
+        white-space: normal;
+        word-wrap: break-word;
     }
     .close-button {
         top: 20px;
@@ -93,16 +108,35 @@
     /* Mobile portrait: 2 cards per row */
     .input-section {
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        gap: 8px;
+        padding-top: 10px;
     }
     
     /* Smaller text in input groups for mobile */
+    .input-group {
+        padding: 10px;
+    }
+    
     .input-group label {
-        font-size: calc(var(--font-size-base) * 0.85);
+        font-size: calc(var(--font-size-base) * 0.78);
+        margin-bottom: 4px;
     }
     
     .input-group h5 {
-        font-size: calc(var(--font-size-base) * 0.9);
+        font-size: calc(var(--font-size-base) * 0.85);
+    }
+    
+    .input-group input,
+    .input-group select,
+    .input-group textarea {
+        font-size: calc(var(--font-size-base) * 0.8);
+        padding: 6px;
+    }
+    
+    .input-group button {
+        font-size: calc(var(--font-size-base) * 0.75);
+        padding: 6px 10px;
+        min-height: 38px;
     }
     
     /* Dashboard: Add metric button above indicators on mobile */
