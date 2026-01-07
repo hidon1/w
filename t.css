@@ -80,7 +80,7 @@
         min-width: 48px;
         max-width: 80px;
         padding: 4px 5px;
-        font-size: calc(var(--font-size-base) * 0.52);
+        font-size: calc(var(--font-size-base) * 0.7);
         flex: 1 1 calc(33% - 4px);
         border-radius: 6px;
     }
@@ -1317,8 +1317,8 @@ body.dark-mode .history-list li {
     user-select: none;
 }
 .card-fab-icon {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     object-fit: contain;
 }
 .card-fab:hover,
@@ -3750,9 +3750,9 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
         left: 15px;
         right: auto;
         bottom: auto;
-        width: 42px;
-        height: 42px;
-        font-size: 18px;
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
         z-index: 1110;
     }
     .dashboard-item h3 {
