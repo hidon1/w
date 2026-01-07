@@ -800,8 +800,9 @@
         let comparisonProjectId = null;
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
-        // Card transition constants
-        const CARD_TRANSITION_DURATION = 300; // milliseconds, matches CSS transition
+        // Card transition constants - matches CSS: .project-details-card { transition: left 0.3s ease; }
+        const CARD_TRANSITION_DURATION = 300; // milliseconds
+        let cardHideTimeout = null; // Track timeout to prevent race conditions
         // משתני הזזה לכרטיסיה
         let isDragging = false;
         let startX = 0;
@@ -5005,6 +5006,23 @@
             const shouldShow = isMobileViewport() && !cardOpen;
             cardFab.style.display = shouldShow ? 'flex' : 'none';
         }
+        
+        // Helper function to hide card after slide-out animation
+        function hideCardAfterDelay() {
+            // Cancel any pending hide timeout to prevent race conditions
+            if (cardHideTimeout) {
+                clearTimeout(cardHideTimeout);
+            }
+            
+            // Schedule visibility hide after transition completes
+            cardHideTimeout = setTimeout(() => {
+                if (!cardOpen) { // Double check state hasn't changed
+                    projectDetailsCard.style.visibility = 'hidden';
+                }
+                cardHideTimeout = null;
+            }, CARD_TRANSITION_DURATION);
+        }
+        
         // פונקציות הזזה לכרטיסיה במובייל
         function handleTouchStart(e) {
             if (!isMobileViewport()) return; // רק במובייל
@@ -5067,7 +5085,11 @@
             projectDetailsCard.style.transition = 'left 0.3s ease';
             
             if (cardOpen) {
-                // Opening: Make visible first, then slide in
+                // Opening: Cancel any pending hide, make visible first, then slide in
+                if (cardHideTimeout) {
+                    clearTimeout(cardHideTimeout);
+                    cardHideTimeout = null;
+                }
                 projectDetailsCard.style.visibility = 'visible';
                 projectDetailsCard.style.left = '15px';
                 projectDetailsCard.style.pointerEvents = 'auto';
@@ -5075,11 +5097,7 @@
                 // Closing: Slide out first, then hide after transition
                 projectDetailsCard.style.left = '-280px';
                 projectDetailsCard.style.pointerEvents = 'none';
-                setTimeout(() => {
-                    if (!cardOpen) { // Double check state hasn't changed
-                        projectDetailsCard.style.visibility = 'hidden';
-                    }
-                }, CARD_TRANSITION_DURATION);
+                hideCardAfterDelay();
             }
             
             // Update icon direction
@@ -5098,11 +5116,7 @@
             projectDetailsCard.style.pointerEvents = 'none';
             
             // Hide card after slide-out animation completes
-            setTimeout(() => {
-                if (!cardOpen) { // Double check state hasn't changed
-                    projectDetailsCard.style.visibility = 'hidden';
-                }
-            }, CARD_TRANSITION_DURATION);
+            hideCardAfterDelay();
             
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
