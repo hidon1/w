@@ -2,9 +2,19 @@
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js");
 
-firebase.initializeApp(self.FIREBASE_CONFIG || {
-  // You may inject config via workbox or set at build; otherwise this will reuse main page registration
-});
+// Firebase config - must be hardcoded in service worker (no access to window)
+// IMPORTANT: Update these values to match your Firebase project
+const firebaseConfig = {
+  apiKey: "AIzaSyC8hWZ5XJGBQZx32m3VkL4JwPFe90qZAdQ",
+  authDomain: "wine-d0c2c.firebaseapp.com",
+  projectId: "wine-d0c2c",
+  storageBucket: "wine-d0c2c.firebasestorage.app",
+  messagingSenderId: "659709195708",
+  appId: "1:659709195708:web:39b401c67d31206b4667b9",
+  measurementId: "G-25Q2F6G9QC"
+};
+
+firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
