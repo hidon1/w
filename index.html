@@ -4958,9 +4958,10 @@
             projectDetailsCard.style.transition = 'none';
             
             if (isMobileViewport()) {
-                // Mobile: hide card off-screen
+                // Mobile: hide card off-screen and keep invisible
                 projectDetailsCard.style.left = '-280px';
                 projectDetailsCard.style.pointerEvents = 'none';
+                projectDetailsCard.style.visibility = 'hidden';
                 cardOpen = false;
                 if (typeof setCardFabVisibility === 'function') {
                     setCardFabVisibility();
@@ -4972,12 +4973,12 @@
                 // Desktop: show card on screen
                 projectDetailsCard.style.left = '15px';
                 projectDetailsCard.style.pointerEvents = 'auto';
+                projectDetailsCard.style.visibility = 'visible';
             }
             
-            // Use requestAnimationFrame to restore transition and make visible
+            // Use requestAnimationFrame to restore transition
             requestAnimationFrame(() => {
-                projectDetailsCard.style.transition = 'left 0.3s ease';
-                projectDetailsCard.style.visibility = 'visible';
+                projectDetailsCard.style.transition = 'left 0.3s ease, visibility 0s';
             });
         }
         
@@ -4987,10 +4988,14 @@
                 if (!cardOpen) {
                     projectDetailsCard.style.left = '-280px';
                     projectDetailsCard.style.pointerEvents = 'none';
+                    projectDetailsCard.style.visibility = 'hidden';
+                } else {
+                    projectDetailsCard.style.visibility = 'visible';
                 }
                 updateCardFabState();
             } else {
                 projectDetailsCard.style.pointerEvents = 'auto';
+                projectDetailsCard.style.visibility = 'visible';
             }
         }
         function setCardFabVisibility() {
@@ -5057,7 +5062,8 @@
         function toggleCard() {
             if (!isMobileViewport()) return; // רק במובייל
             cardOpen = !cardOpen;
-            projectDetailsCard.style.transition = 'left 0.3s ease';
+            projectDetailsCard.style.transition = 'left 0.3s ease, visibility 0s';
+            projectDetailsCard.style.visibility = cardOpen ? 'visible' : 'hidden';
             projectDetailsCard.style.left = cardOpen ? '15px' : '-280px';
             projectDetailsCard.style.pointerEvents = cardOpen ? 'auto' : 'none';
             
@@ -5072,7 +5078,8 @@
         function closeCard() {
             if (!isMobileViewport()) return;
             cardOpen = false;
-            projectDetailsCard.style.transition = 'left 0.3s ease';
+            projectDetailsCard.style.transition = 'left 0.3s ease, visibility 0s';
+            projectDetailsCard.style.visibility = 'hidden';
             projectDetailsCard.style.left = '-280px';
             projectDetailsCard.style.pointerEvents = 'none';
             
