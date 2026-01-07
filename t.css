@@ -280,7 +280,7 @@
         padding: 15px 10px;
         background: linear-gradient(135deg, var(--card-background), #f0f0f0);
         border-radius: 12px;
-        /* Remove border - user requested no circle around the section */
+        /* Remove border to eliminate circular/boxed styling around the stage overview section */
     }
     
     .stage-overview-container h4 {
