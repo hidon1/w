@@ -433,7 +433,19 @@ body {
     line-height: 1.6;
     overflow-x: hidden;
     transition: all var(--animation-speed);
-    animation: fadeIn 1s ease-out;
+}
+
+/* Prevent all animations and transitions on page load */
+body.preload * {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+}
+
+/* Apply fade in animation only after page is loaded */
+body.loaded {
+    animation: fadeIn 0.5s ease-out;
 }
 
 @keyframes fadeIn {
@@ -2858,6 +2870,132 @@ body.dark-mode .add-reminder-form input, body.dark-mode .add-reminder-form texta
     transform: translateY(-2px);
 }
 
+/* Image upload section styles */
+.image-upload-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+body.dark-mode .image-upload-section {
+    background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+    border-color: var(--dark-border-color);
+}
+
+.image-upload-section label {
+    font-weight: 700;
+    color: var(--text-color);
+    font-size: calc(var(--font-size-base) * 0.9);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+body.dark-mode .image-upload-section label {
+    color: var(--dark-text-color);
+}
+
+.image-upload-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.image-upload-btn, .camera-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: calc(var(--font-size-base) * 0.9);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.image-upload-btn {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: white;
+}
+
+.image-upload-btn:hover {
+    background: linear-gradient(135deg, #1976D2, #1565C0);
+    transform: translateY(-2px);
+}
+
+.camera-btn {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+    color: white;
+}
+
+.camera-btn:hover {
+    background: linear-gradient(135deg, #388E3C, #2E7D32);
+    transform: translateY(-2px);
+}
+
+.image-preview {
+    position: relative;
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--border-color);
+    max-width: 300px;
+}
+
+body.dark-mode .image-preview {
+    border-color: var(--dark-border-color);
+}
+
+.image-preview img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.remove-image-btn {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: rgba(244, 67, 54, 0.9);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.remove-image-btn:hover {
+    background: rgba(211, 47, 47, 1);
+    transform: scale(1.1);
+}
+
+.inbox-item-image, .reminder-item-image {
+    width: 100%;
+    max-width: 250px;
+    margin-top: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.inbox-item-image:hover, .reminder-item-image:hover {
+    transform: scale(1.05);
+}
+
 /* Sound selection styles */
 .sound-selection {
     display: flex;
@@ -2906,6 +3044,204 @@ body.dark-mode .sound-selection select {
 .preview-sound-btn:hover {
     background: linear-gradient(135deg, #FFB366, #FFC999);
     transform: scale(1.1);
+}
+
+/* Email-like Inbox styles */
+.inbox-item {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+body.dark-mode .inbox-item {
+    background: var(--dark-card-background);
+    border-color: var(--dark-border-color);
+}
+
+.inbox-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.inbox-message-header {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    cursor: pointer;
+    gap: 15px;
+    transition: background 0.3s ease;
+}
+
+.inbox-message-header:hover {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+body.dark-mode .inbox-message-header:hover {
+    background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
+}
+
+.inbox-icon {
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.inbox-preview {
+    flex: 1;
+    min-width: 0;
+}
+
+.inbox-subject {
+    font-weight: 700;
+    color: var(--text-color);
+    font-size: calc(var(--font-size-base) * 1);
+    margin-bottom: 5px;
+}
+
+body.dark-mode .inbox-subject {
+    color: var(--dark-text-color);
+}
+
+.inbox-snippet {
+    color: var(--light-text-color);
+    font-size: calc(var(--font-size-base) * 0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+body.dark-mode .inbox-snippet {
+    color: var(--dark-light-text-color);
+}
+
+.inbox-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.inbox-date {
+    font-size: calc(var(--font-size-base) * 0.85);
+    color: var(--light-text-color);
+    font-weight: 600;
+}
+
+.inbox-time {
+    font-size: calc(var(--font-size-base) * 0.75);
+    color: var(--light-text-color);
+}
+
+.inbox-toggle-icon {
+    font-size: 16px;
+    color: var(--primary-color);
+    margin-top: 5px;
+    transition: transform 0.3s ease;
+}
+
+.inbox-message-body {
+    border-top: 1px solid #e0e0e0;
+    padding: 20px;
+    background: linear-gradient(135deg, #fafafa, #f5f5f5);
+    animation: slideDown 0.3s ease-out;
+}
+
+body.dark-mode .inbox-message-body {
+    border-color: var(--dark-border-color);
+    background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+.inbox-message-content {
+    margin-bottom: 15px;
+}
+
+.inbox-message-content p {
+    margin: 0 0 15px 0;
+    font-size: calc(var(--font-size-base) * 1);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+body.dark-mode .inbox-message-content p {
+    color: var(--dark-text-color);
+}
+
+.inbox-message-image {
+    margin-top: 15px;
+}
+
+.inbox-message-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.inbox-delete-btn {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: calc(var(--font-size-base) * 0.9);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.inbox-delete-btn:hover {
+    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .inbox-message-header {
+        padding: 12px;
+        gap: 10px;
+    }
+    
+    .inbox-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 16px;
+    }
+    
+    .inbox-subject {
+        font-size: calc(var(--font-size-base) * 0.9);
+    }
+    
+    .inbox-snippet {
+        font-size: calc(var(--font-size-base) * 0.8);
+    }
+    
+    .inbox-meta {
+        font-size: calc(var(--font-size-base) * 0.75);
+    }
 }
 
 /* Reminder popup notification styles */

@@ -15,6 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-storage-compat.js"></script>
     <link rel="stylesheet" href="t.css">
     <!-- Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -31,6 +32,7 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const storage = firebase.storage();
         
         // Site password prompt configuration - set to false to disable auto-prompt
         const ENABLE_SITE_PASSWORD_PROMPT = false;
@@ -51,7 +53,7 @@
             });
     </script>
 </head>
-<body>
+<body class="preload">
     <div class="hamburger-menu-btn" id="hamburgerBtn">
         <span></span>
         <span></span>
@@ -404,6 +406,26 @@
                     <button type="button" onclick="previewReminderSound()" class="preview-sound-btn">
                         <i class="fas fa-volume-up"></i>
                     </button>
+                </div>
+                <div class="image-upload-section">
+                    <label for="reminderImageUpload">
+                        <i class="fas fa-image"></i> העלה תמונה (אופציונלי):
+                    </label>
+                    <div class="image-upload-buttons">
+                        <input type="file" id="reminderImageUpload" accept="image/*" style="display:none;" onchange="handleReminderImageSelect(event)">
+                        <button type="button" onclick="document.getElementById('reminderImageUpload').click()" class="image-upload-btn">
+                            <i class="fas fa-folder-open"></i> בחר קובץ
+                        </button>
+                        <button type="button" onclick="openCameraForReminder()" class="camera-btn">
+                            <i class="fas fa-camera"></i> צלם
+                        </button>
+                    </div>
+                    <div id="reminderImagePreview" class="image-preview" style="display:none;">
+                        <img id="reminderPreviewImg" src="" alt="תצוגה מקדימה">
+                        <button type="button" onclick="removeReminderImage()" class="remove-image-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
                 <button onclick="addReminder()">הוסף תזכורת</button>
             </div>
@@ -786,6 +808,10 @@
         const customPropertyModal = document.getElementById('customPropertyModal');
         const customPropertyNameInput = document.getElementById('customPropertyNameInput');
         const deleteMetricBtn = document.getElementById('deleteMetricBtn');
+        
+        // Image upload variables
+        let selectedReminderImage = null;
+        let selectedReminderImageFile = null;
         const accessControlModal = document.getElementById('accessControlModal');
         const inviteEmailInput = document.getElementById('inviteEmailInput');
         const inviteProjectSelect = document.getElementById('inviteProjectSelect');
@@ -1190,6 +1216,141 @@
             }
         }
         
+        // Image upload functions for reminders
+        function handleReminderImageSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                selectedReminderImageFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    selectedReminderImage = e.target.result;
+                    document.getElementById('reminderPreviewImg').src = e.target.result;
+                    document.getElementById('reminderImagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        async function openCameraForReminder() {
+            try {
+                // Check if getUserMedia is supported
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('המצלמה לא נתמכת בדפדפן זה');
+                    return;
+                }
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } // Use back camera on mobile
+                });
+                
+                // Create video element for preview
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.autoplay = true;
+                video.style.width = '100%';
+                video.style.maxWidth = '400px';
+                video.style.borderRadius = '8px';
+                
+                // Create canvas for capturing
+                const canvas = document.createElement('canvas');
+                
+                // Create capture button
+                const captureBtn = document.createElement('button');
+                captureBtn.textContent = 'צלם';
+                captureBtn.style.marginTop = '10px';
+                captureBtn.className = 'image-upload-btn';
+                
+                // Create cancel button
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = 'ביטול';
+                cancelBtn.style.marginTop = '10px';
+                cancelBtn.className = 'camera-btn';
+                
+                // Create modal for camera
+                const cameraModal = document.createElement('div');
+                cameraModal.className = 'modal';
+                cameraModal.style.display = 'flex';
+                cameraModal.innerHTML = `
+                    <div class="modal-content" style="max-width: 500px; padding: 20px;">
+                        <h3>צלם תמונה</h3>
+                        <div id="cameraContainer"></div>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button id="cameraCaptureBtn" class="image-upload-btn" style="flex: 1;">
+                                <i class="fas fa-camera"></i> צלם
+                            </button>
+                            <button id="cameraCancelBtn" class="camera-btn" style="flex: 1; background: linear-gradient(135deg, #f44336, #d32f2f);">
+                                <i class="fas fa-times"></i> ביטול
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(cameraModal);
+                document.getElementById('cameraContainer').appendChild(video);
+                
+                document.getElementById('cameraCaptureBtn').onclick = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    
+                    canvas.toBlob((blob) => {
+                        selectedReminderImageFile = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+                        selectedReminderImage = canvas.toDataURL('image/jpeg');
+                        document.getElementById('reminderPreviewImg').src = selectedReminderImage;
+                        document.getElementById('reminderImagePreview').style.display = 'block';
+                        
+                        // Stop camera and close modal
+                        stream.getTracks().forEach(track => track.stop());
+                        document.body.removeChild(cameraModal);
+                    }, 'image/jpeg');
+                };
+                
+                document.getElementById('cameraCancelBtn').onclick = () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    document.body.removeChild(cameraModal);
+                };
+                
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                alert('שגיאה בגישה למצלמה: ' + error.message);
+            }
+        }
+        
+        function removeReminderImage() {
+            selectedReminderImage = null;
+            selectedReminderImageFile = null;
+            document.getElementById('reminderImagePreview').style.display = 'none';
+            document.getElementById('reminderImageUpload').value = '';
+        }
+        
+        async function uploadReminderImage(reminderId) {
+            if (!selectedReminderImageFile) {
+                return null;
+            }
+            
+            const user = auth.currentUser;
+            if (!user) {
+                console.log('Not logged in - cannot upload image to Firebase Storage');
+                return selectedReminderImage; // Return base64 for local storage
+            }
+            
+            try {
+                const storageRef = storage.ref();
+                const imageRef = storageRef.child(`reminders/${user.uid}/${reminderId}_${Date.now()}.jpg`);
+                
+                // Upload file
+                await imageRef.put(selectedReminderImageFile);
+                
+                // Get download URL
+                const downloadURL = await imageRef.getDownloadURL();
+                return downloadURL;
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                // Fallback to base64 if upload fails
+                return selectedReminderImage;
+            }
+        }
+        
         async function addReminder() {
             const text = reminderTextInput.value.trim();
             const datetime = reminderDateTimeInput.value;
@@ -1198,13 +1359,31 @@
             const sound = soundSelect ? soundSelect.value : 'alarm1';
             
             if (text && datetime) {
-                reminders.push({ id: Date.now(), text, datetime, popup, sound, notified: false });
+                const reminderId = Date.now();
+                
+                // Upload image if selected
+                let imageUrl = null;
+                if (selectedReminderImage) {
+                    imageUrl = await uploadReminderImage(reminderId);
+                }
+                
+                reminders.push({ 
+                    id: reminderId, 
+                    text, 
+                    datetime, 
+                    popup, 
+                    sound, 
+                    notified: false,
+                    imageUrl: imageUrl
+                });
+                
                 localStorage.setItem('reminders', JSON.stringify(reminders));
                 await syncRemindersToFirebase();
                 reminderTextInput.value = '';
                 reminderDateTimeInput.value = '';
                 reminderPopupInput.checked = false;
                 if (soundSelect) soundSelect.value = 'alarm1';
+                removeReminderImage();
                 renderRemindersList();
                 checkReminders();
             } else {
@@ -1220,11 +1399,16 @@
                                       reminder.sound === 'alarm2' ? '🔔 שעון 2' :
                                       reminder.sound === 'bell' ? '🔔 פעמון' :
                                       reminder.sound === 'chime' ? '🔔 צלצול' : '';
+                    
+                    const imageHtml = reminder.imageUrl ? 
+                        `<img src="${reminder.imageUrl}" alt="תמונה" class="reminder-item-image" onclick="window.open('${reminder.imageUrl}', '_blank')">` : '';
+                    
                     const li = document.createElement('li');
                     li.innerHTML = `
                         <div class="reminder-details">
                             <div class="text">${reminder.text}</div>
                             <div class="datetime">${new Date(reminder.datetime).toLocaleString('he-IL')} ${soundLabel}</div>
+                            ${imageHtml}
                         </div>
                         <div class="reminder-actions">
                             <button onclick="deleteReminder(${reminder.id})">מחק</button>
@@ -1254,20 +1438,68 @@
         }
         function renderInboxList() {
             inboxList.innerHTML = '';
-            inbox.forEach(reminder => {
+            inbox.forEach((reminder, index) => {
+                const soundLabel = reminder.sound === 'none' ? '' :
+                                  reminder.sound === 'alarm1' ? '🔔' :
+                                  reminder.sound === 'alarm2' ? '🔔' :
+                                  reminder.sound === 'bell' ? '🔔' :
+                                  reminder.sound === 'chime' ? '🔔' : '';
+                
+                const imageHtml = reminder.imageUrl ? 
+                    `<div class="inbox-message-image">
+                        <img src="${reminder.imageUrl}" alt="תמונה" class="inbox-item-image" onclick="window.open('${reminder.imageUrl}', '_blank')">
+                    </div>` : '';
+                
+                const dateStr = new Date(reminder.datetime).toLocaleDateString('he-IL');
+                const timeStr = new Date(reminder.datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+                
                 const li = document.createElement('li');
+                li.className = 'inbox-item';
                 li.innerHTML = `
-                    <div class="reminder-details">
-                        <div class="text">${reminder.text}</div>
-                        <div class="datetime">${new Date(reminder.datetime).toLocaleString('he-IL')}</div>
+                    <div class="inbox-message-header" onclick="toggleInboxMessage(${index})">
+                        <div class="inbox-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="inbox-preview">
+                            <div class="inbox-subject">${soundLabel} תזכורת</div>
+                            <div class="inbox-snippet">${reminder.text.substring(0, 50)}${reminder.text.length > 50 ? '...' : ''}</div>
+                        </div>
+                        <div class="inbox-meta">
+                            <div class="inbox-date">${dateStr}</div>
+                            <div class="inbox-time">${timeStr}</div>
+                            <i class="fas fa-chevron-down inbox-toggle-icon" id="inbox-toggle-${index}"></i>
+                        </div>
                     </div>
-                    <div class="reminder-actions">
-                        <button onclick="deleteInbox(${reminder.id})">מחק</button>
+                    <div class="inbox-message-body" id="inbox-body-${index}" style="display:none;">
+                        <div class="inbox-message-content">
+                            <p>${reminder.text}</p>
+                            ${imageHtml}
+                        </div>
+                        <div class="inbox-message-actions">
+                            <button onclick="deleteInbox(${reminder.id})" class="inbox-delete-btn">
+                                <i class="fas fa-trash"></i> מחק
+                            </button>
+                        </div>
                     </div>
                 `;
                 inboxList.appendChild(li);
             });
             updateInboxBadge();
+        }
+        
+        function toggleInboxMessage(index) {
+            const body = document.getElementById(`inbox-body-${index}`);
+            const icon = document.getElementById(`inbox-toggle-${index}`);
+            
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                body.style.display = 'none';
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
         }
         async function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
@@ -4060,6 +4292,71 @@
                 }
             }
         }
+        
+        // Real-time listeners for inbox and reminders
+        let inboxUnsubscribe = null;
+        let remindersUnsubscribe = null;
+        
+        function setupInboxRealtimeSync(user) {
+            // Clean up existing listener
+            if (inboxUnsubscribe) {
+                inboxUnsubscribe();
+                inboxUnsubscribe = null;
+            }
+            
+            if (!user) {
+                return;
+            }
+            
+            // Set up real-time listener for inbox
+            const inboxDocRef = db.collection('userInbox').doc(user.uid);
+            
+            inboxUnsubscribe = inboxDocRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
+                if (doc.exists && !doc.metadata.hasPendingWrites && !doc.metadata.fromCache) {
+                    const data = doc.data();
+                    if (data.inbox) {
+                        inbox = data.inbox;
+                        localStorage.setItem('inbox', JSON.stringify(inbox));
+                        renderInboxList();
+                        updateInboxBadge();
+                        console.log('Inbox synced from Firebase');
+                    }
+                }
+            }, (error) => {
+                console.error('Error listening to inbox changes:', error);
+            });
+        }
+        
+        function setupRemindersRealtimeSync(user) {
+            // Clean up existing listener
+            if (remindersUnsubscribe) {
+                remindersUnsubscribe();
+                remindersUnsubscribe = null;
+            }
+            
+            if (!user) {
+                return;
+            }
+            
+            // Set up real-time listener for reminders
+            const remindersDocRef = db.collection('userReminders').doc(user.uid);
+            
+            remindersUnsubscribe = remindersDocRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
+                if (doc.exists && !doc.metadata.hasPendingWrites && !doc.metadata.fromCache) {
+                    const data = doc.data();
+                    if (data.reminders) {
+                        reminders = data.reminders;
+                        localStorage.setItem('reminders', JSON.stringify(reminders));
+                        renderRemindersList();
+                        checkReminders();
+                        console.log('Reminders synced from Firebase');
+                    }
+                }
+            }, (error) => {
+                console.error('Error listening to reminders changes:', error);
+            });
+        }
+        
         // Real-time synchronization listener
         let realtimeUnsubscribe = null;
         
@@ -4191,6 +4488,12 @@
             }
         }
         window.addEventListener('load', () => {
+            // Remove preload class to enable animations smoothly
+            setTimeout(() => {
+                document.body.classList.remove('preload');
+                document.body.classList.add('loaded');
+            }, 100);
+            
             const loginBtn = document.getElementById('loginBtn');
             const logoutBtn = document.getElementById('logoutBtn');
             const changeSitePasswordBtn = document.getElementById('changeSitePasswordBtn');
@@ -4242,8 +4545,10 @@
                     renderInboxList();
                     updateInboxBadge();
                     
-                    // Set up real-time synchronization
+                    // Set up real-time synchronization for all data
                     setupRealtimeSync(user);
+                    setupInboxRealtimeSync(user);
+                    setupRemindersRealtimeSync(user);
                     
                     closeLoginModal();
                     
@@ -4260,8 +4565,10 @@
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'none';
                     if (logoutBtn) logoutBtn.style.display = 'none';
                     
-                    // Clean up real-time listener
+                    // Clean up real-time listeners
                     setupRealtimeSync(null);
+                    setupInboxRealtimeSync(null);
+                    setupRemindersRealtimeSync(null);
                     
                     openLoginModal();
                 }
