@@ -4,6 +4,19 @@ import { isOnline, enqueue, setupOfflineHandlers } from "./offline.js";
 import { uploadReminderImage } from "./image-upload.js";
 import { initNotifications } from "./notifications.js";
 
+// UUID generator with fallback for older browsers
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for browsers without crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 const logEl = document.getElementById("log");
 function log(msg) { logEl.textContent += `\n${msg}`; }
 
@@ -51,7 +64,7 @@ saveBtn.addEventListener("click", async () => {
     }
 
     const reminder = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       title: titleInput.value || "ללא כותרת",
       dueAt: new Date(dueInput.value).getTime() || Date.now(),
       imageUrl,
