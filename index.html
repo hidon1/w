@@ -800,7 +800,8 @@
         let comparisonProjectId = null;
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
-        // Card transition duration - set via JS: projectDetailsCard.style.transition = 'left 0.3s ease'
+        // Card transition duration - set via JS at line 4984: projectDetailsCard.style.transition = 'left 0.3s ease'
+        // Used to time the delayed visibility hide after slide-out animation completes
         const CARD_TRANSITION_DURATION = 300; // milliseconds
         let cardHideTimeout = null; // Track timeout to prevent race conditions
         // משתני הזזה לכרטיסיה
@@ -5010,6 +5011,7 @@
         // Helper function to hide card after slide-out animation
         function hideCardAfterDelay() {
             // Cancel any pending hide timeout to prevent race conditions
+            // clearTimeout prevents the callback from running, so setting to null is safe
             if (cardHideTimeout) {
                 clearTimeout(cardHideTimeout);
                 cardHideTimeout = null;
@@ -5017,7 +5019,8 @@
             
             // Schedule visibility hide after transition completes
             cardHideTimeout = setTimeout(() => {
-                // Only hide if card is still closed (timeout wasn't canceled)
+                // Only hide if card is still closed and timeout wasn't canceled
+                // If cardHideTimeout is null, it was canceled (clearTimeout was called)
                 if (!cardOpen && cardHideTimeout) {
                     projectDetailsCard.style.visibility = 'hidden';
                     cardHideTimeout = null;
