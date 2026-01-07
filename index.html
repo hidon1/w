@@ -800,6 +800,8 @@
         let comparisonProjectId = null;
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+        // Card transition constants
+        const CARD_TRANSITION_DURATION = 300; // milliseconds, matches CSS transition
         // משתני הזזה לכרטיסיה
         let isDragging = false;
         let startX = 0;
@@ -5077,7 +5079,7 @@
                     if (!cardOpen) { // Double check state hasn't changed
                         projectDetailsCard.style.visibility = 'hidden';
                     }
-                }, 300); // Match transition duration
+                }, CARD_TRANSITION_DURATION);
             }
             
             // Update icon direction
@@ -5100,7 +5102,7 @@
                 if (!cardOpen) { // Double check state hasn't changed
                     projectDetailsCard.style.visibility = 'hidden';
                 }
-            }, 300); // Match transition duration
+            }, CARD_TRANSITION_DURATION);
             
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
