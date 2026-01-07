@@ -800,6 +800,10 @@
         let comparisonProjectId = null;
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+        // Card transition duration - set via JS at line 4984: projectDetailsCard.style.transition = 'left 0.3s ease'
+        // Used to time the delayed visibility hide after slide-out animation completes
+        const CARD_TRANSITION_DURATION = 300; // milliseconds
+        let cardHideTimeout = null; // Track timeout to prevent race conditions
         // משתני הזזה לכרטיסיה
         let isDragging = false;
         let startX = 0;
@@ -4958,9 +4962,10 @@
             projectDetailsCard.style.transition = 'none';
             
             if (isMobileViewport()) {
-                // Mobile: hide card off-screen
+                // Mobile: hide card off-screen and keep invisible
                 projectDetailsCard.style.left = '-280px';
                 projectDetailsCard.style.pointerEvents = 'none';
+                projectDetailsCard.style.visibility = 'hidden';
                 cardOpen = false;
                 if (typeof setCardFabVisibility === 'function') {
                     setCardFabVisibility();
@@ -4972,12 +4977,12 @@
                 // Desktop: show card on screen
                 projectDetailsCard.style.left = '15px';
                 projectDetailsCard.style.pointerEvents = 'auto';
+                projectDetailsCard.style.visibility = 'visible';
             }
             
-            // Use requestAnimationFrame to restore transition and make visible
+            // Use requestAnimationFrame to restore transition
             requestAnimationFrame(() => {
                 projectDetailsCard.style.transition = 'left 0.3s ease';
-                projectDetailsCard.style.visibility = 'visible';
             });
         }
         
@@ -4987,10 +4992,14 @@
                 if (!cardOpen) {
                     projectDetailsCard.style.left = '-280px';
                     projectDetailsCard.style.pointerEvents = 'none';
+                    projectDetailsCard.style.visibility = 'hidden';
+                } else {
+                    projectDetailsCard.style.visibility = 'visible';
                 }
                 updateCardFabState();
             } else {
                 projectDetailsCard.style.pointerEvents = 'auto';
+                projectDetailsCard.style.visibility = 'visible';
             }
         }
         function setCardFabVisibility() {
@@ -4998,6 +5007,27 @@
             const shouldShow = isMobileViewport() && !cardOpen;
             cardFab.style.display = shouldShow ? 'flex' : 'none';
         }
+        
+        // Helper function to hide card after slide-out animation
+        function hideCardAfterDelay() {
+            // Cancel any pending hide timeout to prevent race conditions
+            // clearTimeout prevents the callback from running, so setting to null is safe
+            if (cardHideTimeout) {
+                clearTimeout(cardHideTimeout);
+                cardHideTimeout = null;
+            }
+            
+            // Schedule visibility hide after transition completes
+            cardHideTimeout = setTimeout(() => {
+                // Only hide if card is still closed and timeout wasn't canceled
+                // If cardHideTimeout is null, it was canceled (clearTimeout was called)
+                if (!cardOpen && cardHideTimeout) {
+                    projectDetailsCard.style.visibility = 'hidden';
+                    cardHideTimeout = null;
+                }
+            }, CARD_TRANSITION_DURATION);
+        }
+        
         // פונקציות הזזה לכרטיסיה במובייל
         function handleTouchStart(e) {
             if (!isMobileViewport()) return; // רק במובייל
@@ -5021,15 +5051,26 @@
             const deltaX = currentX - startX;
             if (deltaX > 50) {
                 // פתח לגמרי אם הזיז ימינה מספיק
+                if (cardHideTimeout) {
+                    clearTimeout(cardHideTimeout);
+                    cardHideTimeout = null;
+                }
+                projectDetailsCard.style.visibility = 'visible';
                 projectDetailsCard.style.left = '15px';
+                projectDetailsCard.style.pointerEvents = 'auto';
                 cardOpen = true;
             } else if (deltaX < -50) {
                 // סגור אם הזיז שמאלה מספיק
                 projectDetailsCard.style.left = '-280px';
+                projectDetailsCard.style.pointerEvents = 'none';
                 cardOpen = false;
+                hideCardAfterDelay();
             } else {
                 // חזור למצב הקודם
                 projectDetailsCard.style.left = cardOpen ? '15px' : '-280px';
+                if (!cardOpen) {
+                    hideCardAfterDelay();
+                }
             }
             
             // Update icon based on final state
@@ -5039,7 +5080,6 @@
             }
             updateCardFabState();
             setCardFabVisibility();
-            projectDetailsCard.style.pointerEvents = cardOpen ? 'auto' : 'none';
         }
         function updateCardFabState() {
             if (!cardFab) return;
@@ -5058,8 +5098,22 @@
             if (!isMobileViewport()) return; // רק במובייל
             cardOpen = !cardOpen;
             projectDetailsCard.style.transition = 'left 0.3s ease';
-            projectDetailsCard.style.left = cardOpen ? '15px' : '-280px';
-            projectDetailsCard.style.pointerEvents = cardOpen ? 'auto' : 'none';
+            
+            if (cardOpen) {
+                // Opening: Cancel any pending hide, make visible first, then slide in
+                if (cardHideTimeout) {
+                    clearTimeout(cardHideTimeout);
+                    cardHideTimeout = null;
+                }
+                projectDetailsCard.style.visibility = 'visible';
+                projectDetailsCard.style.left = '15px';
+                projectDetailsCard.style.pointerEvents = 'auto';
+            } else {
+                // Closing: Slide out first, then hide after transition
+                projectDetailsCard.style.left = '-280px';
+                projectDetailsCard.style.pointerEvents = 'none';
+                hideCardAfterDelay();
+            }
             
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
@@ -5075,6 +5129,9 @@
             projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = '-280px';
             projectDetailsCard.style.pointerEvents = 'none';
+            
+            // Hide card after slide-out animation completes
+            hideCardAfterDelay();
             
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
