@@ -83,6 +83,7 @@
         font-size: calc(var(--font-size-base) * 0.7);
         flex: 1 1 calc(33% - 4px);
         border-radius: 6px;
+        min-height: 44px; /* Ensure minimum touch target size on mobile */
     }
     .close-button {
         top: 20px;
@@ -651,6 +652,11 @@ body.dark-mode .stage-nav-container {
     text-align: center;
     position: relative;
     overflow: hidden;
+    /* Ensure touch events work on mobile */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px; /* Minimum touch target size */
 }
 
 .stage-nav-button::before {
