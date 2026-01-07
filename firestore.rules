@@ -51,6 +51,16 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
     
+    // User Reminders - User-specific reminders
+    match /userReminders/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // User Inbox - User-specific inbox messages
+    match /userInbox/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
     // Legacy: Project Access Invites (deprecated but kept for backward compatibility)
     match /projectAccessInvites/{inviteId} {
       // Only account owner can manage invites
