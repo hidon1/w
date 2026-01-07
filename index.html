@@ -4978,7 +4978,7 @@
             
             // Use requestAnimationFrame to restore transition
             requestAnimationFrame(() => {
-                projectDetailsCard.style.transition = 'left 0.3s ease, visibility 0s';
+                projectDetailsCard.style.transition = 'left 0.3s ease';
             });
         }
         
@@ -5062,10 +5062,23 @@
         function toggleCard() {
             if (!isMobileViewport()) return; // רק במובייל
             cardOpen = !cardOpen;
-            projectDetailsCard.style.transition = 'left 0.3s ease, visibility 0s';
-            projectDetailsCard.style.visibility = cardOpen ? 'visible' : 'hidden';
-            projectDetailsCard.style.left = cardOpen ? '15px' : '-280px';
-            projectDetailsCard.style.pointerEvents = cardOpen ? 'auto' : 'none';
+            projectDetailsCard.style.transition = 'left 0.3s ease';
+            
+            if (cardOpen) {
+                // Opening: Make visible first, then slide in
+                projectDetailsCard.style.visibility = 'visible';
+                projectDetailsCard.style.left = '15px';
+                projectDetailsCard.style.pointerEvents = 'auto';
+            } else {
+                // Closing: Slide out first, then hide after transition
+                projectDetailsCard.style.left = '-280px';
+                projectDetailsCard.style.pointerEvents = 'none';
+                setTimeout(() => {
+                    if (!cardOpen) { // Double check state hasn't changed
+                        projectDetailsCard.style.visibility = 'hidden';
+                    }
+                }, 300); // Match transition duration
+            }
             
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
@@ -5078,10 +5091,16 @@
         function closeCard() {
             if (!isMobileViewport()) return;
             cardOpen = false;
-            projectDetailsCard.style.transition = 'left 0.3s ease, visibility 0s';
-            projectDetailsCard.style.visibility = 'hidden';
+            projectDetailsCard.style.transition = 'left 0.3s ease';
             projectDetailsCard.style.left = '-280px';
             projectDetailsCard.style.pointerEvents = 'none';
+            
+            // Hide card after slide-out animation completes
+            setTimeout(() => {
+                if (!cardOpen) { // Double check state hasn't changed
+                    projectDetailsCard.style.visibility = 'hidden';
+                }
+            }, 300); // Match transition duration
             
             // Update icon direction
             const icon = document.getElementById('pullHandleIcon');
