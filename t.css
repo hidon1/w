@@ -1317,8 +1317,8 @@ body.dark-mode .history-list li {
     user-select: none;
 }
 .card-fab-icon {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     object-fit: contain;
 }
 .card-fab:hover,
@@ -3750,9 +3750,9 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
         left: 15px;
         right: auto;
         bottom: auto;
-        width: 42px;
-        height: 42px;
-        font-size: 18px;
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
         z-index: 1110;
     }
     .dashboard-item h3 {
