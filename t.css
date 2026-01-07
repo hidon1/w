@@ -3940,26 +3940,35 @@ body.dark-mode .add-metric-modal-content input {
     
     /* Stage navigation: Display all 6 categories in one row on desktop */
     .stage-nav-container {
-        flex-wrap: wrap; /* Allow wrapping if needed */
+        flex-wrap: nowrap; /* Prevent wrapping - display all in one row */
         overflow-x: visible; /* Show all categories */
     }
     
     .stage-nav-container > div {
         width: auto; /* Let divs size naturally */
         display: flex;
-        flex-wrap: nowrap;
-        gap: 8px;
+        flex-wrap: nowrap; /* Ensure buttons within divs don't wrap */
+        gap: 6px; /* Reduced gap to save space */
     }
     
     .wine-icon-container {
         width: auto; /* Let wine icon size naturally */
         order: 1; /* Keep wine icon in middle */
+        flex-shrink: 0; /* Prevent wine icon from shrinking */
+        margin: 0 8px; /* Add some spacing around the icon */
+    }
+    
+    .wine-icon-container img {
+        width: 60px; /* Slightly smaller wine icon on desktop to save space */
+        height: auto;
     }
     
     .stage-nav-button {
         flex: 0 1 auto; /* Allow buttons to size based on content */
-        min-width: 100px; /* Slightly wider on desktop */
-        font-size: calc(var(--font-size-base) * 0.85);
+        min-width: 80px; /* Reduced from 100px to fit better in one row */
+        max-width: 110px; /* Add max-width to prevent buttons from being too wide */
+        font-size: calc(var(--font-size-base) * 0.82);
+        padding: 8px 10px; /* Slightly reduce padding to fit better */
     }
     
     /* Input section: 4 data cubes per row instead of 2 */
