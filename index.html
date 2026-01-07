@@ -212,12 +212,12 @@
             </div>
             <button class="add-custom-property-btn" onclick="addCustomProperty()">+ הוסף שדה מותאם אישית</button>
         </div>
+        <div id="currentStageContent">
+            <div class="input-section" id="currentStageInputSection"></div>
+        </div>
         <div class="stage-overview-container" id="stageOverviewContainer" style="display: none;">
             <h4>נתונים משלבים קודמים</h4>
             <div class="step-cards-grid" id="stepCardsGrid"></div>
-        </div>
-        <div id="currentStageContent">
-            <div class="input-section" id="currentStageInputSection"></div>
         </div>
     </div>
     <div class="dashboard-section" id="fixedDashboardSection">
@@ -427,7 +427,7 @@
                         </button>
                     </div>
                 </div>
-                <button onclick="addReminder()">הוסף תזכורת</button>
+                <button id="addReminderBtn" onclick="addReminder()">הוסף תזכורת</button>
             </div>
             <ul id="remindersList" class="reminders-list"></ul>
         </div>
@@ -1357,35 +1357,53 @@
             const popup = reminderPopupInput.checked;
             const soundSelect = document.getElementById('reminderSound');
             const sound = soundSelect ? soundSelect.value : 'alarm1';
+            const addBtn = document.getElementById('addReminderBtn');
             
             if (text && datetime) {
                 const reminderId = Date.now();
                 
-                // Upload image if selected
-                let imageUrl = null;
-                if (selectedReminderImage) {
-                    imageUrl = await uploadReminderImage(reminderId);
+                // Disable button and show loading state
+                if (addBtn) {
+                    addBtn.disabled = true;
+                    addBtn.textContent = 'שומר...';
                 }
                 
-                reminders.push({ 
-                    id: reminderId, 
-                    text, 
-                    datetime, 
-                    popup, 
-                    sound, 
-                    notified: false,
-                    imageUrl: imageUrl
-                });
-                
-                localStorage.setItem('reminders', JSON.stringify(reminders));
-                await syncRemindersToFirebase();
-                reminderTextInput.value = '';
-                reminderDateTimeInput.value = '';
-                reminderPopupInput.checked = false;
-                if (soundSelect) soundSelect.value = 'alarm1';
-                removeReminderImage();
-                renderRemindersList();
-                checkReminders();
+                try {
+                    // Upload image if selected
+                    let imageUrl = null;
+                    if (selectedReminderImage) {
+                        imageUrl = await uploadReminderImage(reminderId);
+                    }
+                    
+                    reminders.push({ 
+                        id: reminderId, 
+                        text, 
+                        datetime, 
+                        popup, 
+                        sound, 
+                        notified: false,
+                        imageUrl: imageUrl
+                    });
+                    
+                    localStorage.setItem('reminders', JSON.stringify(reminders));
+                    await syncRemindersToFirebase();
+                    reminderTextInput.value = '';
+                    reminderDateTimeInput.value = '';
+                    reminderPopupInput.checked = false;
+                    if (soundSelect) soundSelect.value = 'alarm1';
+                    removeReminderImage();
+                    renderRemindersList();
+                    checkReminders();
+                } catch (error) {
+                    console.error('Error adding reminder:', error);
+                    alert('שגיאה בשמירת התזכורת. אנא נסה שוב.');
+                } finally {
+                    // Re-enable button and restore text
+                    if (addBtn) {
+                        addBtn.disabled = false;
+                        addBtn.textContent = 'הוסף תזכורת';
+                    }
+                }
             } else {
                 alert('אנא הזן טקסט ותאריך/שעה.');
             }
