@@ -1547,7 +1547,8 @@
                 });
             }
         }
-        window.onload = async () => {
+        // Initialize data and UI on page load - Part 1
+        window.addEventListener('load', async () => {
             // Load stagesConfig from localStorage if available
             const savedStagesConfig = localStorage.getItem('stagesConfig');
             if (savedStagesConfig) {
@@ -1580,9 +1581,11 @@
             // Data is stored in localStorage and will be synced to Firebase once logged in
             
             // Add touch event listeners for card swipe functionality
-            projectDetailsCard.addEventListener('touchstart', handleTouchStart);
-            projectDetailsCard.addEventListener('touchmove', handleTouchMove);
-            projectDetailsCard.addEventListener('touchend', handleTouchEnd);
+            if (projectDetailsCard) {
+                projectDetailsCard.addEventListener('touchstart', handleTouchStart);
+                projectDetailsCard.addEventListener('touchmove', handleTouchMove);
+                projectDetailsCard.addEventListener('touchend', handleTouchEnd);
+            }
             
             if (cardFab) {
                 cardFab.addEventListener('click', toggleCardFromFab);
@@ -1590,7 +1593,7 @@
             
             // Initialize card position to prevent flickering
             initializeProjectDetailsCard();
-        };
+        });
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
             projectYearFilter.value = 'all';
@@ -4505,6 +4508,7 @@
                 }
             }
         }
+        // Authentication and UI initialization on page load - Part 2
         window.addEventListener('load', () => {
             // Remove preload class to enable animations smoothly
             setTimeout(() => {
@@ -5292,12 +5296,8 @@
                 projectDetailsCard.style.pointerEvents = 'none';
                 projectDetailsCard.style.visibility = 'hidden';
                 cardOpen = false;
-                if (typeof setCardFabVisibility === 'function') {
-                    setCardFabVisibility();
-                }
-                if (typeof updateCardFabState === 'function') {
-                    updateCardFabState();
-                }
+                setCardFabVisibility();
+                updateCardFabState();
             } else {
                 // Desktop: show card on screen
                 projectDetailsCard.style.left = '15px';
