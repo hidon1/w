@@ -1588,7 +1588,22 @@
             }
             
             if (cardFab) {
-                cardFab.addEventListener('click', toggleCardFromFab);
+                // Use a flag to prevent double-firing on touch devices
+                let touchHandled = false;
+                
+                cardFab.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    touchHandled = true;
+                    toggleCardFromFab();
+                    // Reset flag after a short delay
+                    setTimeout(() => { touchHandled = false; }, 300);
+                });
+                
+                cardFab.addEventListener('click', (e) => {
+                    if (!touchHandled) {
+                        toggleCardFromFab();
+                    }
+                });
             }
             
             // Initialize card position to prevent flickering
@@ -1752,13 +1767,8 @@
             stageNavContainer.style.display = 'flex';
             projectDetailsCard.style.display = 'block';
             fixedDashboardSection.style.display = 'flex';
-            const stageOrder = Object.keys(stagesConfig);
-            const currentStageIndex = stageOrder.indexOf(currentStageId);
-            if (currentStageIndex > 0) {
-                stageOverviewContainer.style.display = 'block';
-            } else {
-                stageOverviewContainer.style.display = 'none';
-            }
+            // Always show stage overview container
+            stageOverviewContainer.style.display = 'block';
         }
         function createNewProjectData(name) {
             const newProject = {
@@ -3394,12 +3404,24 @@
             stepCardsGrid.innerHTML = '';
             const stageOrder = Object.keys(stagesConfig).filter(id => id !== 'wineDetails');
             const currentStageIndex = stageOrder.indexOf(currentStageId);
+            
+            // Always show the container, even in harvest stage (stage1)
+            stageOverviewContainer.style.display = 'block';
+            
             if (currentStageIndex === 0) {
-                stageOverviewContainer.style.display = 'none';
+                // For harvest stage (first stage), show empty state message
+                const emptyStateDiv = document.createElement('div');
+                emptyStateDiv.className = 'stage-overview-empty-state';
+                emptyStateDiv.innerHTML = `
+                    <p>
+                        <i class="fas fa-info-circle"></i>
+                        אין עדיין נתונים משלבים קודמים. זהו השלב הראשון.
+                    </p>
+                `;
+                stepCardsGrid.appendChild(emptyStateDiv);
                 return;
-            } else {
-                stageOverviewContainer.style.display = 'block';
             }
+            
             for (let i = 0; i < currentStageIndex; i++) {
                 const prevStageId = stageOrder[i];
                 const prevStageConfig = stagesConfig[prevStageId];
