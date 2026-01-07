@@ -269,6 +269,43 @@
         display: flex !important;
     }
     
+    /* Stage overview section - mobile specific styling */
+    .stage-overview-container {
+        margin-top: 20px;
+        margin-bottom: 30px;
+        padding: 15px 10px;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px;
+        border: 2px solid var(--primary-color);
+    }
+    
+    .stage-overview-container h4 {
+        font-size: calc(var(--font-size-base) * 1.1);
+        margin-bottom: 15px;
+        text-align: center;
+        color: var(--primary-color);
+    }
+    
+    .step-cards-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+    }
+    
+    .step-preview-card {
+        padding: 10px;
+        border-radius: 10px;
+    }
+    
+    .step-preview-card h5 {
+        font-size: calc(var(--font-size-base) * 0.9);
+        margin-bottom: 6px;
+    }
+    
+    .step-preview-card p {
+        font-size: calc(var(--font-size-base) * 0.75);
+        margin: 2px 0;
+    }
+    
     /* Show mobile description, hide desktop description */
     .login-description-mobile {
         display: block !important;
@@ -2154,6 +2191,32 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
     color: var(--secondary-color);
     margin-right: 5px;
     transition: color var(--animation-speed);
+}
+
+body.dark-mode .stage-overview-container {
+    background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
+    border-color: var(--dark-primary-color);
+}
+
+body.dark-mode .stage-overview-container h4 {
+    color: var(--dark-primary-color);
+}
+
+body.dark-mode .step-preview-card {
+    background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
+    border-color: var(--dark-border-color);
+}
+
+body.dark-mode .step-preview-card h5 {
+    color: var(--dark-primary-color);
+}
+
+body.dark-mode .step-preview-card p {
+    color: var(--dark-text-color);
+}
+
+body.dark-mode .step-preview-card .summary-value {
+    color: var(--dark-accent-color);
 }
 
 .project-details-card {
