@@ -800,7 +800,7 @@
         let comparisonProjectId = null;
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
-        // Card transition constants - matches CSS: .project-details-card { transition: left 0.3s ease; }
+        // Card transition duration - set via JS: projectDetailsCard.style.transition = 'left 0.3s ease'
         const CARD_TRANSITION_DURATION = 300; // milliseconds
         let cardHideTimeout = null; // Track timeout to prevent race conditions
         // משתני הזזה לכרטיסיה
@@ -5015,12 +5015,15 @@
             }
             
             // Schedule visibility hide after transition completes
-            cardHideTimeout = setTimeout(() => {
-                if (!cardOpen) { // Double check state hasn't changed
+            const timeoutId = setTimeout(() => {
+                // Only hide if this is still the current timeout (no race condition)
+                if (cardHideTimeout === timeoutId && !cardOpen) {
                     projectDetailsCard.style.visibility = 'hidden';
+                    cardHideTimeout = null;
                 }
-                cardHideTimeout = null;
             }, CARD_TRANSITION_DURATION);
+            
+            cardHideTimeout = timeoutId;
         }
         
         // פונקציות הזזה לכרטיסיה במובייל
