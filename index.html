@@ -5012,18 +5012,17 @@
             // Cancel any pending hide timeout to prevent race conditions
             if (cardHideTimeout) {
                 clearTimeout(cardHideTimeout);
+                cardHideTimeout = null;
             }
             
             // Schedule visibility hide after transition completes
-            const timeoutId = setTimeout(() => {
-                // Only hide if this is still the current timeout (no race condition)
-                if (cardHideTimeout === timeoutId && !cardOpen) {
+            cardHideTimeout = setTimeout(() => {
+                // Only hide if card is still closed (timeout wasn't canceled)
+                if (!cardOpen && cardHideTimeout) {
                     projectDetailsCard.style.visibility = 'hidden';
                     cardHideTimeout = null;
                 }
             }, CARD_TRANSITION_DURATION);
-            
-            cardHideTimeout = timeoutId;
         }
         
         // פונקציות הזזה לכרטיסיה במובייל
