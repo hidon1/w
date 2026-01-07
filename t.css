@@ -159,18 +159,18 @@
         justify-content: center;
     }
     .dashboard-item {
-        min-width: 35px;
-        max-width: 60px;
-        padding: 2px 3px;
-        min-height: 35px;
+        min-width: 45px;
+        max-width: 75px;
+        padding: 4px 5px;
+        min-height: 50px;
     }
     
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.42);
+        font-size: calc(var(--font-size-base) * 0.72);
     }
     
     .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.58);
+        font-size: calc(var(--font-size-base) * 0.88);
     }
     .card-fab {
         display: flex;
@@ -3756,12 +3756,12 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
         z-index: 1110;
     }
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.42);
+        font-size: calc(var(--font-size-base) * 0.72);
         white-space: normal;
         word-break: break-word;
     }
     .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.58);
+        font-size: calc(var(--font-size-base) * 0.88);
     }
     .input-section {
         grid-template-columns: repeat(2, 1fr);
