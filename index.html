@@ -1752,6 +1752,10 @@
             stageNavContainer.style.display = 'flex';
             projectDetailsCard.style.display = 'block';
             fixedDashboardSection.style.display = 'flex';
+            
+            // Always ensure stage navigation is rendered when showing main content
+            renderStageNavigation();
+            
             const stageOrder = Object.keys(stagesConfig);
             const currentStageIndex = stageOrder.indexOf(currentStageId);
             if (currentStageIndex > 0) {

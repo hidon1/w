@@ -83,6 +83,10 @@
         font-size: calc(var(--font-size-base) * 0.7);
         flex: 1 1 calc(33% - 4px);
         border-radius: 6px;
+        /* Ensure touch events work properly on mobile */
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        user-select: none;
     }
     .close-button {
         top: 20px;
@@ -276,7 +280,7 @@
         padding: 15px 10px;
         background: linear-gradient(135deg, var(--card-background), #f0f0f0);
         border-radius: 12px;
-        border: 2px solid var(--primary-color);
+        /* Remove border - user requested no circle around the section */
     }
     
     .stage-overview-container h4 {
@@ -651,6 +655,10 @@ body.dark-mode .stage-nav-container {
     text-align: center;
     position: relative;
     overflow: hidden;
+    /* Ensure touch events work properly on all devices */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 }
 
 .stage-nav-button::before {
@@ -671,6 +679,12 @@ body.dark-mode .stage-nav-container {
 .stage-nav-button:hover {
     background-color: var(--secondary-color);
     transform: translateY(-2px);
+}
+
+/* Active state for mobile touch feedback */
+.stage-nav-button:active {
+    background-color: var(--primary-color);
+    transform: scale(0.98);
 }
 
 .stage-nav-button.active {
