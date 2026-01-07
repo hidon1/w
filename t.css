@@ -321,6 +321,21 @@
         color: var(--primary-color);
     }
     
+    .stage-overview-empty-state {
+        text-align: center;
+        color: var(--light-text-color);
+        font-size: calc(var(--font-size-base) * 0.9);
+        padding: 15px;
+    }
+    
+    .stage-overview-empty-state i {
+        margin-left: 8px;
+    }
+        margin-bottom: 15px;
+        text-align: center;
+        color: var(--primary-color);
+    }
+    
     .step-cards-grid {
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 10px;
@@ -2187,6 +2202,27 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
     font-size: calc(var(--font-size-base) * 1.3);
     font-weight: 700;
     transition: color var(--animation-speed);
+}
+
+.stage-overview-empty-state {
+    text-align: center;
+    color: var(--light-text-color);
+    font-size: calc(var(--font-size-base) * 0.95);
+    padding: 20px 15px;
+    line-height: 1.6;
+}
+
+.stage-overview-empty-state i {
+    margin-left: 8px;
+    color: var(--primary-color);
+}
+
+body.dark-mode .stage-overview-empty-state {
+    color: var(--dark-light-text-color);
+}
+
+body.dark-mode .stage-overview-empty-state i {
+    color: var(--dark-primary-color);
 }
 
 .step-cards-grid {

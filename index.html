@@ -1588,11 +1588,21 @@
             }
             
             if (cardFab) {
-                cardFab.addEventListener('click', toggleCardFromFab);
-                // Add touch event support for better mobile responsiveness
+                // Use a flag to prevent double-firing on touch devices
+                let touchHandled = false;
+                
                 cardFab.addEventListener('touchend', (e) => {
                     e.preventDefault();
+                    touchHandled = true;
                     toggleCardFromFab();
+                    // Reset flag after a short delay
+                    setTimeout(() => { touchHandled = false; }, 300);
+                });
+                
+                cardFab.addEventListener('click', (e) => {
+                    if (!touchHandled) {
+                        toggleCardFromFab();
+                    }
                 });
             }
             
@@ -3403,8 +3413,8 @@
                 const emptyStateDiv = document.createElement('div');
                 emptyStateDiv.className = 'stage-overview-empty-state';
                 emptyStateDiv.innerHTML = `
-                    <p style="text-align: center; color: var(--light-text-color); font-size: calc(var(--font-size-base) * 0.9); padding: 15px;">
-                        <i class="fas fa-info-circle" style="margin-left: 8px;"></i>
+                    <p>
+                        <i class="fas fa-info-circle"></i>
                         אין עדיין נתונים משלבים קודמים. זהו השלב הראשון.
                     </p>
                 `;
