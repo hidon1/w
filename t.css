@@ -279,20 +279,11 @@
         border: 2px solid var(--primary-color);
     }
     
-    body.dark-mode .stage-overview-container {
-        background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
-        border-color: var(--dark-primary-color);
-    }
-    
     .stage-overview-container h4 {
         font-size: calc(var(--font-size-base) * 1.1);
         margin-bottom: 15px;
         text-align: center;
         color: var(--primary-color);
-    }
-    
-    body.dark-mode .stage-overview-container h4 {
-        color: var(--dark-primary-color);
     }
     
     .step-cards-grid {
