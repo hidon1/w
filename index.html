@@ -1547,7 +1547,7 @@
                 });
             }
         }
-        // Initialize data and UI on page load - Part 1
+        // Initialize application on page load
         window.addEventListener('load', async () => {
             // Load stagesConfig from localStorage if available
             const savedStagesConfig = localStorage.getItem('stagesConfig');
@@ -1593,6 +1593,93 @@
             
             // Initialize card position to prevent flickering
             initializeProjectDetailsCard();
+            
+            // Remove preload class to enable animations smoothly after initialization
+            setTimeout(() => {
+                document.body.classList.remove('preload');
+                document.body.classList.add('loaded');
+            }, 100);
+            
+            // Set up authentication listeners
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const changeSitePasswordBtn = document.getElementById('changeSitePasswordBtn');
+            const authStatus = document.getElementById('authStatus');
+            auth.getRedirectResult().then((result) => {
+                if (result.user) {
+                    console.log('User signed in via redirect');
+                } else {
+                    // Normal case - no redirect happened
+                    // This occurs when:
+                    // 1. User is already authenticated from a previous session
+                    // 2. Popup authentication was used instead of redirect
+                    // 3. Page was loaded directly without going through auth flow
+                    // This is not an error
+                }
+            }).catch((error) => {
+                console.error('Redirect sign-in error:', error);
+                alert('שגיאה בהתחברות: ' + error.message);
+            });
+            if (loginBtn) {
+                loginBtn.addEventListener('click', () => {
+                    try {
+                        // Note: loginWithGoogle() handles async errors internally via .catch() handlers
+                        // This try-catch only catches synchronous errors during function invocation
+                        loginWithGoogle();
+                    } catch (error) {
+                        console.error('Error calling loginWithGoogle:', error);
+                        alert('שגיאה בהתחברות: ' + error.message);
+                    }
+                });
+            }
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    await auth.signOut();
+                });
+            }
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
+                    if (loginBtn) loginBtn.style.display = 'none';
+                    if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = ENABLE_SITE_PASSWORD_PROMPT ? 'inline-block' : 'none';
+                    if (logoutBtn) logoutBtn.style.display = 'inline-block';
+                    await loadStateFromFirebase(user);
+                    
+                    // Load reminders and inbox from Firebase
+                    await loadRemindersFromFirebase();
+                    await loadInboxFromFirebase();
+                    renderRemindersList();
+                    renderInboxList();
+                    updateInboxBadge();
+                    
+                    // Set up real-time synchronization for all data
+                    setupRealtimeSync(user);
+                    setupInboxRealtimeSync(user);
+                    setupRemindersRealtimeSync(user);
+                    
+                    closeLoginModal();
+                    
+                    // Check if user signed in with Google and needs to set site password
+                    if (ENABLE_SITE_PASSWORD_PROMPT && user.providerData && user.providerData.length > 0) {
+                        const googleProvider = user.providerData.find(p => p.providerId === 'google.com');
+                        if (googleProvider) {
+                            await checkAndPromptForSitePassword(user);
+                        }
+                    }
+                } else {
+                    if (authStatus) authStatus.textContent = 'לא מחובר';
+                    if (loginBtn) loginBtn.style.display = 'inline-block';
+                    if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'none';
+                    if (logoutBtn) logoutBtn.style.display = 'none';
+                    
+                    // Clean up real-time listeners
+                    setupRealtimeSync(null);
+                    setupInboxRealtimeSync(null);
+                    setupRemindersRealtimeSync(null);
+                    
+                    openLoginModal();
+                }
+            });
         });
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
@@ -4508,94 +4595,6 @@
                 }
             }
         }
-        // Authentication and UI initialization on page load - Part 2
-        window.addEventListener('load', () => {
-            // Remove preload class to enable animations smoothly
-            setTimeout(() => {
-                document.body.classList.remove('preload');
-                document.body.classList.add('loaded');
-            }, 100);
-            
-            const loginBtn = document.getElementById('loginBtn');
-            const logoutBtn = document.getElementById('logoutBtn');
-            const changeSitePasswordBtn = document.getElementById('changeSitePasswordBtn');
-            const authStatus = document.getElementById('authStatus');
-            auth.getRedirectResult().then((result) => {
-                if (result.user) {
-                    console.log('User signed in via redirect');
-                } else {
-                    // Normal case - no redirect happened
-                    // This occurs when:
-                    // 1. User is already authenticated from a previous session
-                    // 2. Popup authentication was used instead of redirect
-                    // 3. Page was loaded directly without going through auth flow
-                    // This is not an error
-                }
-            }).catch((error) => {
-                console.error('Redirect sign-in error:', error);
-                alert('שגיאה בהתחברות: ' + error.message);
-            });
-            if (loginBtn) {
-                loginBtn.addEventListener('click', () => {
-                    try {
-                        // Note: loginWithGoogle() handles async errors internally via .catch() handlers
-                        // This try-catch only catches synchronous errors during function invocation
-                        loginWithGoogle();
-                    } catch (error) {
-                        console.error('Error calling loginWithGoogle:', error);
-                        alert('שגיאה בהתחברות: ' + error.message);
-                    }
-                });
-            }
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', async () => {
-                    await auth.signOut();
-                });
-            }
-            auth.onAuthStateChanged(async (user) => {
-                if (user) {
-                    if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
-                    if (loginBtn) loginBtn.style.display = 'none';
-                    if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = ENABLE_SITE_PASSWORD_PROMPT ? 'inline-block' : 'none';
-                    if (logoutBtn) logoutBtn.style.display = 'inline-block';
-                    await loadStateFromFirebase(user);
-                    
-                    // Load reminders and inbox from Firebase
-                    await loadRemindersFromFirebase();
-                    await loadInboxFromFirebase();
-                    renderRemindersList();
-                    renderInboxList();
-                    updateInboxBadge();
-                    
-                    // Set up real-time synchronization for all data
-                    setupRealtimeSync(user);
-                    setupInboxRealtimeSync(user);
-                    setupRemindersRealtimeSync(user);
-                    
-                    closeLoginModal();
-                    
-                    // Check if user signed in with Google and needs to set site password
-                    if (ENABLE_SITE_PASSWORD_PROMPT && user.providerData && user.providerData.length > 0) {
-                        const googleProvider = user.providerData.find(p => p.providerId === 'google.com');
-                        if (googleProvider) {
-                            await checkAndPromptForSitePassword(user);
-                        }
-                    }
-                } else {
-                    if (authStatus) authStatus.textContent = 'לא מחובר';
-                    if (loginBtn) loginBtn.style.display = 'inline-block';
-                    if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'none';
-                    if (logoutBtn) logoutBtn.style.display = 'none';
-                    
-                    // Clean up real-time listeners
-                    setupRealtimeSync(null);
-                    setupInboxRealtimeSync(null);
-                    setupRemindersRealtimeSync(null);
-                    
-                    openLoginModal();
-                }
-            });
-        });
         function openLoginModal() {
             const modal = document.getElementById('loginModal');
             if (modal) {
