@@ -16,6 +16,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-messaging-compat.js"></script>
     <link rel="stylesheet" href="t.css">
     <!-- Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -29,10 +30,21 @@
             appId: "1:659709195708:web:39b401c67d31206b4667b9",
             measurementId: "G-25Q2F6G9QC"
         };
+        
+        // Make config available globally for service worker and modules
+        window.FIREBASE_CONFIG = firebaseConfig;
+        window.VAPID_PUBLIC_KEY = "REPLACE_ME_VAPID"; // TODO: Replace with actual VAPID key
+        
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         const storage = firebase.storage();
+        
+        // Initialize Firebase Messaging for push notifications
+        let messaging = null;
+        if (firebase.messaging.isSupported()) {
+            messaging = firebase.messaging();
+        }
         
         // Site password prompt configuration - set to false to disable auto-prompt
         const ENABLE_SITE_PASSWORD_PROMPT = false;
@@ -1124,39 +1136,74 @@
         
         async function loadRemindersFromFirebase() {
             const user = auth.currentUser;
+            
+            // First, try to load from IndexedDB (most reliable, no quota issues)
+            try {
+                const indexedDBReminders = await getAllRemindersFromIndexedDB();
+                if (indexedDBReminders && indexedDBReminders.length > 0) {
+                    reminders = indexedDBReminders;
+                    console.log('Loaded reminders from IndexedDB:', indexedDBReminders.length);
+                }
+            } catch (error) {
+                console.error('Error loading from IndexedDB:', error);
+            }
+            
             if (!user) {
-                // Load from localStorage
+                // Not logged in, try localStorage as fallback
                 const localReminders = localStorage.getItem('reminders');
-                if (localReminders) {
-                    reminders = JSON.parse(localReminders);
+                if (localReminders && reminders.length === 0) {
+                    try {
+                        reminders = JSON.parse(localReminders);
+                        // Migrate to IndexedDB
+                        for (const reminder of reminders) {
+                            await saveReminderToIndexedDB(reminder);
+                        }
+                    } catch (error) {
+                        console.error('Error loading from localStorage:', error);
+                    }
                 }
                 return;
             }
             
+            // Logged in, sync with Firebase
             try {
                 const docRef = db.collection('userReminders').doc(user.uid);
                 const docSnap = await docRef.get();
                 
                 if (docSnap.exists) {
                     const data = docSnap.data();
-                    reminders = data.reminders || [];
-                    localStorage.setItem('reminders', JSON.stringify(reminders));
+                    const firebaseReminders = data.reminders || [];
+                    
+                    // Merge Firebase reminders with IndexedDB
+                    if (firebaseReminders.length > 0) {
+                        reminders = firebaseReminders;
+                        // Update IndexedDB with Firebase data
+                        for (const reminder of reminders) {
+                            await saveReminderToIndexedDB(reminder);
+                        }
+                    }
+                } else if (reminders.length > 0) {
+                    // No Firebase data, upload IndexedDB data to Firebase
+                    await syncRemindersToFirebase();
                 } else {
-                    // Load from localStorage as fallback
+                    // No Firebase and no IndexedDB, try localStorage
                     const localReminders = localStorage.getItem('reminders');
                     if (localReminders) {
-                        reminders = JSON.parse(localReminders);
-                        // Sync to Firebase for first time
-                        await syncRemindersToFirebase();
+                        try {
+                            reminders = JSON.parse(localReminders);
+                            // Sync to both IndexedDB and Firebase
+                            for (const reminder of reminders) {
+                                await saveReminderToIndexedDB(reminder);
+                            }
+                            await syncRemindersToFirebase();
+                        } catch (error) {
+                            console.error('Error migrating from localStorage:', error);
+                        }
                     }
                 }
             } catch (err) {
                 console.error('Error loading reminders from Firebase:', err);
-                // Fallback to localStorage
-                const localReminders = localStorage.getItem('reminders');
-                if (localReminders) {
-                    reminders = JSON.parse(localReminders);
-                }
+                // Already have IndexedDB data loaded above
             }
         }
         
@@ -1330,24 +1377,41 @@
             
             const user = auth.currentUser;
             if (!user) {
-                console.log('Not logged in - cannot upload image to Firebase Storage');
-                return selectedReminderImage; // Return base64 for local storage
+                // Try to sign in anonymously if not logged in
+                try {
+                    console.log('User not logged in, attempting anonymous sign-in...');
+                    await auth.signInAnonymously();
+                    console.log('Anonymous sign-in successful');
+                } catch (error) {
+                    console.error('Anonymous sign-in failed:', error);
+                    throw new Error('לא ניתן להתחבר למערכת. אנא בדוק את החיבור לאינטרנט ונסה שוב.');
+                }
+            }
+            
+            // Check if online
+            if (!navigator.onLine) {
+                throw new Error('אין חיבור אינטרנט. התמונה לא תועלה.');
             }
             
             try {
+                const currentUser = auth.currentUser;
+                if (!currentUser) {
+                    throw new Error('שגיאה באימות משתמש');
+                }
+                
                 const storageRef = storage.ref();
-                const imageRef = storageRef.child(`reminders/${user.uid}/${reminderId}_${Date.now()}.jpg`);
+                const imageRef = storageRef.child(`reminders/${currentUser.uid}/${reminderId}_${Date.now()}.jpg`);
                 
                 // Upload file
                 await imageRef.put(selectedReminderImageFile);
                 
                 // Get download URL
                 const downloadURL = await imageRef.getDownloadURL();
+                console.log('Image uploaded successfully:', downloadURL);
                 return downloadURL;
             } catch (error) {
                 console.error('Error uploading image:', error);
-                // Fallback to base64 if upload fails
-                return selectedReminderImage;
+                throw new Error('שגיאה בהעלאת התמונה: ' + error.message);
             }
         }
         
@@ -1369,13 +1433,21 @@
                 }
                 
                 try {
-                    // Upload image if selected
+                    // Upload image if selected and online
                     let imageUrl = null;
-                    if (selectedReminderImage) {
-                        imageUrl = await uploadReminderImage(reminderId);
+                    if (selectedReminderImage && navigator.onLine) {
+                        try {
+                            imageUrl = await uploadReminderImage(reminderId);
+                        } catch (uploadError) {
+                            console.error('Image upload error:', uploadError);
+                            // Continue without image if upload fails
+                            alert('שגיאה בהעלאת התמונה: ' + uploadError.message + '\nהתזכורת תישמר ללא תמונה.');
+                        }
+                    } else if (selectedReminderImage && !navigator.onLine) {
+                        alert('אין חיבור אינטרנט. התזכורת תישמר ללא תמונה.');
                     }
                     
-                    reminders.push({ 
+                    const newReminder = { 
                         id: reminderId, 
                         text, 
                         datetime, 
@@ -1383,10 +1455,34 @@
                         sound, 
                         notified: false,
                         imageUrl: imageUrl
-                    });
+                    };
                     
-                    localStorage.setItem('reminders', JSON.stringify(reminders));
-                    await syncRemindersToFirebase();
+                    // Save to IndexedDB (prevents QuotaExceededError)
+                    await saveReminderToIndexedDB(newReminder);
+                    
+                    // Also add to in-memory array
+                    reminders.push(newReminder);
+                    
+                    // Sync to Firebase for cloud backup
+                    try {
+                        await syncRemindersToFirebase();
+                    } catch (syncError) {
+                        console.error('Firebase sync error:', syncError);
+                        // Continue even if Firebase sync fails - data is saved locally
+                    }
+                    
+                    // Backup to localStorage (metadata only, without large base64 images)
+                    try {
+                        const remindersCopy = reminders.map(r => ({
+                            ...r,
+                            // Don't store base64 in localStorage to avoid quota
+                            imageUrl: r.imageUrl && r.imageUrl.startsWith('http') ? r.imageUrl : null
+                        }));
+                        localStorage.setItem('reminders', JSON.stringify(remindersCopy));
+                    } catch (storageErr) {
+                        console.warn('localStorage save failed (using IndexedDB instead):', storageErr);
+                    }
+                    
                     reminderTextInput.value = '';
                     reminderDateTimeInput.value = '';
                     reminderPopupInput.checked = false;
@@ -1438,8 +1534,32 @@
         }
         async function deleteReminder(id) {
             reminders = reminders.filter(r => r.id !== id);
-            localStorage.setItem('reminders', JSON.stringify(reminders));
-            await syncRemindersToFirebase();
+            
+            // Delete from IndexedDB
+            try {
+                await deleteReminderFromIndexedDB(id);
+            } catch (error) {
+                console.error('Error deleting from IndexedDB:', error);
+            }
+            
+            // Update localStorage backup
+            try {
+                const remindersCopy = reminders.map(r => ({
+                    ...r,
+                    imageUrl: r.imageUrl && r.imageUrl.startsWith('http') ? r.imageUrl : null
+                }));
+                localStorage.setItem('reminders', JSON.stringify(remindersCopy));
+            } catch (storageErr) {
+                console.warn('localStorage update failed:', storageErr);
+            }
+            
+            // Sync to Firebase
+            try {
+                await syncRemindersToFirebase();
+            } catch (error) {
+                console.error('Firebase sync error:', error);
+            }
+            
             renderRemindersList();
         }
         function openInboxModal() {
@@ -1580,6 +1700,43 @@
             updateSharedAccessNotice();
             updateInboxBadge();
             requestNotificationPermission();
+            
+            // Register service worker for push notifications
+            if ('serviceWorker' in navigator && messaging) {
+                try {
+                    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                    console.log('Service Worker registered for push notifications:', registration);
+                    
+                    // Request FCM token for push notifications
+                    const vapidKey = window.VAPID_PUBLIC_KEY;
+                    if (vapidKey && vapidKey !== 'REPLACE_ME_VAPID') {
+                        try {
+                            const token = await messaging.getToken({ 
+                                vapidPublicKey: vapidKey,
+                                serviceWorkerRegistration: registration
+                            });
+                            if (token) {
+                                console.log('FCM token obtained:', token);
+                                // TODO: Save token to database for sending push notifications
+                            }
+                        } catch (tokenError) {
+                            console.warn('Unable to get FCM token:', tokenError);
+                        }
+                    } else {
+                        console.log('VAPID key not configured. Push notifications will not work.');
+                    }
+                    
+                    // Handle foreground messages
+                    messaging.onMessage((payload) => {
+                        console.log('Foreground message received:', payload);
+                        const { title, body } = payload.notification || {};
+                        showReminderPopup(title || body || 'תזכורת חדשה');
+                    });
+                } catch (error) {
+                    console.warn('Service worker registration failed:', error);
+                }
+            }
+            
             setInterval(checkReminders, 60000);
             checkReminders();
             const user = auth.currentUser;
@@ -4236,6 +4393,70 @@
                 savedAt: new Date().toISOString()
             };
         }
+        
+        // IndexedDB helper functions for reminders to avoid localStorage QuotaExceededError
+        const REMINDERS_DB_NAME = "reminders-db";
+        const REMINDERS_STORE_NAME = "reminders";
+        
+        function openRemindersDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(REMINDERS_DB_NAME, 1);
+                req.onupgradeneeded = () => {
+                    const db = req.result;
+                    if (!db.objectStoreNames.contains(REMINDERS_STORE_NAME)) {
+                        db.createObjectStore(REMINDERS_STORE_NAME, { keyPath: "id" });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+        
+        async function saveReminderToIndexedDB(reminder) {
+            try {
+                const db = await openRemindersDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(REMINDERS_STORE_NAME, "readwrite");
+                    tx.objectStore(REMINDERS_STORE_NAME).put(reminder);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            } catch (error) {
+                console.error('IndexedDB save error:', error);
+                throw error;
+            }
+        }
+        
+        async function getAllRemindersFromIndexedDB() {
+            try {
+                const db = await openRemindersDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(REMINDERS_STORE_NAME, "readonly");
+                    const req = tx.objectStore(REMINDERS_STORE_NAME).getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => reject(req.error);
+                });
+            } catch (error) {
+                console.error('IndexedDB read error:', error);
+                return [];
+            }
+        }
+        
+        async function deleteReminderFromIndexedDB(id) {
+            try {
+                const db = await openRemindersDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(REMINDERS_STORE_NAME, "readwrite");
+                    tx.objectStore(REMINDERS_STORE_NAME).delete(id);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            } catch (error) {
+                console.error('IndexedDB delete error:', error);
+                throw error;
+            }
+        }
+        
         // Helper function to handle localStorage quota exceeded errors
         // Helper function to handle localStorage errors
         function handleLocalStorageError(err) {
