@@ -1402,8 +1402,11 @@
                 const storageRef = storage.ref();
                 const imageRef = storageRef.child(`reminders/${currentUser.uid}/${reminderId}_${Date.now()}.jpg`);
                 
-                // Upload file
-                await imageRef.put(selectedReminderImageFile);
+                // Upload file with explicit metadata
+                const metadata = {
+                    contentType: selectedReminderImageFile.type || 'image/jpeg'
+                };
+                await imageRef.put(selectedReminderImageFile, metadata);
                 
                 // Get download URL
                 const downloadURL = await imageRef.getDownloadURL();
