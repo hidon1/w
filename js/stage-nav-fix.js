@@ -1,19 +1,34 @@
 // Fallback deterministic stage navigation renderer (always shows 6 categories)
-const STAGES = [
-  { id: 'stage1', label: 'בציר', iconClass: 'fa-leaf' },
-  { id: 'stage2', label: 'ריסוק והכנה לתסיסה', iconClass: 'fa-wine-glass' },
-  { id: 'stage3', label: 'תסיסה אלכוהולית', iconClass: 'fa-flask' },
-  { id: 'stage4', label: 'תסיסה מלולקטית', iconClass: 'fa-sync-alt' },
-  { id: 'stage5', label: 'יישון', iconClass: 'fa-hourglass-half' },
-  { id: 'stage6', label: 'הכנה לבקבוק', iconClass: 'fa-vial' }
-];
+// Uses global stagesConfig from main script to avoid duplication
+
+function getStageDefinitions() {
+  // If stagesConfig is available globally, use it
+  if (window.stagesConfig) {
+    const stages = ['stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'stage6'];
+    return stages
+      .filter(id => window.stagesConfig[id])
+      .map(id => ({
+        id,
+        label: window.stagesConfig[id].longName || window.stagesConfig[id].name
+      }));
+  }
+  
+  // Fallback definitions if stagesConfig not available
+  return [
+    { id: 'stage1', label: 'בציר' },
+    { id: 'stage2', label: 'ריסוק והכנה לתסיסה' },
+    { id: 'stage3', label: 'תסיסה אלכוהולית' },
+    { id: 'stage4', label: 'תסיסה מלולקטית' },
+    { id: 'stage5', label: 'יישון' },
+    { id: 'stage6', label: 'הכנה לבקבוק' }
+  ];
+}
 
 function createButton(stage) {
   const btn = document.createElement('button');
   btn.className = 'stage-nav-button';
   btn.type = 'button';
-  btn.dataset.stageId = stage.id;
-  btn.innerHTML = `<i class="fas ${stage.iconClass}" aria-hidden="true"></i> ${stage.label}`;
+  btn.textContent = stage.label; // Match existing implementation
   btn.addEventListener('click', () => {
     if (typeof window.switchStage === 'function') {
       window.switchStage(stage.id);
@@ -24,33 +39,58 @@ function createButton(stage) {
   return btn;
 }
 
+let renderPending = false;
+
 function renderStageNavDeterministic() {
   const container = document.getElementById('stageNavContainer');
   if (!container) return;
 
-  container.innerHTML = '';
-  const rowLeft = document.createElement('div');
-  const logoRow = document.createElement('div');
-  logoRow.className = 'wine-icon-container';
-  const rowRight = document.createElement('div');
+  // Prevent duplicate renders
+  if (renderPending) return;
+  renderPending = true;
+  
+  requestAnimationFrame(() => {
+    const stages = getStageDefinitions();
+    
+    container.innerHTML = '';
+    const rowLeft = document.createElement('div');
+    const logoRow = document.createElement('div');
+    logoRow.className = 'wine-icon-container';
+    const rowRight = document.createElement('div');
 
-  STAGES.slice(0,3).forEach(s => rowLeft.appendChild(createButton(s)));
-  logoRow.innerHTML = `<img src="image_00b206.png" alt="יין" width="48" height="48" />`;
-  STAGES.slice(3,6).forEach(s => rowRight.appendChild(createButton(s)));
+    stages.slice(0, 3).forEach(s => rowLeft.appendChild(createButton(s)));
+    
+    // Match existing implementation
+    const wineIconLink = document.createElement('a');
+    wineIconLink.href = '#';
+    wineIconLink.onclick = (e) => { e.preventDefault(); };
+    const wineIconImg = document.createElement('img');
+    wineIconImg.src = 'image_00b206.png';
+    wineIconImg.alt = 'Wine Icon';
+    wineIconLink.appendChild(wineIconImg);
+    logoRow.appendChild(wineIconLink);
+    
+    stages.slice(3, 6).forEach(s => rowRight.appendChild(createButton(s)));
 
-  container.appendChild(rowLeft);
-  container.appendChild(logoRow);
-  container.appendChild(rowRight);
+    container.appendChild(rowLeft);
+    container.appendChild(logoRow);
+    container.appendChild(rowRight);
 
-  [rowLeft, logoRow, rowRight].forEach(el => {
-    el.style.display = 'flex';
-    el.style.visibility = 'visible';
+    [rowLeft, logoRow, rowRight].forEach(el => {
+      el.style.display = 'flex';
+      el.style.visibility = 'visible';
+    });
+    
+    renderPending = false;
   });
 }
 
+let observerActive = false;
+let observer = null;
+
 function setupObserver() {
   const container = document.getElementById('stageNavContainer');
-  if (!container) return;
+  if (!container || observerActive) return;
 
   const ensureSix = () => {
     const buttons = container.querySelectorAll('.stage-nav-button');
@@ -62,17 +102,29 @@ function setupObserver() {
 
   ensureSix();
 
-  const obs = new MutationObserver(ensureSix);
-  obs.observe(container, { childList: true, subtree: true });
+  observer = new MutationObserver(ensureSix);
+  observer.observe(container, { childList: true, subtree: true });
+  observerActive = true;
 
   document.addEventListener('visibilitychange', ensureSix);
   window.addEventListener('resize', ensureSix);
+}
+
+function cleanup() {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+    observerActive = false;
+  }
 }
 
 function initStageNavFix() {
   renderStageNavDeterministic();
   setupObserver();
 }
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', cleanup);
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initStageNavFix);
