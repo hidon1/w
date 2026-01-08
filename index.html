@@ -1372,8 +1372,12 @@
         
         async function uploadReminderImage(reminderId) {
             if (!selectedReminderImageFile) {
+                console.log('No image file selected, skipping upload');
                 return null;
             }
+            
+            console.log('Starting image upload for reminder:', reminderId);
+            console.log('Image file:', selectedReminderImageFile.name, selectedReminderImageFile.type, selectedReminderImageFile.size);
             
             const user = auth.currentUser;
             if (!user) {
@@ -1381,7 +1385,7 @@
                 try {
                     console.log('User not logged in, attempting anonymous sign-in...');
                     await auth.signInAnonymously();
-                    console.log('Anonymous sign-in successful');
+                    console.log('Anonymous sign-in successful, uid:', auth.currentUser.uid);
                 } catch (error) {
                     console.error('Anonymous sign-in failed:', error);
                     throw new Error('לא ניתן להתחבר למערכת. אנא בדוק את החיבור לאינטרנט ונסה שוב.');
@@ -1390,6 +1394,7 @@
             
             // Check if online
             if (!navigator.onLine) {
+                console.warn('No internet connection detected');
                 throw new Error('אין חיבור אינטרנט. התמונה לא תועלה.');
             }
             
@@ -1400,20 +1405,27 @@
                 }
                 
                 const storageRef = storage.ref();
-                const imageRef = storageRef.child(`reminders/${currentUser.uid}/${reminderId}_${Date.now()}.jpg`);
+                const imagePath = `reminders/${currentUser.uid}/${reminderId}_${Date.now()}.jpg`;
+                const imageRef = storageRef.child(imagePath);
+                
+                console.log('Uploading image to path:', imagePath);
                 
                 // Upload file with explicit metadata
                 const metadata = {
                     contentType: selectedReminderImageFile.type || 'image/jpeg'
                 };
-                await imageRef.put(selectedReminderImageFile, metadata);
+                
+                const uploadTask = await imageRef.put(selectedReminderImageFile, metadata);
+                console.log('Image uploaded successfully, bytes transferred:', uploadTask.bytesTransferred);
                 
                 // Get download URL
                 const downloadURL = await imageRef.getDownloadURL();
-                console.log('Image uploaded successfully:', downloadURL);
+                console.log('Image download URL obtained:', downloadURL);
                 return downloadURL;
             } catch (error) {
                 console.error('Error uploading image:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
                 throw new Error('שגיאה בהעלאת התמונה: ' + error.message);
             }
         }
@@ -1438,15 +1450,17 @@
                 try {
                     // Upload image if selected and online
                     let imageUrl = null;
-                    if (selectedReminderImage && navigator.onLine) {
+                    if (selectedReminderImageFile && navigator.onLine) {
                         try {
                             imageUrl = await uploadReminderImage(reminderId);
+                            console.log('Image upload completed, URL:', imageUrl);
                         } catch (uploadError) {
                             console.error('Image upload error:', uploadError);
                             // Continue without image if upload fails
                             alert('שגיאה בהעלאת התמונה: ' + uploadError.message + '\nהתזכורת תישמר ללא תמונה.');
                         }
-                    } else if (selectedReminderImage && !navigator.onLine) {
+                    } else if (selectedReminderImageFile && !navigator.onLine) {
+                        console.warn('Offline: Image will not be uploaded');
                         alert('אין חיבור אינטרנט. התזכורת תישמר ללא תמונה.');
                     }
                     
@@ -2531,13 +2545,20 @@
         }
         function renderStageNavigation() {
             stageNavContainer.innerHTML = '';
-            const stageOrder = Object.keys(stagesConfig).filter(id => id !== 'wineDetails');
-            const leftSideStages = stageOrder.slice(0, 3);
-            const rightSideStages = stageOrder.slice(3, 6);
+            // Ensure we have all 6 stages in order
+            const stageOrder = Object.keys(stagesConfig).filter(id => id !== 'wineDetails').sort();
+            
+            // Always ensure we have exactly 6 stages (stage1-stage6)
+            const expectedStages = ['stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'stage6'];
+            const finalStageOrder = expectedStages.filter(stageId => stagesConfig[stageId]);
+            
+            const leftSideStages = finalStageOrder.slice(0, 3);
+            const rightSideStages = finalStageOrder.slice(3, 6);
             const leftDiv = document.createElement('div');
             const rightDiv = document.createElement('div');
             leftSideStages.forEach(stageId => {
                 const stage = stagesConfig[stageId];
+                if (!stage) return; // Skip if stage config is missing
                 const button = document.createElement('button');
                 button.className = 'stage-nav-button';
                 button.textContent = `${stage.longName}`;
@@ -2559,6 +2580,7 @@
             wineIconContainer.appendChild(wineIconLink);
             rightSideStages.forEach(stageId => {
                 const stage = stagesConfig[stageId];
+                if (!stage) return; // Skip if stage config is missing
                 const button = document.createElement('button');
                 button.className = 'stage-nav-button';
                 button.textContent = `${stage.longName}`;
