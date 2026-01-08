@@ -1415,8 +1415,8 @@
                     contentType: selectedReminderImageFile.type || 'image/jpeg'
                 };
                 
-                const uploadTask = await imageRef.put(selectedReminderImageFile, metadata);
-                console.log('Image uploaded successfully, bytes transferred:', uploadTask.bytesTransferred);
+                const uploadSnapshot = await imageRef.put(selectedReminderImageFile, metadata);
+                console.log('Image uploaded successfully, bytes transferred:', uploadSnapshot.bytesTransferred);
                 
                 // Get download URL
                 const downloadURL = await imageRef.getDownloadURL();
@@ -2545,10 +2545,8 @@
         }
         function renderStageNavigation() {
             stageNavContainer.innerHTML = '';
-            // Ensure we have all 6 stages in order
-            const stageOrder = Object.keys(stagesConfig).filter(id => id !== 'wineDetails').sort();
             
-            // Always ensure we have exactly 6 stages (stage1-stage6)
+            // Always ensure we have exactly 6 stages (stage1-stage6) in order
             const expectedStages = ['stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'stage6'];
             const finalStageOrder = expectedStages.filter(stageId => stagesConfig[stageId]);
             
