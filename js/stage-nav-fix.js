@@ -7,20 +7,23 @@ function getStageDefinitions() {
     const stages = ['stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'stage6'];
     return stages
       .filter(id => window.stagesConfig[id])
-      .map(id => ({
-        id,
-        label: window.stagesConfig[id].longName || window.stagesConfig[id].name
-      }));
+      .map(id => {
+        const config = window.stagesConfig[id];
+        return {
+          id,
+          longName: config.longName || config.name
+        };
+      });
   }
   
   // Fallback definitions if stagesConfig not available
   return [
-    { id: 'stage1', label: 'בציר' },
-    { id: 'stage2', label: 'ריסוק והכנה לתסיסה' },
-    { id: 'stage3', label: 'תסיסה אלכוהולית' },
-    { id: 'stage4', label: 'תסיסה מלולקטית' },
-    { id: 'stage5', label: 'יישון' },
-    { id: 'stage6', label: 'הכנה לבקבוק' }
+    { id: 'stage1', longName: 'בציר' },
+    { id: 'stage2', longName: 'ריסוק והכנה לתסיסה' },
+    { id: 'stage3', longName: 'תסיסה אלכוהולית' },
+    { id: 'stage4', longName: 'תסיסה מלולקטית' },
+    { id: 'stage5', longName: 'יישון' },
+    { id: 'stage6', longName: 'הכנה לבקבוק' }
   ];
 }
 
@@ -28,14 +31,14 @@ function createButton(stage) {
   const btn = document.createElement('button');
   btn.className = 'stage-nav-button';
   btn.type = 'button';
-  btn.textContent = stage.label; // Match existing implementation
-  btn.addEventListener('click', () => {
+  btn.textContent = stage.longName; // Match existing implementation
+  btn.onclick = () => {
     if (typeof window.switchStage === 'function') {
       window.switchStage(stage.id);
     } else {
       console.log('[StageNavFix] Clicked:', stage.id, '(switchStage not available)');
     }
-  });
+  };
   return btn;
 }
 
@@ -87,12 +90,17 @@ function renderStageNavDeterministic() {
 
 let observerActive = false;
 let observer = null;
+let visibilityHandler = null;
+let resizeHandler = null;
 
 function setupObserver() {
   const container = document.getElementById('stageNavContainer');
   if (!container || observerActive) return;
 
   const ensureSix = () => {
+    // Skip if already rendering to prevent cascading checks
+    if (renderPending) return;
+    
     const buttons = container.querySelectorAll('.stage-nav-button');
     if (buttons.length !== 6) {
       console.warn('[StageNavFix] Buttons lost/incorrect count, re-rendering...');
@@ -106,8 +114,12 @@ function setupObserver() {
   observer.observe(container, { childList: true, subtree: true });
   observerActive = true;
 
-  document.addEventListener('visibilitychange', ensureSix);
-  window.addEventListener('resize', ensureSix);
+  // Store handlers for cleanup
+  visibilityHandler = ensureSix;
+  resizeHandler = ensureSix;
+  
+  document.addEventListener('visibilitychange', visibilityHandler);
+  window.addEventListener('resize', resizeHandler);
 }
 
 function cleanup() {
@@ -115,6 +127,16 @@ function cleanup() {
     observer.disconnect();
     observer = null;
     observerActive = false;
+  }
+  
+  // Remove event listeners
+  if (visibilityHandler) {
+    document.removeEventListener('visibilitychange', visibilityHandler);
+    visibilityHandler = null;
+  }
+  if (resizeHandler) {
+    window.removeEventListener('resize', resizeHandler);
+    resizeHandler = null;
   }
 }
 
