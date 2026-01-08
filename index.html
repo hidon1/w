@@ -735,6 +735,8 @@
                 customMetrics: {}
             },
         };
+        // Expose stagesConfig globally for the stage-nav-fix module
+        window.stagesConfig = stagesConfig;
         let projects = loadProjects();
         let currentProjectId = localStorage.getItem('currentProjectId') || Object.keys(projects)[0];
         let currentStageId = localStorage.getItem('currentStageId') || 'stage1';
@@ -2598,6 +2600,8 @@
             renderStageNavigation();
             loadCurrentStageContent();
         }
+        // Expose switchStage globally for the stage-nav-fix module
+        window.switchStage = switchStage;
         function loadCurrentStageContent() {
             if (projects[currentProjectId].isClosed) {
                 alert('הפרויקט סגור. פתח אותו כדי לעבוד עליו.');
@@ -5739,5 +5743,6 @@
             setCardFabVisibility();
         }
     </script>
+    <script type="module" src="./js/stage-nav-fix.js"></script>
 </body>
 </html>
