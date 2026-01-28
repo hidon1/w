@@ -1355,20 +1355,17 @@
                 }
                 
                 try {
-                    // Upload image if selected and online
+                    // Convert image to base64 if selected
                     let imageUrl = null;
-                    if (selectedReminderImageFile && navigator.onLine) {
+                    if (selectedReminderImageFile) {
                         try {
                             imageUrl = await uploadReminderImage(reminderId);
-                            console.log('Image upload completed, URL:', imageUrl);
+                            console.log('Image converted to base64');
                         } catch (uploadError) {
-                            console.error('Image upload error:', uploadError);
-                            // Continue without image if upload fails
-                            alert('שגיאה בהעלאת התמונה: ' + uploadError.message + '\nהתזכורת תישמר ללא תמונה.');
+                            console.error('Image conversion error:', uploadError);
+                            // Continue without image if conversion fails
+                            alert('שגיאה בעיבוד התמונה: ' + uploadError.message + '\nהתזכורת תישמר ללא תמונה.');
                         }
-                    } else if (selectedReminderImageFile && !navigator.onLine) {
-                        console.warn('Offline: Image will not be uploaded');
-                        alert('אין חיבור אינטרנט. התזכורת תישמר ללא תמונה.');
                     }
                     
                     const newReminder = { 
@@ -1693,8 +1690,7 @@
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     // Data already loaded from localStorage
                     
-                    // Load reminders and inbox from // Reminders loaded from localStorage
-                    // Inbox loaded from localStorage
+                    // Load reminders and inbox from localStorage
                     renderRemindersList();
                     renderInboxList();
                     updateInboxBadge();
@@ -4430,10 +4426,7 @@
             return;
         }
         
-        // Real-time listeners for inbox and reminders
-        let inboxUnsubscribe = null;
-        let remindersUnsubscribe = null;
-        
+        // Firebase realtime sync functions removed
         function setupInboxRealtimeSync(user) {
             // Firebase realtime sync removed - localStorage only
             return;
@@ -4443,9 +4436,6 @@
             // Firebase realtime sync removed - localStorage only
             return;
         }
-        
-        // Real-time synchronization listener
-        let realtimeUnsubscribe = null;
         
         function setupRealtimeSync(user) {
             // Firebase realtime sync removed - localStorage only
@@ -4736,7 +4726,7 @@
         /**
          * Register a new user with email and password
          */
-        async function registerWithEmailPassword() {
+        function registerWithEmailPassword() {
             const emailInput = document.getElementById('registerEmailInput');
             const passwordInput = document.getElementById('registerPasswordInput');
             
@@ -4767,7 +4757,7 @@
         /**
          * Login with existing email and password
          */
-        async function loginWithEmailPassword() {
+        function loginWithEmailPassword() {
             const emailInput = document.getElementById('loginEmailInput');
             const passwordInput = document.getElementById('loginPasswordInput');
             
@@ -4793,7 +4783,7 @@
         /**
          * Legacy function for site password login (kept for compatibility with existing code)
          */
-        async function loginWithSitePassword() {
+        function loginWithSitePassword() {
             const email = document.getElementById('siteEmailInput') ? document.getElementById('siteEmailInput').value : '';
             const password = document.getElementById('sitePasswordInput') ? document.getElementById('sitePasswordInput').value : '';
             
