@@ -4025,6 +4025,61 @@ body.dark-mode .add-metric-modal-content input {
     margin-left: 10px;
 }
 
+/* Access Management Tabs */
+.access-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.access-tab {
+    flex: 1;
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #666;
+    font-size: calc(var(--font-size-base) * 1);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.access-tab:hover {
+    background: rgba(31, 59, 115, 0.05);
+    color: var(--primary-color);
+}
+
+.access-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: rgba(31, 59, 115, 0.08);
+    font-weight: 600;
+}
+
+.access-tab i {
+    font-size: 1.1em;
+}
+
+.access-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.access-tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .access-section {
     margin-bottom: 25px;
 }

@@ -85,7 +85,6 @@
             <li><button onclick="openInboxModal();">תיבת דואר <span id="inboxBadge" class="inbox-badge" style="display:none;">0</span></button></li>
             <li><button onclick="openRemindersModal();">תזכורות</button></li>
             <li><button onclick="openAccessControlModal();">ניהול גישה</button></li>
-            <li><button onclick="openManageEmailsModal();">ניהול כתובות מייל</button></li>
             <li class="divider"></li>
             <li><button onclick="openInstructionsModal()">הוראות</button></li>
             <li><button onclick="openTimelineModal()">ציר זמן</button></li>
@@ -511,108 +510,121 @@
                 <span class="close-button" onclick="closeAccessControlModal()">&times;</span>
                 <h3><i class="fas fa-users-cog"></i> ניהול גישה למערכת</h3>
                 
-                <!-- Add New User Section -->
-                <div class="access-section add-user-section">
-                    <h4><i class="fas fa-user-plus"></i> הוסף משתמש חדש</h4>
-                    <p class="section-description">הזן את כתובת המייל של המשתמש והגדר הרשאות גישה לפרויקטים</p>
-                    
-                    <div class="form-group">
-                        <label for="newUserEmail"><i class="fas fa-envelope"></i> כתובת מייל:</label>
-                        <input type="email" id="newUserEmail" placeholder="user@example.com" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="userProjectAccess"><i class="fas fa-folder-open"></i> גישה לפרויקטים:</label>
-                        <select id="userProjectAccess">
-                            <option value="all">כל הפרויקטים</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-key"></i> הרשאות:</label>
-                        <div class="permissions-container">
-                            <div class="permission-option">
-                                <input type="radio" id="permView" name="userPermission" value="view" checked>
-                                <label for="permView">
-                                    <i class="fas fa-eye"></i>
-                                    <span class="perm-title">צפייה בלבד</span>
-                                    <span class="perm-desc">המשתמש יוכל לצפות בנתונים בלבד</span>
-                                </label>
-                            </div>
-                            <div class="permission-option">
-                                <input type="radio" id="permEdit" name="userPermission" value="edit">
-                                <label for="permEdit">
-                                    <i class="fas fa-edit"></i>
-                                    <span class="perm-title">עריכה</span>
-                                    <span class="perm-desc">המשתמש יוכל לצפות ולערוך נתונים</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="userFinanceAccess">
-                            <i class="fas fa-dollar-sign"></i> גישה לניהול כספים
-                        </label>
-                    </div>
-                    
-                    <button class="btn-primary" onclick="grantUserAccess()">
-                        <i class="fas fa-user-check"></i> הענק גישה
+                <!-- Tab Navigation -->
+                <div class="access-tabs">
+                    <button class="access-tab active" onclick="switchAccessTab('shareAccess')">
+                        <i class="fas fa-user-plus"></i> שיתוף גישה למשתמשים
+                    </button>
+                    <button class="access-tab" onclick="switchAccessTab('linkEmails')">
+                        <i class="fas fa-link"></i> חיבור כתובות מייל
                     </button>
                 </div>
                 
-                <hr class="section-divider">
-                
-                <!-- Active Users Section -->
-                <div class="access-section active-users-section">
-                    <h4><i class="fas fa-users"></i> משתמשים עם גישה פעילה</h4>
-                    <div class="users-list-container">
-                        <ul id="activeUsersList" class="active-users-list"></ul>
-                        <div id="noUsersMessage" class="no-users-message" style="display:none;">
-                            <i class="fas fa-info-circle"></i>
-                            <p>אין משתמשים עם גישה כרגע</p>
+                <!-- Tab Content: Share Access -->
+                <div id="shareAccessTab" class="access-tab-content active">
+                    <!-- Add New User Section -->
+                    <div class="access-section add-user-section">
+                        <h4><i class="fas fa-user-plus"></i> הוסף משתמש חדש</h4>
+                        <p class="section-description">הזן את כתובת המייל של המשתמש והגדר הרשאות גישה לפרויקטים</p>
+                        
+                        <div class="form-group">
+                            <label for="newUserEmail"><i class="fas fa-envelope"></i> כתובת מייל:</label>
+                            <input type="email" id="newUserEmail" placeholder="user@example.com" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="userProjectAccess"><i class="fas fa-folder-open"></i> גישה לפרויקטים:</label>
+                            <select id="userProjectAccess">
+                                <option value="all">כל הפרויקטים</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-key"></i> הרשאות:</label>
+                            <div class="permissions-container">
+                                <div class="permission-option">
+                                    <input type="radio" id="permView" name="userPermission" value="view" checked>
+                                    <label for="permView">
+                                        <i class="fas fa-eye"></i>
+                                        <span class="perm-title">צפייה בלבד</span>
+                                        <span class="perm-desc">המשתמש יוכל לצפות בנתונים בלבד</span>
+                                    </label>
+                                </div>
+                                <div class="permission-option">
+                                    <input type="radio" id="permEdit" name="userPermission" value="edit">
+                                    <label for="permEdit">
+                                        <i class="fas fa-edit"></i>
+                                        <span class="perm-title">עריכה</span>
+                                        <span class="perm-desc">המשתמש יוכל לצפות ולערוך נתונים</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="userFinanceAccess">
+                                <i class="fas fa-dollar-sign"></i> גישה לניהול כספים
+                            </label>
+                        </div>
+                        
+                        <button class="btn-primary" onclick="grantUserAccess()">
+                            <i class="fas fa-user-check"></i> הענק גישה
+                        </button>
+                    </div>
+                    
+                    <hr class="section-divider">
+                    
+                    <!-- Active Users Section -->
+                    <div class="access-section active-users-section">
+                        <h4><i class="fas fa-users"></i> משתמשים עם גישה פעילה</h4>
+                        <div class="users-list-container">
+                            <ul id="activeUsersList" class="active-users-list"></ul>
+                            <div id="noUsersMessage" class="no-users-message" style="display:none;">
+                                <i class="fas fa-info-circle"></i>
+                                <p>אין משתמשים עם גישה כרגע</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div id="manageEmailsModal" class="modal">
-            <div class="modal-content project-modal-content">
-                <span class="close-button" onclick="closeManageEmailsModal()">&times;</span>
-                <h3>ניהול כתובות מייל משויכות</h3>
-                <p style="margin-top:0; color: #666; font-size: 0.9em;">
-                    הוסף כתובות מייל נוספות לחשבון שלך. כל המיילים המשויכים יאפשרו לך להתחבר לאותו חשבון עם ה-UID הייחודי שלך.
-                </p>
                 
-                <!-- Display currently linked providers -->
-                <div style="margin-bottom: 25px; padding: 15px; background: linear-gradient(135deg, #f0f4ff, #e6f0ff); border-radius: 10px; border: 1px solid #d0e0ff;">
-                    <h4 style="margin-top: 0; color: #1f3b73; font-size: 1em;">כתובות מייל משויכות כעת:</h4>
-                    <ul id="linkedEmailsList" style="list-style: none; padding: 0; margin: 10px 0 0 0;">
-                        <li style="color: #888; font-style: italic;">טוען...</li>
-                    </ul>
-                </div>
-                
-                <!-- Form to add new email -->
-                <div style="padding: 20px; background: linear-gradient(135deg, #fff5f5, #ffe6e6); border-radius: 10px; border: 1px solid #ffd0d0;">
-                    <h4 style="margin-top: 0; color: #8b0000; font-size: 1em;">הוסף כתובת מייל חדשה:</h4>
-                    <p style="margin: 5px 0 15px 0; font-size: 0.85em; color: #666;">
-                        הזן כתובת מייל וסיסמה חדשים. הסיסמה חייבת להיות לפחות 6 תווים.
-                    </p>
-                    <div class="email-form">
-                        <input type="email" id="newLinkedEmail" placeholder="כתובת מייל חדשה" required>
-                        <input type="password" id="newLinkedEmailPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6">
-                        <div class="buttons">
-                            <button class="register-btn" onclick="linkNewEmail()" style="width: 100%;">
-                                <i class="fas fa-link" style="margin-left: 8px;"></i>
-                                שייך כתובת מייל חדשה
-                            </button>
+                <!-- Tab Content: Link Emails -->
+                <div id="linkEmailsTab" class="access-tab-content">
+                    <div class="access-section">
+                        <p style="margin-top:0; color: #666; font-size: 0.9em;">
+                            הוסף כתובות מייל נוספות לחשבון שלך. כל המיילים המשויכים יאפשרו לך להתחבר לאותו חשבון עם ה-UID הייחודי שלך.
+                        </p>
+                        
+                        <!-- Display currently linked providers -->
+                        <div style="margin-bottom: 25px; padding: 15px; background: linear-gradient(135deg, #f0f4ff, #e6f0ff); border-radius: 10px; border: 1px solid #d0e0ff;">
+                            <h4 style="margin-top: 0; color: #1f3b73; font-size: 1em;">כתובות מייל משויכות כעת:</h4>
+                            <ul id="linkedEmailsList" style="list-style: none; padding: 0; margin: 10px 0 0 0;">
+                                <li style="color: #888; font-style: italic;">טוען...</li>
+                            </ul>
                         </div>
+                        
+                        <!-- Form to add new email -->
+                        <div style="padding: 20px; background: linear-gradient(135deg, #fff5f5, #ffe6e6); border-radius: 10px; border: 1px solid #ffd0d0;">
+                            <h4 style="margin-top: 0; color: #8b0000; font-size: 1em;">הוסף כתובת מייל חדשה:</h4>
+                            <p style="margin: 5px 0 15px 0; font-size: 0.85em; color: #666;">
+                                הזן כתובת מייל וסיסמה חדשים. הסיסמה חייבת להיות לפחות 6 תווים.
+                            </p>
+                            <div class="email-form">
+                                <input type="email" id="newLinkedEmail" placeholder="כתובת מייל חדשה" required>
+                                <input type="password" id="newLinkedEmailPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6">
+                                <div class="buttons">
+                                    <button class="register-btn" onclick="linkNewEmail()" style="width: 100%;">
+                                        <i class="fas fa-link" style="margin-left: 8px;"></i>
+                                        שייך כתובת מייל חדשה
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Status message area -->
+                        <div id="linkEmailStatus" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none; font-size: 0.9em;"></div>
                     </div>
                 </div>
-                
-                <!-- Status message area -->
-                <div id="linkEmailStatus" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none; font-size: 0.9em;"></div>
             </div>
         </div>
         <div id="confirmationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle" aria-describedby="confirmationMessage" tabindex="-1">
@@ -2141,12 +2153,36 @@
             }
             populateUserProjectSelect();
             loadActiveUsers();
+            loadLinkedEmails(); // Load linked emails for the second tab
             clearAccessForm();
+            switchAccessTab('shareAccess'); // Default to first tab
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
             fixedDashboardSection.style.display = 'none';
             accessControlModal.style.display = 'flex';
+        }
+        
+        function switchAccessTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.access-tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.access-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            const selectedContent = document.getElementById(tabName + 'Tab');
+            if (selectedContent) {
+                selectedContent.classList.add('active');
+            }
+            
+            // Add active class to clicked tab
+            const clickedTab = event?.target.closest('.access-tab');
+            if (clickedTab) {
+                clickedTab.classList.add('active');
+            }
         }
         
         function closeAccessControlModal() {
@@ -5243,9 +5279,8 @@
         }
         
         /**
-         * Opens the Manage Emails modal for linking multiple email addresses
-         * This allows users to add additional email/password combinations to their account
-         * All linked emails will share the same UID and allow login to the same account
+         * Opens the unified Access Control modal on the Link Emails tab
+         * This redirects to the unified modal for better UX
          */
         function openManageEmailsModal() {
             const user = auth.currentUser;
@@ -5255,30 +5290,19 @@
                 return;
             }
             
-            closeSidebar();
-            const modal = document.getElementById('manageEmailsModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                loadLinkedEmails();
-            }
+            // Open the unified access control modal
+            openAccessControlModal();
+            // Switch to the link emails tab
+            setTimeout(() => {
+                switchAccessTab('linkEmails');
+            }, 100);
         }
         
         /**
-         * Closes the Manage Emails modal
+         * Closes the unified Access Control modal (replaces old Manage Emails modal)
          */
         function closeManageEmailsModal() {
-            const modal = document.getElementById('manageEmailsModal');
-            if (modal) {
-                modal.style.display = 'none';
-                // Clear form fields
-                document.getElementById('newLinkedEmail').value = '';
-                document.getElementById('newLinkedEmailPassword').value = '';
-                // Hide status message
-                const statusDiv = document.getElementById('linkEmailStatus');
-                if (statusDiv) {
-                    statusDiv.style.display = 'none';
-                }
-            }
+            closeAccessControlModal();
         }
         
         /**
