@@ -1,8 +1,5 @@
-import { ensureAuth } from "./auth.js";
 import { saveReminder } from "./indexeddb.js";
 import { isOnline, enqueue, setupOfflineHandlers } from "./offline.js";
-import { uploadReminderImage } from "./image-upload.js";
-import { initNotifications } from "./notifications.js";
 
 // UUID generator with fallback for older browsers
 function generateUUID() {
@@ -18,20 +15,12 @@ function generateUUID() {
 }
 
 const logEl = document.getElementById("log");
-function log(msg) { logEl.textContent += `\n${msg}`; }
+function log(msg) { if (logEl) logEl.textContent += `\n${msg}`; }
 
 setupOfflineHandlers();
 
-// Register SW for messaging
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/firebase-messaging-sw.js").then(() => log("Service worker registered"));
-}
-
-// Init notifications (best-effort)
-initNotifications().catch((e) => log("Notifications init error: " + e.message));
-
-// Auth before actions
-ensureAuth().then(() => log("Authenticated (anonymous)")).catch((e) => log("Auth error: " + e.message));
+// Firebase and notifications removed
+log("Running in offline-only mode");
 
 // Camera/gallery input handling
 const pickBtn = document.getElementById("pickBtn");
@@ -51,23 +40,11 @@ const dueInput = document.getElementById("dueInput");
 
 saveBtn.addEventListener("click", async () => {
   try {
-    await ensureAuth();
-    let imageUrl;
-    const doUpload = async () => {
-      if (selectedFile) imageUrl = await uploadReminderImage(selectedFile);
-    };
-    if (isOnline()) {
-      await doUpload();
-    } else if (selectedFile) {
-      enqueue(doUpload);
-      log("אופליין — ההעלאה תתבצע כשיהיה חיבור");
-    }
-
+    // Image upload removed - Firebase storage no longer available
     const reminder = {
       id: generateUUID(),
       title: titleInput.value || "ללא כותרת",
       dueAt: new Date(dueInput.value).getTime() || Date.now(),
-      imageUrl,
       createdAt: Date.now(),
     };
     await saveReminder(reminder);
