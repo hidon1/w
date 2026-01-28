@@ -402,6 +402,8 @@
     --secondary-color: #9D2449;
     --accent-color: #D4AF37; /* Golden accent */
     --background-color: #FAF7F2;
+    --background-color-mid: #F5EEE6;
+    --background-color-end: #E8DFD5;
     --card-background: #ffffff;
     --text-color: #2C2C2C;
     --light-text-color: #5A5A5A;
@@ -416,6 +418,8 @@
     --top-section-background: linear-gradient(135deg, #FFF8E1, #F5F5DC);
     --top-section-border: #D4C6B1;
     --dark-background-color: #1A1A1D;
+    --dark-background-color-mid: #0F0F11;
+    --dark-background-color-end: #000000;
     --dark-card-background: #2A2A2E;
     --dark-text-color: #E8DFD5;
     --dark-light-text-color: #B8AFA0;
@@ -519,7 +523,7 @@ body {
     margin: 0;
     padding: 0;
     padding-bottom: 180px;
-    background: linear-gradient(135deg, #FAF7F2 0%, #F5EEE6 50%, #E8DFD5 100%);
+    background: linear-gradient(135deg, var(--background-color) 0%, var(--background-color-mid) 50%, var(--background-color-end) 100%);
     background-attachment: fixed;
     color: var(--text-color);
     direction: rtl;
@@ -563,7 +567,7 @@ body.loaded {
 }
 
 body.dark-mode {
-    background: linear-gradient(135deg, #1A1A1D 0%, #0F0F11 50%, #000000 100%);
+    background: linear-gradient(135deg, var(--dark-background-color) 0%, var(--dark-background-color-mid) 50%, var(--dark-background-color-end) 100%);
     background-attachment: fixed;
     color: var(--dark-text-color);
 }
