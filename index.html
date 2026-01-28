@@ -12,60 +12,174 @@
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/pdfmake.min.js"></script>
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/vfs_fonts.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-messaging-compat.js"></script>
     <link rel="stylesheet" href="t.css">
-    <!-- Google Identity Services (GIS) Library -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC8hWZ5XJGBQZx32m3VkL4JwPFe90qZAdQ",
-            authDomain: "wine-d0c2c.firebaseapp.com",
-            projectId: "wine-d0c2c",
-            storageBucket: "wine-d0c2c.firebasestorage.app",
-            messagingSenderId: "659709195708",
-            appId: "1:659709195708:web:39b401c67d31206b4667b9",
-            measurementId: "G-25Q2F6G9QC"
-        };
-        
-        // Make config available globally for service worker and modules
-        window.FIREBASE_CONFIG = firebaseConfig;
-        window.VAPID_PUBLIC_KEY = "REPLACE_ME_VAPID"; // TODO: Replace with actual VAPID key
-        
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const storage = firebase.storage();
-        
-        // Initialize Firebase Messaging for push notifications
-        let messaging = null;
-        if (firebase.messaging.isSupported()) {
-            messaging = firebase.messaging();
-        }
-        
+        // Simple client-side authentication
         // Site password prompt configuration - set to false to disable auto-prompt
         const ENABLE_SITE_PASSWORD_PROMPT = false;
-        
-        // Enable Firestore persistence for offline support and faster real-time sync
-        db.enablePersistence({ synchronizeTabs: true })
-            .then(() => {
-                console.log('Firestore persistence enabled - real-time sync optimized');
-            })
-            .catch((err) => {
-                if (err.code === 'failed-precondition') {
-                    // Multiple tabs open, persistence can only be enabled in one tab at a time
-                    console.log('Firestore persistence unavailable - multiple tabs open');
-                } else if (err.code === 'unimplemented') {
-                    // The current browser doesn't support persistence
-                    console.log('Firestore persistence not supported in this browser');
-                }
-            });
     </script>
 </head>
 <body class="preload">
+    <script>
+        // Simplified Authentication System (replaces null
+        const SimpleAuth = {
+            currentUser: null,
+            users: {},
+            
+            init() {
+                const storedUsers = localStorage.getItem('simpleAuth_users');
+                if (storedUsers) {
+                    this.users = JSON.parse(storedUsers);
+                }
+                const sessionUser = sessionStorage.getItem('currentUser');
+                if (sessionUser) {
+                    this.currentUser = JSON.parse(sessionUser);
+                }
+            },
+            
+            signUp(email, password) {
+                if (this.users[email]) {
+                    throw new Error('המשתמש כבר קיים');
+                }
+                this.users[email] = {
+                    email: email,
+                    passwordHash: this.hashPassword(password),
+                    uid: email,
+                    createdAt: Date.now()
+                };
+                localStorage.setItem('simpleAuth_users', JSON.stringify(this.users));
+                return this.signIn(email, password);
+            },
+            
+            signIn(email, password) {
+                const user = this.users[email];
+                if (!user || user.passwordHash !== this.hashPassword(password)) {
+                    throw new Error('אימייל או סיסמה שגויים');
+                }
+                this.currentUser = {
+                    email: email,
+                    uid: email,
+                    displayName: email
+                };
+                sessionStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                if (this._authCallback) {
+                    this._authCallback(this.currentUser);
+                }
+                return this.currentUser;
+            },
+            
+            signOut() {
+                this.currentUser = null;
+                sessionStorage.removeItem('currentUser');
+                if (this._authCallback) {
+                    this._authCallback(null);
+                }
+            },
+            
+            hashPassword(password) {
+                let hash = 0;
+                for (let i = 0; i < password.length; i++) {
+                    const char = password.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return hash.toString();
+            },
+            
+            onAuthStateChanged(callback) {
+                this._authCallback = callback;
+                // Call immediately with current state
+                if (callback) {
+                    callback(this.currentUser);
+                }
+            },
+            
+            getRedirectResult() {
+                return Promise.resolve({});
+            }
+        };
+        
+        // Initialize auth
+        SimpleAuth.init();
+        
+        // Create compatible auth object with getter for currentUser
+        const auth = {
+            get currentUser() {
+                return SimpleAuth.currentUser;
+            },
+            signOut: () => SimpleAuth.signOut(),
+            onAuthStateChanged: (callback) => SimpleAuth.onAuthStateChanged(callback),
+            getRedirectResult: () => SimpleAuth.getRedirectResult()
+        };
+        
+        // Simplified Access Management
+        const AccessManagement = {
+            ACCESS_KEY: 'userAccess',
+            
+            grantAccess(targetEmail, projectId, allowEdit, allowFinance) {
+                const currentEmail = SimpleAuth.currentUser?.email;
+                if (!currentEmail) throw new Error('Not authenticated');
+                
+                const accessData = this.getAccessData();
+                const accessId = Date.now().toString();
+                accessData[accessId] = {
+                    id: accessId,
+                    ownerEmail: currentEmail,
+                    userEmail: targetEmail,
+                    projectId: projectId === 'all' ? null : projectId,
+                    allowEdit: allowEdit || false,
+                    allowFinance: allowFinance || false,
+                    status: 'active',
+                    createdAt: Date.now()
+                };
+                this.saveAccessData(accessData);
+                return accessId;
+            },
+            
+            getActiveUsers() {
+                const currentEmail = SimpleAuth.currentUser?.email;
+                if (!currentEmail) return [];
+                const accessData = this.getAccessData();
+                return Object.values(accessData).filter(access => 
+                    access.ownerEmail === currentEmail && access.status === 'active'
+                );
+            },
+            
+            revokeAccess(accessId) {
+                const accessData = this.getAccessData();
+                if (accessData[accessId]) {
+                    accessData[accessId].status = 'revoked';
+                    this.saveAccessData(accessData);
+                }
+            },
+            
+            checkAccess(userEmail, projectId) {
+                const accessData = this.getAccessData();
+                return Object.values(accessData).find(access => 
+                    access.userEmail === userEmail &&
+                    access.status === 'active' &&
+                    (access.projectId === null || access.projectId === projectId)
+                );
+            },
+            
+            getAccessData() {
+                try {
+                    const data = localStorage.getItem(this.ACCESS_KEY);
+                    return data ? JSON.parse(data) : {};
+                } catch (e) {
+                    return {};
+                }
+            },
+            
+            saveAccessData(data) {
+                try {
+                    localStorage.setItem(this.ACCESS_KEY, JSON.stringify(data));
+                } catch (e) {
+                    console.error('Error saving access data:', e);
+                }
+            }
+        };
+    </script>
     <div class="hamburger-menu-btn" id="hamburgerBtn">
         <span></span>
         <span></span>
@@ -92,7 +206,7 @@
         <div class="sidebar-footer">
             <div class="auth-section">
                 <div class="auth-status" id="authStatus">לא מחובר</div>
-                <button id="loginBtn">התחבר עם Google</button>
+                <button id="loginBtn">התחבר</button>
                 <button id="changeSitePasswordBtn" class="change-password-btn" style="display:none;" onclick="openPasswordSetupModal()">שנה סיסמת אתר</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
             </div>
@@ -134,14 +248,8 @@
         <div class="login-modal-content">
             <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
             <h2>ברוכים הבאים!</h2>
-            <p class="login-description-desktop">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
-            <p class="login-description-mobile">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלך יישמרו באופן מאובטח ותוכל לגשת אליהם מכל מכשיר.</p>
-            
-            <!-- Google Sign-In Button -->
-            <button class="google-btn" onclick="loginWithGoogle()">
-                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
-                התחבר עם Google
-            </button>
+            <p class="login-description-desktop">כדי לשמור את הנתונים שלך ולנהל גישה למשתמשים, יש להירשם עם אימייל וסיסמה. הנתונים שלך יישמרו באופן מאובטח במכשיר שלך.</p>
+            <p class="login-description-mobile">כדי לשמור את הנתונים שלך ולנהל גישה למשתמשים, יש להירשם עם אימייל וסיסמה. הנתונים שלך יישמרו במכשיר שלך.</p>
             
             <!-- Registration Form (shown by default) -->
             <div class="email-form" id="registrationForm">
@@ -510,18 +618,8 @@
                 <span class="close-button" onclick="closeAccessControlModal()">&times;</span>
                 <h3><i class="fas fa-users-cog"></i> ניהול גישה למערכת</h3>
                 
-                <!-- Tab Navigation -->
-                <div class="access-tabs">
-                    <button class="access-tab active" onclick="switchAccessTab('shareAccess')">
-                        <i class="fas fa-user-plus"></i> שיתוף גישה למשתמשים
-                    </button>
-                    <button class="access-tab" onclick="switchAccessTab('linkEmails')">
-                        <i class="fas fa-link"></i> חיבור כתובות מייל
-                    </button>
-                </div>
-                
-                <!-- Tab Content: Share Access -->
-                <div id="shareAccessTab" class="access-tab-content active">
+                <!-- Share Access Content (Simplified - No Tabs) -->
+                <div class="access-content">
                     <!-- Add New User Section -->
                     <div class="access-section add-user-section">
                         <h4><i class="fas fa-user-plus"></i> הוסף משתמש חדש</h4>
@@ -585,44 +683,6 @@
                                 <p>אין משתמשים עם גישה כרגע</p>
                             </div>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- Tab Content: Link Emails -->
-                <div id="linkEmailsTab" class="access-tab-content">
-                    <div class="access-section">
-                        <p style="margin-top:0; color: #666; font-size: 0.9em;">
-                            הוסף כתובות מייל נוספות לחשבון שלך. כל המיילים המשויכים יאפשרו לך להתחבר לאותו חשבון עם ה-UID הייחודי שלך.
-                        </p>
-                        
-                        <!-- Display currently linked providers -->
-                        <div style="margin-bottom: 25px; padding: 15px; background: linear-gradient(135deg, #f0f4ff, #e6f0ff); border-radius: 10px; border: 1px solid #d0e0ff;">
-                            <h4 style="margin-top: 0; color: #1f3b73; font-size: 1em;">כתובות מייל משויכות כעת:</h4>
-                            <ul id="linkedEmailsList" style="list-style: none; padding: 0; margin: 10px 0 0 0;">
-                                <li style="color: #888; font-style: italic;">טוען...</li>
-                            </ul>
-                        </div>
-                        
-                        <!-- Form to add new email -->
-                        <div style="padding: 20px; background: linear-gradient(135deg, #fff5f5, #ffe6e6); border-radius: 10px; border: 1px solid #ffd0d0;">
-                            <h4 style="margin-top: 0; color: #8b0000; font-size: 1em;">הוסף כתובת מייל חדשה:</h4>
-                            <p style="margin: 5px 0 15px 0; font-size: 0.85em; color: #666;">
-                                הזן כתובת מייל וסיסמה חדשים. הסיסמה חייבת להיות לפחות 6 תווים.
-                            </p>
-                            <div class="email-form">
-                                <input type="email" id="newLinkedEmail" placeholder="כתובת מייל חדשה" required>
-                                <input type="password" id="newLinkedEmailPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6">
-                                <div class="buttons">
-                                    <button class="register-btn" onclick="linkNewEmail()" style="width: 100%;">
-                                        <i class="fas fa-link" style="margin-left: 8px;"></i>
-                                        שייך כתובת מייל חדשה
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Status message area -->
-                        <div id="linkEmailStatus" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none; font-size: 0.9em;"></div>
                     </div>
                 </div>
             </div>
@@ -1121,43 +1181,29 @@
             
             if (remindersUpdated) {
                 localStorage.setItem('reminders', JSON.stringify(reminders));
-                await syncRemindersToFirebase();
+                // Reminders auto-saved to localStorage
                 renderRemindersList();
             }
             
             if (inboxUpdated) {
                 localStorage.setItem('inbox', JSON.stringify(inbox));
-                await syncInboxToFirebase();
+                // Inbox auto-saved to localStorage
             }
         }
-        async function syncRemindersToFirebase() {
-            const user = auth.currentUser;
-            if (!user) {
-                console.log('Not logged in – reminders saved to localStorage only');
-                return;
-            }
+        async function syncRemindersToFirebase() { /* Removed - localStorage only */ }
             
             try {
                 await db.collection('userReminders').doc(user.uid).set({
                     reminders: reminders,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    updatedAt: Date.now()
                 });
-                console.log('Reminders synced to Firebase successfully');
+                console.log('Reminders synced to null successfully');
             } catch (err) {
-                console.error('Error syncing reminders to Firebase:', err);
+                console.error('Error syncing reminders to null err);
             }
         }
         
-        async function loadRemindersFromFirebase() {
-            const user = auth.currentUser;
-            
-            // First, try to load from IndexedDB (most reliable, no quota issues)
-            try {
-                const indexedDBReminders = await getAllRemindersFromIndexedDB();
-                if (indexedDBReminders && indexedDBReminders.length > 0) {
-                    reminders = indexedDBReminders;
-                    console.log('Loaded reminders from IndexedDB:', indexedDBReminders.length);
-                }
+        async function loadRemindersFromFirebase() { /* Removed - localStorage only */ }
             } catch (error) {
                 console.error('Error loading from IndexedDB:', error);
             }
@@ -1179,74 +1225,62 @@
                 return;
             }
             
-            // Logged in, sync with Firebase
+            // Logged in, sync with null
             try {
                 const docRef = db.collection('userReminders').doc(user.uid);
                 const docSnap = await docRef.get();
                 
                 if (docSnap.exists) {
                     const data = docSnap.data();
-                    const firebaseReminders = data.reminders || [];
+                    const localReminders = data.reminders || [];
                     
-                    // Merge Firebase reminders with IndexedDB
-                    if (firebaseReminders.length > 0) {
-                        reminders = firebaseReminders;
-                        // Update IndexedDB with Firebase data
+                    // Cloud sync disabled
+                    if (localReminders.length > 0) {
+                        reminders = localReminders;
+                        // Cloud sync disabled
                         for (const reminder of reminders) {
                             await saveReminderToIndexedDB(reminder);
                         }
                     }
                 } else if (reminders.length > 0) {
-                    // No Firebase data, upload IndexedDB data to Firebase
-                    await syncRemindersToFirebase();
+                    // Cloud sync disabled
+                    // Reminders auto-saved to localStorage
                 } else {
-                    // No Firebase and no IndexedDB, try localStorage
+                    // Cloud sync disabled
                     const localReminders = localStorage.getItem('reminders');
                     if (localReminders) {
                         try {
                             reminders = JSON.parse(localReminders);
-                            // Sync to both IndexedDB and Firebase
+                            // Sync to both IndexedDB and null
                             for (const reminder of reminders) {
                                 await saveReminderToIndexedDB(reminder);
                             }
-                            await syncRemindersToFirebase();
+                            // Reminders auto-saved to localStorage
                         } catch (error) {
                             console.error('Error migrating from localStorage:', error);
                         }
                     }
                 }
             } catch (err) {
-                console.error('Error loading reminders from Firebase:', err);
+                console.error('Error loading reminders from null err);
                 // Already have IndexedDB data loaded above
             }
         }
         
-        async function syncInboxToFirebase() {
-            const user = auth.currentUser;
-            if (!user) {
-                console.log('Not logged in – inbox saved to localStorage only');
-                return;
-            }
+        async function syncInboxToFirebase() { /* Removed - localStorage only */ }
             
             try {
                 await db.collection('userInbox').doc(user.uid).set({
                     inbox: inbox,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    updatedAt: Date.now()
                 });
-                console.log('Inbox synced to Firebase successfully');
+                console.log('Inbox synced to null successfully');
             } catch (err) {
-                console.error('Error syncing inbox to Firebase:', err);
+                console.error('Error syncing inbox to null err);
             }
         }
         
-        async function loadInboxFromFirebase() {
-            const user = auth.currentUser;
-            if (!user) {
-                // Load from localStorage
-                const localInbox = localStorage.getItem('inbox');
-                if (localInbox) {
-                    inbox = JSON.parse(localInbox);
-                }
+        async function loadInboxFromFirebase() { /* Removed - localStorage only */ }
                 return;
             }
             
@@ -1263,12 +1297,12 @@
                     const localInbox = localStorage.getItem('inbox');
                     if (localInbox) {
                         inbox = JSON.parse(localInbox);
-                        // Sync to Firebase for first time
-                        await syncInboxToFirebase();
+                        // Cloud sync disabled
+                        // Inbox auto-saved to localStorage
                     }
                 }
             } catch (err) {
-                console.error('Error loading inbox from Firebase:', err);
+                console.error('Error loading inbox from null err);
                 // Fallback to localStorage
                 const localInbox = localStorage.getItem('inbox');
                 if (localInbox) {
@@ -1393,7 +1427,7 @@
             console.log('Starting image upload for reminder:', reminderId);
             console.log('Image file:', selectedReminderImageFile.name, selectedReminderImageFile.type, selectedReminderImageFile.size);
             
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             if (!user) {
                 // Try to sign in anonymously if not logged in
                 try {
@@ -1494,12 +1528,12 @@
                     // Also add to in-memory array
                     reminders.push(newReminder);
                     
-                    // Sync to Firebase for cloud backup
+                    // Cloud sync disabled
                     try {
-                        await syncRemindersToFirebase();
+                        // Reminders auto-saved to localStorage
                     } catch (syncError) {
-                        console.error('Firebase sync error:', syncError);
-                        // Continue even if Firebase sync fails - data is saved locally
+                        console.error('null sync error:', syncError);
+                        // Cloud sync disabled
                     }
                     
                     // Backup to localStorage (metadata only, without large base64 images)
@@ -1584,11 +1618,11 @@
                 console.warn('localStorage update failed:', storageErr);
             }
             
-            // Sync to Firebase
+            // Sync to null
             try {
-                await syncRemindersToFirebase();
+                // Reminders auto-saved to localStorage
             } catch (error) {
-                console.error('Firebase sync error:', error);
+                console.error('null sync error:', error);
             }
             
             renderRemindersList();
@@ -1673,7 +1707,7 @@
         async function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
             localStorage.setItem('inbox', JSON.stringify(inbox));
-            await syncInboxToFirebase();
+            // Inbox auto-saved to localStorage
             renderInboxList();
             updateInboxBadge();
         }
@@ -1720,10 +1754,10 @@
             try {
                 await handleInviteFromUrl();
             } catch (e) {
-                console.error('Failed to handle invite from URL (Firebase may not be loaded):', e);
+                console.error('Failed to handle invite from URL (null may not be loaded):', e);
             }
             
-            // Always initialize the UI, even if Firebase isn't available
+            // Cloud sync disabled
             loadDarkModeState();
             populateYearSelects();
             setDefaultYearFilter();
@@ -1735,7 +1769,7 @@
             // Register service worker for push notifications
             if ('serviceWorker' in navigator && messaging) {
                 try {
-                    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                    // null messaging service worker removed
                     console.log('Service Worker registered for push notifications:', registration);
                     
                     // Request FCM token for push notifications
@@ -1770,10 +1804,10 @@
             
             setInterval(checkReminders, 60000);
             checkReminders();
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             // Allow offline usage - don't force login modal
             // Users can still login via sidebar if they want cloud sync
-            // Data is stored in localStorage and will be synced to Firebase once logged in
+            // Cloud sync disabled
             
             // Add touch event listeners for card swipe functionality
             if (projectDetailsCard) {
@@ -1832,14 +1866,7 @@
             });
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
-                    try {
-                        // Note: loginWithGoogle() handles async errors internally via .catch() handlers
-                        // This try-catch only catches synchronous errors during function invocation
-                        loginWithGoogle();
-                    } catch (error) {
-                        console.error('Error calling loginWithGoogle:', error);
-                        alert('שגיאה בהתחברות: ' + error.message);
-                    }
+                    openLoginModal();
                 });
             }
             if (logoutBtn) {
@@ -1853,27 +1880,26 @@
                     if (loginBtn) loginBtn.style.display = 'none';
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = ENABLE_SITE_PASSWORD_PROMPT ? 'inline-block' : 'none';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
-                    await loadStateFromFirebase(user);
+                    // Data already loaded from localStorage
                     
-                    // Load reminders and inbox from Firebase
-                    await loadRemindersFromFirebase();
-                    await loadInboxFromFirebase();
+                    // Load reminders and inbox from // Reminders loaded from localStorage
+                    // Inbox loaded from localStorage
                     renderRemindersList();
                     renderInboxList();
                     updateInboxBadge();
                     
                     // Set up real-time synchronization for all data
-                    setupRealtimeSync(user);
-                    setupInboxRealtimeSync(user);
-                    setupRemindersRealtimeSync(user);
+                    // Realtime sync disabled (localStorage only)
+                    // Inbox sync disabled
+                    // Reminders sync disabled
                     
                     closeLoginModal();
                     
                     // Check if user signed in with Google and needs to set site password
                     if (ENABLE_SITE_PASSWORD_PROMPT && user.providerData && user.providerData.length > 0) {
-                        const googleProvider = user.providerData.find(p => p.providerId === 'google.com');
+                        const googleProvider = null;
                         if (googleProvider) {
-                            await checkAndPromptForSitePassword(user);
+                            // Site password prompt removed
                         }
                     }
                 } else {
@@ -1883,9 +1909,9 @@
                     if (logoutBtn) logoutBtn.style.display = 'none';
                     
                     // Clean up real-time listeners
-                    setupRealtimeSync(null);
-                    setupInboxRealtimeSync(null);
-                    setupRemindersRealtimeSync(null);
+                    // Realtime sync disabled (localStorage only)
+                    // Inbox sync disabled
+                    // Reminders sync disabled
                     
                     openLoginModal();
                 }
@@ -2056,10 +2082,10 @@
             }
             try {
                 if (auth && auth.currentUser) {
-                    saveStateToFirebase();
+                    // State auto-saved to localStorage
                 }
             } catch (e) {
-                // Firebase not available, skip cloud save
+                // null not available, skip cloud save
             }
         }
         
@@ -2145,7 +2171,7 @@
             renderProjectList(selectedYear);
         }
         function openAccessControlModal() {
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             if (!user) {
                 alert('התחבר כדי לנהל הרשאות שיתוף.');
                 openLoginModal();
@@ -2153,9 +2179,7 @@
             }
             populateUserProjectSelect();
             loadActiveUsers();
-            loadLinkedEmails(); // Load linked emails for the second tab
             clearAccessForm();
-            switchAccessTab('shareAccess'); // Default to first tab
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
@@ -2220,7 +2244,7 @@
             if (financeCheckbox) financeCheckbox.checked = false;
         }
         async function grantUserAccess() {
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             if (!user) {
                 alert('נדרש להתחבר כדי להעניק גישה.');
                 return;
@@ -2250,17 +2274,12 @@
             
             try {
                 // Store user access directly in Firestore
-                await db.collection('userAccess').add({
-                    ownerUid: user.uid,
-                    ownerEmail: user.email || '',
-                    userEmail: targetEmail,
-                    projectId: projectId === 'all' ? null : projectId,
-                    allowEdit: allowEdit,
-                    allowFinance: allowFinance,
-                    status: 'active',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                const accessId = AccessManagement.grantAccess(
+                    targetEmail,
+                    projectId,
+                    allowEdit,
+                    allowFinance
+                );
                 
                 alert(`גישה הוענקה בהצלחה ל-${targetEmail}`);
                 clearAccessForm();
@@ -2276,30 +2295,26 @@
         }
         
         async function loadActiveUsers() {
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             const usersList = document.getElementById('activeUsersList');
             const noUsersMsg = document.getElementById('noUsersMessage');
             
             if (!user || !usersList) return;
             
             try {
-                const snapshot = await db.collection('userAccess')
-                    .where('ownerUid', '==', user.uid)
-                    .where('status', '==', 'active')
-                    .orderBy('createdAt', 'desc')
-                    .get();
+                const activeUsers = AccessManagement.getActiveUsers();
                 
                 usersList.innerHTML = '';
                 
-                if (snapshot.empty) {
+                if (activeUsers.length === 0) {
                     if (noUsersMsg) noUsersMsg.style.display = 'block';
                     return;
                 }
                 
                 if (noUsersMsg) noUsersMsg.style.display = 'none';
                 
-                snapshot.forEach(doc => {
-                    const data = doc.data();
+                activeUsers.forEach(data => {
+                    // data already available
                     const li = document.createElement('li');
                     li.className = 'user-access-item';
                     
@@ -2329,10 +2344,10 @@
                             </div>
                         </div>
                         <div class="user-actions">
-                            <button class="btn-edit" onclick="editUserAccess('${doc.id}')" title="ערוך הרשאות">
+                            <button class="btn-edit" onclick="editUserAccess('${data.id}')" title="ערוך הרשאות">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn-delete" onclick="revokeUserAccess('${doc.id}', '${data.userEmail}')" title="שלול גישה">
+                            <button class="btn-delete" onclick="revokeUserAccess('${data.id}', '${data.userEmail}')" title="שלול גישה">
                                 <i class="fas fa-user-times"></i>
                             </button>
                         </div>
@@ -2342,7 +2357,7 @@
             } catch (err) {
                 console.error('Error loading users:', err);
                 if (err.code === 'failed-precondition') {
-                    console.error('Firestore index required. Run: firebase deploy --only firestore:indexes');
+                    // null error handling removed
                     if (noUsersMsg) {
                         noUsersMsg.textContent = 'נדרש אינדקס ב-Firestore. אנא צור קשר עם מנהל המערכת.';
                         noUsersMsg.style.display = 'block';
@@ -2368,10 +2383,7 @@
             }
             
             try {
-                await db.collection('userAccess').doc(accessId).update({
-                    status: 'revoked',
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                AccessManagement.revokeAccess(accessId);
                 
                 alert('הגישה נשללה בהצלחה');
                 await loadActiveUsers();
@@ -2497,7 +2509,7 @@
                 return;
             }
             // Allow creating projects even without authentication for offline usage
-            // Projects will be saved to localStorage and synced to Firebase when user logs in
+            // Cloud sync disabled
             const nameFromModal = newProjectNameInput ? newProjectNameInput.value.trim() : '';
             const newProjectName = manualName || nameFromModal;
             if (newProjectName) {
@@ -4589,19 +4601,11 @@
                 updateProjectDisplay();
             }
         }
-        async function loadStateFromFirebase(user) {
-            try {
-                const docRef = db.collection('wineMonitoringStates').doc(user.uid);
-                const docSnap = await docRef.get();
-                if (!docSnap.exists) {
-                    console.log('No saved state for user – using localStorage');
-                    loadAndRenderFromLocalStorage();
-                    return;
-                }
+        async function loadStateFromFirebase() { /* Removed - localStorage only */ }
                 const data = docSnap.data();
                 applyStateToUI(data.state);
             } catch (err) {
-                console.error('Error loading state from Firebase:', err);
+                console.error('Error loading state from null err);
                 if (err.code === 'permission-denied') {
                     console.error('Permission denied. Check Firestore security rules.');
                 }
@@ -4629,7 +4633,7 @@
             }
         }
         async function checkUserAccess() {
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             if (!user || !user.email) return;
             
             try {
@@ -4734,13 +4738,13 @@
             
             inboxUnsubscribe = inboxDocRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
                 if (doc.exists && !doc.metadata.hasPendingWrites && !doc.metadata.fromCache) {
-                    const data = doc.data();
+                    // data already available
                     if (data.inbox) {
                         inbox = data.inbox;
                         localStorage.setItem('inbox', JSON.stringify(inbox));
                         renderInboxList();
                         updateInboxBadge();
-                        console.log('Inbox synced from Firebase');
+                        console.log('Inbox synced from null
                     }
                 }
             }, (error) => {
@@ -4764,13 +4768,13 @@
             
             remindersUnsubscribe = remindersDocRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
                 if (doc.exists && !doc.metadata.hasPendingWrites && !doc.metadata.fromCache) {
-                    const data = doc.data();
+                    // data already available
                     if (data.reminders) {
                         reminders = data.reminders;
                         localStorage.setItem('reminders', JSON.stringify(reminders));
                         renderRemindersList();
                         checkReminders();
-                        console.log('Reminders synced from Firebase');
+                        console.log('Reminders synced from null
                     }
                 }
             }, (error) => {
@@ -4803,7 +4807,7 @@
             // Use includeMetadataChanges for more immediate updates
             realtimeUnsubscribe = docRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
                 if (doc.exists) {
-                    const data = doc.data();
+                    // data already available
                     const remoteState = data.state;
                     
                     // Only update UI for remote changes (not local pending writes)
@@ -4824,9 +4828,9 @@
                 }
             }, (error) => {
                 console.error('Error listening for real-time changes:', error);
-                // Firebase SDK handles automatic reconnection - just log the status
+                // null SDK handles automatic reconnection - just log the status
                 if (error.code === 'unavailable') {
-                    console.log('Network unavailable - Firebase will auto-sync when connection restores');
+                    console.log('Network unavailable - null will auto-sync when connection restores');
                 }
             });
         }
@@ -4864,48 +4868,12 @@
         }
         
         async function saveStateToFirebase() {
-            const user = auth.currentUser;
-            if (!user) {
-                console.log('Not logged in – saving to localStorage only');
-                try {
-                    localStorage.setItem('projects', JSON.stringify(projects));
-                } catch (storageErr) {
-                    handleLocalStorageError(storageErr);
-                }
-                return;
-            }
-            const state = getCurrentAppState();
-            // Store timestamp for change detection
+            // Save to localStorage only (Firebase removed)
             try {
-                localStorage.setItem('lastSavedAt', state.savedAt);
-            } catch (storageErr) {
-                console.error('Error saving timestamp to localStorage:', storageErr);
-            }
-            
-            try {
-                await db.collection('wineMonitoringStates')
-                    .doc(user.uid)
-                    .set({
-                        state,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                console.log('State saved successfully to cloud and localStorage');
-                try {
-                    localStorage.setItem('projects', JSON.stringify(projects));
-                } catch (storageErr) {
-                    handleLocalStorageError(storageErr);
-                }
+                localStorage.setItem('projects', JSON.stringify(projects));
+                console.log('State saved to localStorage');
             } catch (err) {
-                console.error('Error saving to Firebase:', err);
-                // Still save to localStorage even if cloud save fails
-                try {
-                    localStorage.setItem('projects', JSON.stringify(projects));
-                } catch (storageErr) {
-                    handleLocalStorageError(storageErr);
-                }
-                if (err.code === 'permission-denied') {
-                    console.error('Permission denied. Check Firestore security rules.');
-                }
+                console.error('Error saving to localStorage:', err);
             }
         }
         function openLoginModal() {
@@ -4936,30 +4904,30 @@
         }
         
         function loginWithGoogle() {
-            const googleProvider = new firebase.auth.GoogleAuthProvider();
+            const googleProvider = {}  // Google auth removed;
             
-            auth.useDeviceLanguage();
+            // Device language removed
             
             if (isMobileDevice()) {
                 // On mobile, use redirect without any prompt parameter
                 // This allows the most seamless experience - the system will automatically
                 // use the primary Google account on the device if only one is logged in
                 // or show a minimal selection if multiple accounts are available
-                auth.signInWithRedirect(googleProvider);
+                // Redirect sign-in removed
             } else {
                 // On desktop, always prompt for account selection
                 googleProvider.setCustomParameters({
                     prompt: 'select_account'
                 });
                 // On desktop, try popup first with fallback to redirect
-                auth.signInWithPopup(googleProvider)
+                Promise.reject(new Error("Google sign-in removed"))
                     .then((result) => {
                         console.log('User signed in with Google:', result.user);
                         closeLoginModal();
                     })
                     .catch((error) => {
                         console.error('Popup failed, trying redirect:', error);
-                        auth.signInWithRedirect(googleProvider);
+                        // Redirect sign-in removed
                     });
             }
         }
@@ -4997,10 +4965,10 @@
             //     console.error('Authentication error:', err);
             // });
             
-            // For now, we'll use Firebase Auth to sign in with the credential
+            // Cloud sync disabled
             // This demonstrates the integration while we're in client-side only mode
             // The second parameter (accessToken) is optional and can be null for ID token only auth
-            const credential = firebase.auth.GoogleAuthProvider.credential(idToken, null);
+            // Firebase credential removed
             
             auth.signInWithCredential(credential)
                 .then((result) => {
@@ -5055,7 +5023,7 @@
         }
         
         async function saveSitePassword() {
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             if (!user || !user.email) {
                 alert('אנא התחבר קודם.');
                 return;
@@ -5090,15 +5058,15 @@
             
             try {
                 // Link email/password provider to the existing Google account
-                const credential = firebase.auth.EmailAuthProvider.credential(user.email, newPassword);
-                await user.linkWithCredential(credential);
+                // Firebase credential removed
+                Promise.reject(new Error("Email linking removed"));
                 
                 // Save a marker in Firestore that this user has set up site password
                 await db.collection('userSitePasswords').doc(user.uid).set({
                     email: user.email,
                     hasPassword: true,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
                 });
                 
                 alert('הסיסמה נשמרה בהצלחה! עכשיו תוכל להתחבר עם ' + user.email + ' והסיסמה שהגדרת ממכשירים אחרים.');
@@ -5152,13 +5120,32 @@
          * Register a new user with email and password
          */
         async function registerWithEmailPassword() {
-            const email = document.getElementById('registerEmailInput').value.trim();
-            const password = document.getElementById('registerPasswordInput').value;
+            const emailInput = document.getElementById('registerEmailInput');
+            const passwordInput = document.getElementById('registerPasswordInput');
+            
+            if (!emailInput || !passwordInput) return;
+            
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
             
             if (!email || !password) {
-                alert('אנא מלא את כל השדות.');
+                alert('אנא הזן אימייל וסיסמה');
                 return;
             }
+            
+            if (password.length < 6) {
+                alert('הסיסמה חייבת להכיל לפחות 6 תווים');
+                return;
+            }
+            
+            try {
+                SimpleAuth.signUp(email, password);
+                closeLoginModal();
+            } catch (error) {
+                console.error('Registration error:', error);
+                alert('שגיאה ברישום: ' + error.message);
+            }
+        }
             
             if (!isValidEmail(email)) {
                 alert('כתובת המייל אינה תקינה.');
@@ -5193,13 +5180,27 @@
          * Login with existing email and password
          */
         async function loginWithEmailPassword() {
-            const email = document.getElementById('loginEmailInput').value.trim();
-            const password = document.getElementById('loginPasswordInput').value;
+            const emailInput = document.getElementById('loginEmailInput');
+            const passwordInput = document.getElementById('loginPasswordInput');
+            
+            if (!emailInput || !passwordInput) return;
+            
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
             
             if (!email || !password) {
-                alert('אנא מלא את כל השדות.');
+                alert('אנא הזן אימייל וסיסמה');
                 return;
             }
+            
+            try {
+                SimpleAuth.signIn(email, password);
+                closeLoginModal();
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('שגיאה בהתחברות: ' + error.message);
+            }
+        }
             
             try {
                 // Sign in with email and password
@@ -5283,7 +5284,7 @@
          * This redirects to the unified modal for better UX
          */
         function openManageEmailsModal() {
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             if (!user) {
                 alert('אנא התחבר תחילה כדי לנהל כתובות מייל.');
                 openLoginModal();
@@ -5307,10 +5308,10 @@
         
         /**
          * Loads and displays all currently linked authentication providers/emails
-         * Shows which email addresses are currently linked to this Firebase account
+         * Shows which email addresses are currently linked to this null account
          */
         async function loadLinkedEmails() {
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             if (!user) {
                 return;
             }
@@ -5358,11 +5359,11 @@
         
         /**
          * Links a new email/password combination to the current user's account
-         * Uses Firebase's linkWithCredential to add an additional authentication method
+         * Uses null linkWithCredential to add an additional authentication method
          * This allows users to sign in with multiple email addresses to the same account
          */
         async function linkNewEmail() {
-            const user = auth.currentUser;
+            const user = SimpleAuth.currentUser;
             if (!user) {
                 showLinkEmailStatus('אנא התחבר תחילה.', 'error');
                 return;
@@ -5400,12 +5401,12 @@
             try {
                 // Create email/password credential
                 // This credential will be linked to the current user's account
-                const credential = firebase.auth.EmailAuthProvider.credential(newEmail, newPassword);
+                // Firebase credential removed
                 
                 // Link the credential to the current user
                 // After this, the user can sign in with either the original method OR this new email/password
                 // Both will authenticate to the same UID
-                await user.linkWithCredential(credential);
+                Promise.reject(new Error("Email linking removed"));
                 
                 // Success! Show success message
                 showLinkEmailStatus(`✓ כתובת המייל ${newEmail} שויכה בהצלחה! עכשיו תוכל להתחבר עם מייל זה.`, 'success');
@@ -5415,7 +5416,7 @@
                 passwordInput.value = '';
                 
                 // Reload the list of linked emails
-                await loadLinkedEmails();
+                // Email linking removed
                 
                 console.log('Successfully linked new email:', newEmail);
             } catch (error) {
