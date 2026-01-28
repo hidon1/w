@@ -1190,7 +1190,7 @@
                 // Inbox auto-saved to localStorage
             }
         }
-        async function syncRemindersToFirebase() { /* Removed - using localStorage */ }
+        async function syncRemindersToFirebase() { /* Removed - localStorage only */ }
             
             try {
                 await db.collection('userReminders').doc(user.uid).set({
@@ -1203,7 +1203,7 @@
             }
         }
         
-        async function loadRemindersFromFirebase() { /* Removed - using localStorage */ }
+        async function loadRemindersFromFirebase() { /* Removed - localStorage only */ }
             } catch (error) {
                 console.error('Error loading from IndexedDB:', error);
             }
@@ -1267,7 +1267,7 @@
             }
         }
         
-        async function syncInboxToFirebase() { /* Removed - using localStorage */ }
+        async function syncInboxToFirebase() { /* Removed - localStorage only */ }
             
             try {
                 await db.collection('userInbox').doc(user.uid).set({
@@ -1280,7 +1280,7 @@
             }
         }
         
-        async function loadInboxFromFirebase() { /* Removed - using localStorage */ }
+        async function loadInboxFromFirebase() { /* Removed - localStorage only */ }
                 return;
             }
             
@@ -1882,8 +1882,7 @@
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     // Data already loaded from localStorage
                     
-                    // Load reminders and inbox from null
-                    // Reminders loaded from localStorage
+                    // Load reminders and inbox from // Reminders loaded from localStorage
                     // Inbox loaded from localStorage
                     renderRemindersList();
                     renderInboxList();
@@ -4602,7 +4601,7 @@
                 updateProjectDisplay();
             }
         }
-        async function loadStateFromFirebase(user) { /* Removed - using localStorage */ }
+        async function loadStateFromFirebase() { /* Removed - localStorage only */ }
                 const data = docSnap.data();
                 applyStateToUI(data.state);
             } catch (err) {
@@ -4876,36 +4875,6 @@
             } catch (err) {
                 console.error('Error saving to localStorage:', err);
             }
-        } catch (storageErr) {
-                    handleLocalStorageError(storageErr);
-                }
-                return;
-            }
-            const state = getCurrentAppState();
-            // Store timestamp for change detection
-            try {
-                localStorage.setItem('lastSavedAt', state.savedAt);
-            } catch (storageErr) {
-                console.error('Error saving timestamp to localStorage:', storageErr);
-            }
-            
-            try {
-                // Save to localStorage only (null removed)
-                console.log('State saved successfully to localStorage'); catch (storageErr) {
-                    handleLocalStorageError(storageErr);
-                }
-            } catch (err) {
-                console.error('Error saving to null err);
-                // Still save to localStorage even if cloud save fails
-                try {
-                    localStorage.setItem('projects', JSON.stringify(projects));
-                } catch (storageErr) {
-                    handleLocalStorageError(storageErr);
-                }
-                if (err.code === 'permission-denied') {
-                    console.error('Permission denied. Check Firestore security rules.');
-                }
-            }
         }
         function openLoginModal() {
             const modal = document.getElementById('loginModal');
@@ -4999,7 +4968,7 @@
             // Cloud sync disabled
             // This demonstrates the integration while we're in client-side only mode
             // The second parameter (accessToken) is optional and can be null for ID token only auth
-            const credential = null  // null credential removed;
+            // Firebase credential removed
             
             auth.signInWithCredential(credential)
                 .then((result) => {
@@ -5089,7 +5058,7 @@
             
             try {
                 // Link email/password provider to the existing Google account
-                const credential = null  // null credential removed;
+                // Firebase credential removed
                 Promise.reject(new Error("Email linking removed"));
                 
                 // Save a marker in Firestore that this user has set up site password
@@ -5432,7 +5401,7 @@
             try {
                 // Create email/password credential
                 // This credential will be linked to the current user's account
-                const credential = null  // null credential removed;
+                // Firebase credential removed
                 
                 // Link the credential to the current user
                 // After this, the user can sign in with either the original method OR this new email/password
@@ -5447,7 +5416,7 @@
                 passwordInput.value = '';
                 
                 // Reload the list of linked emails
-                await // Email linking removed
+                // Email linking removed
                 
                 console.log('Successfully linked new email:', newEmail);
             } catch (error) {
