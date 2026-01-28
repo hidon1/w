@@ -1190,125 +1190,20 @@
                 // Inbox auto-saved to localStorage
             }
         }
-        async function syncRemindersToFirebase() { /* Removed - localStorage only */ }
-            
-            try {
-                await db.collection('userReminders').doc(user.uid).set({
-                    reminders: reminders,
-                    updatedAt: Date.now()
-                });
-                console.log('Reminders synced to null successfully');
-            } catch (err) {
-                console.error('Error syncing reminders to null err);
-            }
+        function syncRemindersToFirebase() { 
+            // Firebase removed - localStorage only
         }
         
-        async function loadRemindersFromFirebase() { /* Removed - localStorage only */ }
-            } catch (error) {
-                console.error('Error loading from IndexedDB:', error);
-            }
-            
-            if (!user) {
-                // Not logged in, try localStorage as fallback
-                const localReminders = localStorage.getItem('reminders');
-                if (localReminders && reminders.length === 0) {
-                    try {
-                        reminders = JSON.parse(localReminders);
-                        // Migrate to IndexedDB
-                        for (const reminder of reminders) {
-                            await saveReminderToIndexedDB(reminder);
-                        }
-                    } catch (error) {
-                        console.error('Error loading from localStorage:', error);
-                    }
-                }
-                return;
-            }
-            
-            // Logged in, sync with null
-            try {
-                const docRef = db.collection('userReminders').doc(user.uid);
-                const docSnap = await docRef.get();
-                
-                if (docSnap.exists) {
-                    const data = docSnap.data();
-                    const localReminders = data.reminders || [];
-                    
-                    // Cloud sync disabled
-                    if (localReminders.length > 0) {
-                        reminders = localReminders;
-                        // Cloud sync disabled
-                        for (const reminder of reminders) {
-                            await saveReminderToIndexedDB(reminder);
-                        }
-                    }
-                } else if (reminders.length > 0) {
-                    // Cloud sync disabled
-                    // Reminders auto-saved to localStorage
-                } else {
-                    // Cloud sync disabled
-                    const localReminders = localStorage.getItem('reminders');
-                    if (localReminders) {
-                        try {
-                            reminders = JSON.parse(localReminders);
-                            // Sync to both IndexedDB and null
-                            for (const reminder of reminders) {
-                                await saveReminderToIndexedDB(reminder);
-                            }
-                            // Reminders auto-saved to localStorage
-                        } catch (error) {
-                            console.error('Error migrating from localStorage:', error);
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('Error loading reminders from null err);
-                // Already have IndexedDB data loaded above
-            }
+        function loadRemindersFromFirebase() { 
+            // Firebase removed - localStorage only
         }
         
-        async function syncInboxToFirebase() { /* Removed - localStorage only */ }
-            
-            try {
-                await db.collection('userInbox').doc(user.uid).set({
-                    inbox: inbox,
-                    updatedAt: Date.now()
-                });
-                console.log('Inbox synced to null successfully');
-            } catch (err) {
-                console.error('Error syncing inbox to null err);
-            }
+        function syncInboxToFirebase() { 
+            // Firebase removed - localStorage only
         }
         
-        async function loadInboxFromFirebase() { /* Removed - localStorage only */ }
-                return;
-            }
-            
-            try {
-                const docRef = db.collection('userInbox').doc(user.uid);
-                const docSnap = await docRef.get();
-                
-                if (docSnap.exists) {
-                    const data = docSnap.data();
-                    inbox = data.inbox || [];
-                    localStorage.setItem('inbox', JSON.stringify(inbox));
-                } else {
-                    // Load from localStorage as fallback
-                    const localInbox = localStorage.getItem('inbox');
-                    if (localInbox) {
-                        inbox = JSON.parse(localInbox);
-                        // Cloud sync disabled
-                        // Inbox auto-saved to localStorage
-                    }
-                }
-            } catch (err) {
-                console.error('Error loading inbox from null err);
-                // Fallback to localStorage
-                const localInbox = localStorage.getItem('inbox');
-                if (localInbox) {
-                    inbox = JSON.parse(localInbox);
-                }
-            }
+        function loadInboxFromFirebase() { 
+            // Firebase removed - localStorage only
         }
         
         // Image upload functions for reminders
@@ -1424,58 +1319,22 @@
                 return null;
             }
             
-            console.log('Starting image upload for reminder:', reminderId);
+            console.log('Converting image to base64 for reminder:', reminderId);
             console.log('Image file:', selectedReminderImageFile.name, selectedReminderImageFile.type, selectedReminderImageFile.size);
             
-            const user = SimpleAuth.currentUser;
-            if (!user) {
-                // Try to sign in anonymously if not logged in
-                try {
-                    console.log('User not logged in, attempting anonymous sign-in...');
-                    await auth.signInAnonymously();
-                    console.log('Anonymous sign-in successful, uid:', auth.currentUser.uid);
-                } catch (error) {
-                    console.error('Anonymous sign-in failed:', error);
-                    throw new Error('לא ניתן להתחבר למערכת. אנא בדוק את החיבור לאינטרנט ונסה שוב.');
-                }
-            }
-            
-            // Check if online
-            if (!navigator.onLine) {
-                console.warn('No internet connection detected');
-                throw new Error('אין חיבור אינטרנט. התמונה לא תועלה.');
-            }
-            
-            try {
-                const currentUser = auth.currentUser;
-                if (!currentUser) {
-                    throw new Error('שגיאה באימות משתמש');
-                }
-                
-                const storageRef = storage.ref();
-                const imagePath = `reminders/${currentUser.uid}/${reminderId}_${Date.now()}.jpg`;
-                const imageRef = storageRef.child(imagePath);
-                
-                console.log('Uploading image to path:', imagePath);
-                
-                // Upload file with explicit metadata
-                const metadata = {
-                    contentType: selectedReminderImageFile.type || 'image/jpeg'
+            // Convert image to base64 for local storage (no Firebase upload)
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    console.log('Image converted to base64');
+                    resolve(e.target.result);
                 };
-                
-                const uploadSnapshot = await imageRef.put(selectedReminderImageFile, metadata);
-                console.log('Image uploaded successfully, bytes transferred:', uploadSnapshot.bytesTransferred);
-                
-                // Get download URL
-                const downloadURL = await imageRef.getDownloadURL();
-                console.log('Image download URL obtained:', downloadURL);
-                return downloadURL;
-            } catch (error) {
-                console.error('Error uploading image:', error);
-                console.error('Error code:', error.code);
-                console.error('Error message:', error.message);
-                throw new Error('שגיאה בהעלאת התמונה: ' + error.message);
-            }
+                reader.onerror = (error) => {
+                    console.error('Error reading image file:', error);
+                    reject(new Error('שגיאה בקריאת התמונה'));
+                };
+                reader.readAsDataURL(selectedReminderImageFile);
+            });
         }
         
         async function addReminder() {
@@ -1766,41 +1625,7 @@
             updateInboxBadge();
             requestNotificationPermission();
             
-            // Register service worker for push notifications
-            if ('serviceWorker' in navigator && messaging) {
-                try {
-                    // null messaging service worker removed
-                    console.log('Service Worker registered for push notifications:', registration);
-                    
-                    // Request FCM token for push notifications
-                    const vapidKey = window.VAPID_PUBLIC_KEY;
-                    if (vapidKey && vapidKey !== 'REPLACE_ME_VAPID') {
-                        try {
-                            const token = await messaging.getToken({ 
-                                vapidPublicKey: vapidKey,
-                                serviceWorkerRegistration: registration
-                            });
-                            if (token) {
-                                console.log('FCM token obtained:', token);
-                                // TODO: Save token to database for sending push notifications
-                            }
-                        } catch (tokenError) {
-                            console.warn('Unable to get FCM token:', tokenError);
-                        }
-                    } else {
-                        console.log('VAPID key not configured. Push notifications will not work.');
-                    }
-                    
-                    // Handle foreground messages
-                    messaging.onMessage((payload) => {
-                        console.log('Foreground message received:', payload);
-                        const { title, body } = payload.notification || {};
-                        showReminderPopup(title || body || 'תזכורת חדשה');
-                    });
-                } catch (error) {
-                    console.warn('Service worker registration failed:', error);
-                }
-            }
+            // Firebase messaging removed - service worker registration removed
             
             setInterval(checkReminders, 60000);
             checkReminders();
@@ -1849,32 +1674,18 @@
             const logoutBtn = document.getElementById('logoutBtn');
             const changeSitePasswordBtn = document.getElementById('changeSitePasswordBtn');
             const authStatus = document.getElementById('authStatus');
-            auth.getRedirectResult().then((result) => {
-                if (result.user) {
-                    console.log('User signed in via redirect');
-                } else {
-                    // Normal case - no redirect happened
-                    // This occurs when:
-                    // 1. User is already authenticated from a previous session
-                    // 2. Popup authentication was used instead of redirect
-                    // 3. Page was loaded directly without going through auth flow
-                    // This is not an error
-                }
-            }).catch((error) => {
-                console.error('Redirect sign-in error:', error);
-                alert('שגיאה בהתחברות: ' + error.message);
-            });
+            // SimpleAuth doesn't need redirect result
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
                     openLoginModal();
                 });
             }
             if (logoutBtn) {
-                logoutBtn.addEventListener('click', async () => {
-                    await auth.signOut();
+                logoutBtn.addEventListener('click', () => {
+                    SimpleAuth.signOut();
                 });
             }
-            auth.onAuthStateChanged(async (user) => {
+            SimpleAuth.onAuthStateChanged((user) => {
                 if (user) {
                     if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
                     if (loginBtn) loginBtn.style.display = 'none';
@@ -4601,121 +4412,22 @@
                 updateProjectDisplay();
             }
         }
-        async function loadStateFromFirebase() { /* Removed - localStorage only */ }
-                const data = docSnap.data();
-                applyStateToUI(data.state);
-            } catch (err) {
-                console.error('Error loading state from null err);
-                if (err.code === 'permission-denied') {
-                    console.error('Permission denied. Check Firestore security rules.');
-                }
-                // Fallback to localStorage
-                loadAndRenderFromLocalStorage();
-            }
+        function loadStateFromFirebase() { 
+            // Firebase removed - localStorage only
+            loadAndRenderFromLocalStorage();
         }
-        async function loadSharedStateByOwner(ownerUid) {
-            try {
-                const docRef = db.collection('wineMonitoringStates').doc(ownerUid);
-                const docSnap = await docRef.get();
-                if (docSnap.exists) {
-                    const data = docSnap.data();
-                    applyStateToUI(data.state);
-                } else {
-                    alert('הנתונים של בעל החשבון אינם זמינים.');
-                }
-            } catch (err) {
-                console.error('Error loading shared data:', err);
-                if (err.code === 'permission-denied') {
-                    alert('שגיאת הרשאה: אין לך גישה לנתונים האלה. ודא שבעל החשבון העניק לך גישה.');
-                } else {
-                    alert('שגיאה בטעינת השיתוף: ' + (err.message || 'נסה שוב'));
-                }
-            }
+        function loadSharedStateByOwner(ownerUid) {
+            // Firebase sharing removed - localStorage only
+            console.log('Shared access not available without Firebase');
         }
-        async function checkUserAccess() {
-            const user = SimpleAuth.currentUser;
-            if (!user || !user.email) return;
-            
-            try {
-                // Check if current user has been granted access to any owner's data
-                const snapshot = await db.collection('userAccess')
-                    .where('userEmail', '==', user.email)
-                    .where('status', '==', 'active')
-                    .get();
-                
-                if (!snapshot.empty) {
-                    // User has access - load the first active access grant
-                    const accessDoc = snapshot.docs[0];
-                    const access = accessDoc.data();
-                    
-                    sharedAccessContext = {
-                        active: true,
-                        accessId: accessDoc.id,
-                        ownerUid: access.ownerUid,
-                        allowEdit: !!access.allowEdit,
-                        allowFinance: !!access.allowFinance,
-                        allowedProjectId: access.projectId || null
-                    };
-                    
-                    await loadSharedStateByOwner(access.ownerUid);
-                    
-                    if (sharedAccessContext.allowedProjectId && projects[sharedAccessContext.allowedProjectId]) {
-                        currentProjectId = sharedAccessContext.allowedProjectId;
-                        localStorage.setItem('currentProjectId', currentProjectId);
-                    }
-                    
-                    document.body.classList.toggle('view-only', !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance);
-                    updateSharedAccessNotice();
-                }
-            } catch (err) {
-                // Handle permission errors gracefully - user might not have shared access
-                if (err.code === 'permission-denied') {
-                    // This is expected for users without granted access - silently continue
-                    console.log('No shared access found for user');
-                } else {
-                    console.error('Error checking user access:', err);
-                }
-            }
+        function checkUserAccess() {
+            // Firebase access management removed - use local AccessManagement instead
+            return;
         }
         
-        async function handleInviteFromUrl() {
-            const params = new URLSearchParams(window.location.search);
-            const inviteId = params.get('invite');
-            if (!inviteId) {
-                // No invite in URL, check for direct user access
-                await checkUserAccess();
-                return;
-            }
-            try {
-                const inviteDoc = await db.collection('projectAccessInvites').doc(inviteId).get();
-                if (!inviteDoc.exists) {
-                    alert('הזמנה לא נמצאה.');
-                    return;
-                }
-                const invite = inviteDoc.data();
-                sharedAccessContext = {
-                    active: true,
-                    inviteId,
-                    ownerUid: invite.ownerUid,
-                    allowEdit: !!invite.allowEdit,
-                    allowFinance: !!invite.allowFinance,
-                    allowedProjectId: invite.projectId || null
-                };
-                await loadSharedStateByOwner(invite.ownerUid);
-                if (sharedAccessContext.allowedProjectId && projects[sharedAccessContext.allowedProjectId]) {
-                    currentProjectId = sharedAccessContext.allowedProjectId;
-                    localStorage.setItem('currentProjectId', currentProjectId);
-                }
-                document.body.classList.toggle('view-only', !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance);
-                updateSharedAccessNotice();
-            } catch (err) {
-                console.error('Error reading invite:', err);
-                if (err.code === 'permission-denied') {
-                    alert('שגיאת הרשאה בקריאת ההזמנה. ודא שהינך מחובר.');
-                } else {
-                    alert('שגיאה בקריאת ההזמנה: ' + (err.message || 'נסה שוב'));
-                }
-            }
+        function handleInviteFromUrl() {
+            // Firebase invites removed - localStorage only
+            return;
         }
         
         // Real-time listeners for inbox and reminders
@@ -4723,116 +4435,21 @@
         let remindersUnsubscribe = null;
         
         function setupInboxRealtimeSync(user) {
-            // Clean up existing listener
-            if (inboxUnsubscribe) {
-                inboxUnsubscribe();
-                inboxUnsubscribe = null;
-            }
-            
-            if (!user) {
-                return;
-            }
-            
-            // Set up real-time listener for inbox
-            const inboxDocRef = db.collection('userInbox').doc(user.uid);
-            
-            inboxUnsubscribe = inboxDocRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
-                if (doc.exists && !doc.metadata.hasPendingWrites && !doc.metadata.fromCache) {
-                    // data already available
-                    if (data.inbox) {
-                        inbox = data.inbox;
-                        localStorage.setItem('inbox', JSON.stringify(inbox));
-                        renderInboxList();
-                        updateInboxBadge();
-                        console.log('Inbox synced from null
-                    }
-                }
-            }, (error) => {
-                console.error('Error listening to inbox changes:', error);
-            });
+            // Firebase realtime sync removed - localStorage only
+            return;
         }
         
         function setupRemindersRealtimeSync(user) {
-            // Clean up existing listener
-            if (remindersUnsubscribe) {
-                remindersUnsubscribe();
-                remindersUnsubscribe = null;
-            }
-            
-            if (!user) {
-                return;
-            }
-            
-            // Set up real-time listener for reminders
-            const remindersDocRef = db.collection('userReminders').doc(user.uid);
-            
-            remindersUnsubscribe = remindersDocRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
-                if (doc.exists && !doc.metadata.hasPendingWrites && !doc.metadata.fromCache) {
-                    // data already available
-                    if (data.reminders) {
-                        reminders = data.reminders;
-                        localStorage.setItem('reminders', JSON.stringify(reminders));
-                        renderRemindersList();
-                        checkReminders();
-                        console.log('Reminders synced from null
-                    }
-                }
-            }, (error) => {
-                console.error('Error listening to reminders changes:', error);
-            });
+            // Firebase realtime sync removed - localStorage only
+            return;
         }
         
         // Real-time synchronization listener
         let realtimeUnsubscribe = null;
         
         function setupRealtimeSync(user) {
-            // Clean up existing listener
-            if (realtimeUnsubscribe) {
-                realtimeUnsubscribe();
-                realtimeUnsubscribe = null;
-            }
-            
-            if (!user) {
-                return;
-            }
-            
-            // Determine which UID to listen to - either own or shared owner's
-            const targetUid = sharedAccessContext.active && sharedAccessContext.ownerUid 
-                ? sharedAccessContext.ownerUid 
-                : user.uid;
-            
-            // Set up real-time listener for changes with immediate sync
-            const docRef = db.collection('wineMonitoringStates').doc(targetUid);
-            
-            // Use includeMetadataChanges for more immediate updates
-            realtimeUnsubscribe = docRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
-                if (doc.exists) {
-                    // data already available
-                    const remoteState = data.state;
-                    
-                    // Only update UI for remote changes (not local pending writes)
-                    if (!doc.metadata.hasPendingWrites && !doc.metadata.fromCache) {
-                        const localSavedAt = localStorage.getItem('lastSavedAt');
-                        
-                        if (remoteState && remoteState.savedAt && remoteState.savedAt !== localSavedAt) {
-                            console.log('Received real-time update from cloud - updating data immediately');
-                            applyStateToUI(remoteState);
-                            localStorage.setItem('lastSavedAt', remoteState.savedAt);
-                            
-                            // Show a brief notification to user
-                            showSyncNotification();
-                        }
-                    } else if (doc.metadata.fromCache) {
-                        console.log('Data loaded from cache - waiting for server sync');
-                    }
-                }
-            }, (error) => {
-                console.error('Error listening for real-time changes:', error);
-                // null SDK handles automatic reconnection - just log the status
-                if (error.code === 'unavailable') {
-                    console.log('Network unavailable - null will auto-sync when connection restores');
-                }
-            });
+            // Firebase realtime sync removed - localStorage only
+            return;
         }
         
         function showSyncNotification() {
@@ -5146,35 +4763,6 @@
                 alert('שגיאה ברישום: ' + error.message);
             }
         }
-            
-            if (!isValidEmail(email)) {
-                alert('כתובת המייל אינה תקינה.');
-                return;
-            }
-            
-            if (password.length < 6) {
-                alert('הסיסמה חייבת להיות לפחות 6 תווים.');
-                return;
-            }
-            
-            try {
-                // Create new user with email and password
-                await auth.createUserWithEmailAndPassword(email, password);
-                console.log('User registered successfully');
-                closeLoginModal();
-            } catch (error) {
-                console.error('Error during registration:', error);
-                if (error.code === 'auth/email-already-in-use') {
-                    alert('כתובת המייל כבר בשימוש. נסה להתחבר במקום.');
-                } else if (error.code === 'auth/weak-password') {
-                    alert('הסיסמה חלשה מדי. השתמש בסיסמה חזקה יותר.');
-                } else if (error.code === 'auth/invalid-email') {
-                    alert('כתובת המייל אינה תקינה.');
-                } else {
-                    alert('שגיאה ברישום: ' + error.message);
-                }
-            }
-        }
         
         /**
          * Login with existing email and password
@@ -5201,25 +4789,6 @@
                 alert('שגיאה בהתחברות: ' + error.message);
             }
         }
-            
-            try {
-                // Sign in with email and password
-                await auth.signInWithEmailAndPassword(email, password);
-                console.log('User signed in successfully');
-                closeLoginModal();
-            } catch (error) {
-                console.error('Error during login:', error);
-                if (error.code === 'auth/user-not-found') {
-                    alert('משתמש לא נמצא. נסה להירשם תחילה.');
-                } else if (error.code === 'auth/wrong-password') {
-                    alert('סיסמא שגויה.');
-                } else if (error.code === 'auth/invalid-email') {
-                    alert('כתובת המייל אינה תקינה.');
-                } else {
-                    alert('שגיאה בהתחברות: ' + error.message);
-                }
-            }
-        }
         
         /**
          * Legacy function for site password login (kept for compatibility with existing code)
@@ -5234,19 +4803,12 @@
             }
             
             try {
-                // Sign in with email and password
-                await auth.signInWithEmailAndPassword(email, password);
-                console.log('User signed in with site password');
+                // Use SimpleAuth instead of Firebase
+                SimpleAuth.signIn(email, password);
                 closeLoginModal();
             } catch (error) {
                 console.error('Error during site password login:', error);
-                if (error.code === 'auth/user-not-found') {
-                    alert('משתמש לא נמצא. נסה להירשם תחילה.');
-                } else if (error.code === 'auth/wrong-password') {
-                    alert('סיסמא שגויה.');
-                } else {
-                    alert('שגיאה בהתחברות: ' + error.message);
-                }
+                alert('שגיאה בהתחברות: ' + error.message);
             }
         }
         
