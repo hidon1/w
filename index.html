@@ -62,8 +62,8 @@
                     displayName: email
                 };
                 sessionStorage.setItem('currentUser', JSON.stringify(this.currentUser));
-                if (this.onAuthStateChanged) {
-                    this.onAuthStateChanged(this.currentUser);
+                if (this._authCallback) {
+                    this._authCallback(this.currentUser);
                 }
                 return this.currentUser;
             },
@@ -71,8 +71,8 @@
             signOut() {
                 this.currentUser = null;
                 sessionStorage.removeItem('currentUser');
-                if (this.onAuthStateChanged) {
-                    this.onAuthStateChanged(null);
+                if (this._authCallback) {
+                    this._authCallback(null);
                 }
             },
             
@@ -102,9 +102,11 @@
         // Initialize auth
         SimpleAuth.init();
         
-        // Create compatible auth object
+        // Create compatible auth object with getter for currentUser
         const auth = {
-            currentUser: SimpleAuth.currentUser,
+            get currentUser() {
+                return SimpleAuth.currentUser;
+            },
             signOut: () => SimpleAuth.signOut(),
             onAuthStateChanged: (callback) => SimpleAuth.onAuthStateChanged(callback),
             getRedirectResult: () => SimpleAuth.getRedirectResult()
@@ -204,7 +206,7 @@
         <div class="sidebar-footer">
             <div class="auth-section">
                 <div class="auth-status" id="authStatus">לא מחובר</div>
-                <button id="loginBtn">התחבר עם Google</button>
+                <button id="loginBtn">התחבר</button>
                 <button id="changeSitePasswordBtn" class="change-password-btn" style="display:none;" onclick="openPasswordSetupModal()">שנה סיסמת אתר</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
             </div>
@@ -246,14 +248,8 @@
         <div class="login-modal-content">
             <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
             <h2>ברוכים הבאים!</h2>
-            <p class="login-description-desktop">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלכם יישמרו באופן מאובטח ותוכלו לגשת אליהם מכל מכשיר.</p>
-            <p class="login-description-mobile">כדי ליהנות מהשמירה בענן ויצירת פרויקטים חדשים, יש להתחבר עם Google או להירשם עם אימייל וסיסמה לאתר. הנתונים שלך יישמרו באופן מאובטח ותוכל לגשת אליהם מכל מכשיר.</p>
-            
-            <!-- Google Sign-In Button -->
-            <button class="google-btn" onclick="loginWithGoogle()">
-                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
-                התחבר עם Google
-            </button>
+            <p class="login-description-desktop">כדי לשמור את הנתונים שלך ולנהל גישה למשתמשים, יש להירשם עם אימייל וסיסמה. הנתונים שלך יישמרו באופן מאובטח במכשיר שלך.</p>
+            <p class="login-description-mobile">כדי לשמור את הנתונים שלך ולנהל גישה למשתמשים, יש להירשם עם אימייל וסיסמה. הנתונים שלך יישמרו במכשיר שלך.</p>
             
             <!-- Registration Form (shown by default) -->
             <div class="email-form" id="registrationForm">
@@ -622,18 +618,8 @@
                 <span class="close-button" onclick="closeAccessControlModal()">&times;</span>
                 <h3><i class="fas fa-users-cog"></i> ניהול גישה למערכת</h3>
                 
-                <!-- Tab Navigation -->
-                <div class="access-tabs">
-                    <button class="access-tab active" onclick="switchAccessTab('shareAccess')">
-                        <i class="fas fa-user-plus"></i> שיתוף גישה למשתמשים
-                    </button>
-                    <button class="access-tab" onclick="switchAccessTab('linkEmails')">
-                        <i class="fas fa-link"></i> חיבור כתובות מייל
-                    </button>
-                </div>
-                
-                <!-- Tab Content: Share Access -->
-                <div id="shareAccessTab" class="access-tab-content active">
+                <!-- Share Access Content (Simplified - No Tabs) -->
+                <div class="access-content">
                     <!-- Add New User Section -->
                     <div class="access-section add-user-section">
                         <h4><i class="fas fa-user-plus"></i> הוסף משתמש חדש</h4>
@@ -697,44 +683,6 @@
                                 <p>אין משתמשים עם גישה כרגע</p>
                             </div>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- Tab Content: Link Emails -->
-                <div id="linkEmailsTab" class="access-tab-content">
-                    <div class="access-section">
-                        <p style="margin-top:0; color: #666; font-size: 0.9em;">
-                            הוסף כתובות מייל נוספות לחשבון שלך. כל המיילים המשויכים יאפשרו לך להתחבר לאותו חשבון עם ה-UID הייחודי שלך.
-                        </p>
-                        
-                        <!-- Display currently linked providers -->
-                        <div style="margin-bottom: 25px; padding: 15px; background: linear-gradient(135deg, #f0f4ff, #e6f0ff); border-radius: 10px; border: 1px solid #d0e0ff;">
-                            <h4 style="margin-top: 0; color: #1f3b73; font-size: 1em;">כתובות מייל משויכות כעת:</h4>
-                            <ul id="linkedEmailsList" style="list-style: none; padding: 0; margin: 10px 0 0 0;">
-                                <li style="color: #888; font-style: italic;">טוען...</li>
-                            </ul>
-                        </div>
-                        
-                        <!-- Form to add new email -->
-                        <div style="padding: 20px; background: linear-gradient(135deg, #fff5f5, #ffe6e6); border-radius: 10px; border: 1px solid #ffd0d0;">
-                            <h4 style="margin-top: 0; color: #8b0000; font-size: 1em;">הוסף כתובת מייל חדשה:</h4>
-                            <p style="margin: 5px 0 15px 0; font-size: 0.85em; color: #666;">
-                                הזן כתובת מייל וסיסמה חדשים. הסיסמה חייבת להיות לפחות 6 תווים.
-                            </p>
-                            <div class="email-form">
-                                <input type="email" id="newLinkedEmail" placeholder="כתובת מייל חדשה" required>
-                                <input type="password" id="newLinkedEmailPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6">
-                                <div class="buttons">
-                                    <button class="register-btn" onclick="linkNewEmail()" style="width: 100%;">
-                                        <i class="fas fa-link" style="margin-left: 8px;"></i>
-                                        שייך כתובת מייל חדשה
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Status message area -->
-                        <div id="linkEmailStatus" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none; font-size: 0.9em;"></div>
                     </div>
                 </div>
             </div>
@@ -1918,14 +1866,7 @@
             });
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
-                    try {
-                        // Note: loginWithGoogle() handles async errors internally via .catch() handlers
-                        // This try-catch only catches synchronous errors during function invocation
-                        loginWithGoogle();
-                    } catch (error) {
-                        console.error('Error calling loginWithGoogle:', error);
-                        alert('שגיאה בהתחברות: ' + error.message);
-                    }
+                    openLoginModal();
                 });
             }
             if (logoutBtn) {
@@ -2239,9 +2180,7 @@
             }
             populateUserProjectSelect();
             loadActiveUsers();
-            // Email linking removed // Load linked emails for the second tab
             clearAccessForm();
-            switchAccessTab('shareAccess'); // Default to first tab
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
