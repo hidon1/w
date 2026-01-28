@@ -12,57 +12,11 @@
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/pdfmake.min.js"></script>
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/vfs_fonts.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-messaging-compat.js"></script>
     <link rel="stylesheet" href="t.css">
-    <!-- Google Identity Services (GIS) Library -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC8hWZ5XJGBQZx32m3VkL4JwPFe90qZAdQ",
-            authDomain: "wine-d0c2c.firebaseapp.com",
-            projectId: "wine-d0c2c",
-            storageBucket: "wine-d0c2c.firebasestorage.app",
-            messagingSenderId: "659709195708",
-            appId: "1:659709195708:web:39b401c67d31206b4667b9",
-            measurementId: "G-25Q2F6G9QC"
-        };
-        
-        // Make config available globally for service worker and modules
-        window.FIREBASE_CONFIG = firebaseConfig;
-        window.VAPID_PUBLIC_KEY = "REPLACE_ME_VAPID"; // TODO: Replace with actual VAPID key
-        
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const storage = firebase.storage();
-        
-        // Initialize Firebase Messaging for push notifications
-        let messaging = null;
-        if (firebase.messaging.isSupported()) {
-            messaging = firebase.messaging();
-        }
-        
+        // Simple client-side authentication
         // Site password prompt configuration - set to false to disable auto-prompt
         const ENABLE_SITE_PASSWORD_PROMPT = false;
-        
-        // Enable Firestore persistence for offline support and faster real-time sync
-        db.enablePersistence({ synchronizeTabs: true })
-            .then(() => {
-                console.log('Firestore persistence enabled - real-time sync optimized');
-            })
-            .catch((err) => {
-                if (err.code === 'failed-precondition') {
-                    // Multiple tabs open, persistence can only be enabled in one tab at a time
-                    console.log('Firestore persistence unavailable - multiple tabs open');
-                } else if (err.code === 'unimplemented') {
-                    // The current browser doesn't support persistence
-                    console.log('Firestore persistence not supported in this browser');
-                }
-            });
     </script>
 </head>
 <body class="preload">
