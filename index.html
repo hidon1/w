@@ -522,6 +522,22 @@
             background: #c62828;
         }
         
+        /* Permission-based UI hiding */
+        body.view-only-access .metric-delete-btn,
+        body.view-only-access .delete-detail-btn,
+        body.view-only-access .btn-delete,
+        body.view-only-access button[onclick*="delete"],
+        body.view-only-access button[onclick*="edit"],
+        body.view-only-access .add-data-cube {
+            display: none !important;
+        }
+        
+        body.no-finance-access #addFinanceEntryBtn,
+        body.no-finance-access .finance-edit-btn,
+        body.no-finance-access button[onclick*="Finance"] {
+            display: none !important;
+        }
+        
         #messagesList::-webkit-scrollbar-thumb {
             background: #888;
             border-radius: 4px;
@@ -835,6 +851,9 @@
                 <li>**צפייה בהיסטוריה:** לחצו על כל שורת מדד או פריט בלוח המחוונים כדי לראות את ההיסטוריה המלאה שלו עם גרף.</li>
                 <li>**עריכת שם פרויקט:** לחצו על שם הפרויקט (ליד "מערכת ניטור נתונים") כדי לערוך אותו.</li>
                 <li>**כרטיסיית פרטי פרויקט:** בצד שמאל למעלה, לחצו על כל פרט (שם יין, תאריך בציר וכו') כדי לערוך אותו. ניתן גם להוסיף שדות מותאמים אישית.</li>
+                <li>**☁️ סנכרון ענן:** התחברו כדי לסנכרן את הפרויקטים שלכם ל-Firestore ולגשת אליהם מכל מכשיר.</li>
+                <li>**👥 ניהול גישה:** הענקו גישה למשתמשים אחרים לפרויקטים שלכם (צפייה בלבד או עריכה).</li>
+                <li>**📬 הודעות:** שלחו וקבלו הודעות ממשתמשים אחרים במערכת.</li>
             </ul>
             <h4>כיצד להשתמש:</h4>
             <ul>
@@ -845,7 +864,10 @@
                 <li>**דוח כספי:** קבלו סיכום פיננסי רק לפרויקט הנוכחי.</li>
                 <li>**דוח כספי כולל:** קבלו סיכום פיננסי משולב מכל הפרויקטים שלכם.</li>
                 <li>**תזכורות:** הוסיפו תזכורות עם טקסט ותאריך/שעה, ותקבלו הודעה בדפדפן כשהזמן מגיע.</li>
-                <li>**תיבת דואר:** צפו בתזכורות שהתקבלו.</li>
+                <li>**תיבת דואר:** צפו בהודעות ותזכורות שהתקבלו. ניתן להשיב להודעות ממשתמשים אחרים.</li>
+                <li>**ניהול גישה:** הענקו או שללו גישה למשתמשים אחרים. בחרו אם הם יכולים לערוך או רק לצפות.</li>
+                <li>**הודעות Firebase:** שלחו הודעות לחברי החשבון, נהלו חשבונות משותפים.</li>
+            </ul>
                 <li>**מצב כהה:** עברו למצב תצוגה כהה לנוחות מירבית.</li>
             </ul>
         </div>
@@ -1266,6 +1288,39 @@
             } else {
                 sharedAccessNotice.style.display = 'none';
             }
+            
+            // Update UI based on permissions
+            updateUIBasedOnPermissions();
+        }
+        
+        /**
+         * Update UI elements based on current permissions
+         */
+        function updateUIBasedOnPermissions() {
+            const hasEditPermission = !sharedAccessContext.active || sharedAccessContext.allowEdit;
+            const hasFinancePermission = !sharedAccessContext.active || sharedAccessContext.allowFinance;
+            
+            // Hide/show add metric button
+            const addDataCube = document.querySelector('.add-data-cube');
+            if (addDataCube) {
+                addDataCube.style.display = hasEditPermission ? 'flex' : 'none';
+            }
+            
+            // Hide/show finance add button
+            const financeAddBtn = document.getElementById('addFinanceEntryBtn');
+            if (financeAddBtn) {
+                financeAddBtn.style.display = hasFinancePermission ? 'inline-block' : 'none';
+            }
+            
+            // Hide/show custom property add button
+            const customPropertyBtn = document.querySelector('[onclick="openCustomPropertyModal()"]');
+            if (customPropertyBtn) {
+                customPropertyBtn.style.display = hasEditPermission ? 'inline-block' : 'none';
+            }
+            
+            // Add view-only class to body for CSS-based hiding
+            document.body.classList.toggle('view-only-access', !hasEditPermission);
+            document.body.classList.toggle('no-finance-access', !hasFinancePermission);
         }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
