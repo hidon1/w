@@ -6805,18 +6805,20 @@
 
   // Switch Google Account - sign out and redirect to account selection
   window.switchGoogleAccount = async function() {
+    const SIGNOUT_DELAY_MS = 1000;
+    const SIGNIN_DELAY_MS = 500;
+    
     try {
       await signOut(auth);
       window.firebaseApp.currentAccount = null;
       window.firebaseApp.userAccounts = [];
       showNotification('מתנתק... אנא בחר חשבון Google אחר', 'info');
+      
       // Open login modal and trigger Google sign in with account selection
-      setTimeout(() => {
-        openLoginModal();
-        setTimeout(() => {
-          signInWithGoogle();
-        }, 500);
-      }, 1000);
+      await new Promise(resolve => setTimeout(resolve, SIGNOUT_DELAY_MS));
+      openLoginModal();
+      await new Promise(resolve => setTimeout(resolve, SIGNIN_DELAY_MS));
+      signInWithGoogle();
     } catch (error) {
       console.error('Switch account error:', error);
       showNotification('שגיאה בהחלפת חשבון: ' + error.message, 'error');
@@ -6876,7 +6878,9 @@
       }
     })
     .catch((error) => {
-      if (error.code !== 'auth/operation-not-allowed') {
+      if (error.code === 'auth/operation-not-allowed') {
+        console.log('Redirect result: No redirect operation in progress (this is normal on page load)');
+      } else {
         console.error('Redirect result error:', error);
         showNotification('שגיאה בהתחברות: ' + error.message, 'error');
       }
@@ -6989,10 +6993,11 @@
         showNotification('שגיאת הרשאות: אנא וודא שאתה מחובר ויש לך הרשאות לשמור נתונים', 'error');
       } else if (error.code === 'unavailable' || error.message?.includes('UNAVAILABLE')) {
         console.error('Firestore unavailable - network issue');
-        // Retry up to 3 times for network errors
+        // Retry up to 3 times for network errors with exponential backoff
         if (retryCount < 3) {
-          console.log(`Retrying Firestore sync (attempt ${retryCount + 1})...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          const delayMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.log(`Retrying Firestore sync in ${delayMs}ms (attempt ${retryCount + 1})...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
           return await window.syncProjectsToFirestore(accountId, projects, stagesConfig, retryCount + 1);
         }
         showNotification('שגיאת רשת: לא ניתן להתחבר ל-Firestore. הנתונים נשמרו מקומית.', 'error');
@@ -7035,10 +7040,11 @@
         showNotification('שגיאת הרשאות: אין גישה לנתונים', 'error');
       } else if (error.code === 'unavailable' || error.message?.includes('UNAVAILABLE')) {
         console.error('Firestore unavailable - network issue');
-        // Retry up to 3 times for network errors
+        // Retry up to 3 times for network errors with exponential backoff
         if (retryCount < 3) {
-          console.log(`Retrying Firestore load (attempt ${retryCount + 1})...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          const delayMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.log(`Retrying Firestore load in ${delayMs}ms (attempt ${retryCount + 1})...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
           return await window.loadProjectsFromFirestore(accountId, retryCount + 1);
         }
         showNotification('שגיאת רשת: לא ניתן להתחבר ל-Firestore', 'error');
