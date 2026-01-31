@@ -2675,22 +2675,61 @@
                 return;
             }
             
-            let html = '<div style="margin-bottom: 15px;">';
-            html += '<p style="color: #666; margin-bottom: 10px;">בחר חשבון למעבר:</p>';
+            // Create elements safely using DOM methods instead of string concatenation
+            const wrapperDiv = document.createElement('div');
+            wrapperDiv.style.marginBottom = '15px';
+            
+            const instructionP = document.createElement('p');
+            instructionP.style.color = '#666';
+            instructionP.style.marginBottom = '10px';
+            instructionP.textContent = 'בחר חשבון למעבר:';
+            wrapperDiv.appendChild(instructionP);
             
             accounts.forEach(account => {
                 const isCurrent = window.firebaseApp.currentAccount?.id === account.id;
-                html += `
-                    <div style="padding: 15px; margin-bottom: 10px; background: ${isCurrent ? '#e3f2fd' : '#f5f5f5'}; border-radius: 8px; border: 2px solid ${isCurrent ? '#2196F3' : '#ddd'}; cursor: ${isCurrent ? 'default' : 'pointer'};" ${!isCurrent ? `onclick="switchToAccount('${account.id}')"` : ''}>
-                        <div style="font-weight: bold; color: #333; margin-bottom: 5px;">${account.displayName || account.id}</div>
-                        <div style="font-size: 13px; color: #666;">בעלים: ${account.members ? account.members[0] : 'לא ידוע'}</div>
-                        ${isCurrent ? '<div style="margin-top: 8px; color: #2196F3; font-weight: bold; font-size: 12px;">📍 חשבון נוכחי</div>' : ''}
-                    </div>
-                `;
+                
+                const accountDiv = document.createElement('div');
+                accountDiv.style.padding = '15px';
+                accountDiv.style.marginBottom = '10px';
+                accountDiv.style.background = isCurrent ? '#e3f2fd' : '#f5f5f5';
+                accountDiv.style.borderRadius = '8px';
+                accountDiv.style.border = `2px solid ${isCurrent ? '#2196F3' : '#ddd'}`;
+                accountDiv.style.cursor = isCurrent ? 'default' : 'pointer';
+                
+                if (!isCurrent) {
+                    accountDiv.addEventListener('click', () => switchToAccount(account.id));
+                }
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.style.fontWeight = 'bold';
+                nameDiv.style.color = '#333';
+                nameDiv.style.marginBottom = '5px';
+                nameDiv.textContent = account.displayName || account.id;
+                
+                const ownerDiv = document.createElement('div');
+                ownerDiv.style.fontSize = '13px';
+                ownerDiv.style.color = '#666';
+                const ownerName = (account.members && account.members.length > 0) ? account.members[0] : 'לא ידוע';
+                ownerDiv.textContent = `בעלים: ${ownerName}`;
+                
+                accountDiv.appendChild(nameDiv);
+                accountDiv.appendChild(ownerDiv);
+                
+                if (isCurrent) {
+                    const currentBadge = document.createElement('div');
+                    currentBadge.style.marginTop = '8px';
+                    currentBadge.style.color = '#2196F3';
+                    currentBadge.style.fontWeight = 'bold';
+                    currentBadge.style.fontSize = '12px';
+                    currentBadge.textContent = '📍 חשבון נוכחי';
+                    accountDiv.appendChild(currentBadge);
+                }
+                
+                wrapperDiv.appendChild(accountDiv);
             });
             
-            html += '</div>';
-            container.innerHTML = html;
+            container.innerHTML = '';
+            container.appendChild(wrapperDiv);
         }
 
         async function switchToAccount(accountId) {
@@ -6592,7 +6631,7 @@
     });
     
     // Update recipient selector
-    if (recipientSelect) {
+    if (recipientSelect && auth.currentUser) {
       recipientSelect.innerHTML = '<option value="all">כל חברי החשבון</option>';
       members.forEach(email => {
         if (email !== auth.currentUser.email) {
