@@ -308,8 +308,8 @@
         
         <!-- Connection Status -->
         <div id="connectionStatus" style="display: flex; align-items: center; justify-content: center; padding: 10px; margin-bottom: 20px; background: #e3f2fd; border-radius: 8px; border: 1px solid #2196F3;">
-            <span id="connectionStatusIcon" style="width: 10px; height: 10px; border-radius: 50%; background: #4CAF50; margin-left: 8px; display: inline-block; animation: pulse 2s infinite;"></span>
-            <span id="connectionStatusText" style="color: #1976d2; font-weight: bold; font-size: 14px;">מחובר לשרת</span>
+            <span id="connectionStatusIcon" style="width: 10px; height: 10px; border-radius: 50%; background: #4CAF50; margin-left: 8px; display: inline-block; animation: pulse 2s infinite;" aria-label="סטטוס חיבור"></span>
+            <span id="connectionStatusText" style="color: #1976d2; font-weight: bold; font-size: 14px;" role="status" aria-live="polite">✓ מחובר לשרת</span>
         </div>
         
         <!-- Account Switcher -->
@@ -5761,7 +5761,9 @@
             const messageEl = document.createElement('div');
             messageEl.className = 'message-item';
             
-            const senderName = message.sender ? message.sender.split('@')[0] : 'אנונימי';
+            const senderName = message.sender && message.sender.includes('@') 
+              ? message.sender.split('@')[0] 
+              : message.sender || 'אנונימי';
             const timestamp = message.createdAt && typeof message.createdAt.toDate === 'function' 
               ? new Date(message.createdAt.toDate()).toLocaleString('he-IL', { 
                   year: 'numeric', 
@@ -5782,8 +5784,10 @@
             messagesList.appendChild(messageEl);
           });
           
-          // Auto-scroll to bottom
-          messagesList.scrollTop = messagesList.scrollHeight;
+          // Auto-scroll to bottom after DOM update
+          requestAnimationFrame(() => {
+            messagesList.scrollTop = messagesList.scrollHeight;
+          });
         }
       }
       
@@ -5951,11 +5955,11 @@
     if (statusIcon && statusText) {
       if (connected) {
         statusIcon.style.background = '#4CAF50';
-        statusText.textContent = 'מחובר לשרת';
+        statusText.textContent = '✓ מחובר לשרת';
         statusText.style.color = '#2e7d32';
       } else {
         statusIcon.style.background = '#f44336';
-        statusText.textContent = 'לא מחובר';
+        statusText.textContent = '✗ לא מחובר';
         statusText.style.color = '#c62828';
       }
     }
@@ -6077,7 +6081,8 @@
     
     if (user) {
       // User is signed in
-      const displayName = user.displayName || user.email.split('@')[0];
+      const email = user.email || 'משתמש';
+      const displayName = user.displayName || (email.includes('@') ? email.split('@')[0] : email);
       if (authStatus) authStatus.textContent = `מחובר: ${displayName}`;
       if (loginBtn) loginBtn.style.display = 'none';
       if (logoutBtn) {
