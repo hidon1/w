@@ -207,6 +207,10 @@
         <div class="sidebar-footer">
             <div class="auth-section">
                 <div class="auth-status" id="authStatus">לא מחובר</div>
+                <div class="cloud-sync-status" id="cloudSyncStatus" style="display:none; margin-top: 8px; padding: 6px 10px; background: #e3f2fd; border-radius: 6px; font-size: 12px; text-align: center;">
+                    <i class="fas fa-cloud" id="cloudSyncIcon"></i>
+                    <span id="cloudSyncText">מסונכרן</span>
+                </div>
                 <button id="loginBtn">התחבר</button>
                 <button id="changeSitePasswordBtn" class="change-password-btn" style="display:none;" onclick="openPasswordSetupModal()">שנה סיסמת אתר</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
@@ -444,6 +448,96 @@
             border-radius: 4px;
         }
         
+        /* User search results dropdown */
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            margin-top: 4px;
+        }
+        
+        .search-result-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+        
+        .search-result-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .search-result-email {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .search-result-name {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+        
+        /* Inbox action buttons */
+        .inbox-reply-btn {
+            padding: 6px 12px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: 8px;
+            transition: background-color 0.2s;
+        }
+        
+        .inbox-reply-btn:hover {
+            background: #1976d2;
+        }
+        
+        .inbox-delete-btn {
+            padding: 6px 12px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+        
+        .inbox-delete-btn:hover {
+            background: #c62828;
+        }
+        
+        /* Permission-based UI hiding */
+        body.view-only-access .metric-delete-btn,
+        body.view-only-access .delete-detail-btn,
+        body.view-only-access .btn-delete,
+        body.view-only-access button[onclick*="delete"],
+        body.view-only-access button[onclick*="edit"],
+        body.view-only-access .add-data-cube {
+            display: none !important;
+        }
+        
+        body.no-finance-access #addFinanceEntryBtn,
+        body.no-finance-access .finance-edit-btn,
+        body.no-finance-access button[onclick*="Finance"] {
+            display: none !important;
+        }
+        
         #messagesList::-webkit-scrollbar-thumb {
             background: #888;
             border-radius: 4px;
@@ -668,7 +762,34 @@
         <div class="reminders-modal-content">
             <span class="close-button" onclick="closeInboxModal()">&times;</span>
             <h3>תיבת דואר</h3>
+            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <button onclick="clearAllInbox()" style="padding: 8px 15px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-trash-alt"></i> נקה הכל
+                </button>
+            </div>
             <ul id="inboxList" class="reminders-list"></ul>
+        </div>
+    </div>
+    <div id="replyMessageModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-button" onclick="closeReplyMessageModal()">&times;</span>
+            <h3><i class="fas fa-reply"></i> שלח הודעה</h3>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">אל:</label>
+                <input type="text" id="replyToEmail" readonly style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: #f5f5f5;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">הודעה:</label>
+                <textarea id="replyMessageText" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical;" placeholder="הקלד את ההודעה כאן..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="closeReplyMessageModal()" style="padding: 10px 20px; background: #ccc; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-times"></i> ביטול
+                </button>
+                <button onclick="sendReplyMessage()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-paper-plane"></i> שלח
+                </button>
+            </div>
         </div>
     </div>
     <div id="remindersModal" class="reminders-modal">
@@ -730,6 +851,9 @@
                 <li>**צפייה בהיסטוריה:** לחצו על כל שורת מדד או פריט בלוח המחוונים כדי לראות את ההיסטוריה המלאה שלו עם גרף.</li>
                 <li>**עריכת שם פרויקט:** לחצו על שם הפרויקט (ליד "מערכת ניטור נתונים") כדי לערוך אותו.</li>
                 <li>**כרטיסיית פרטי פרויקט:** בצד שמאל למעלה, לחצו על כל פרט (שם יין, תאריך בציר וכו') כדי לערוך אותו. ניתן גם להוסיף שדות מותאמים אישית.</li>
+                <li>**☁️ סנכרון ענן:** התחברו כדי לסנכרן את הפרויקטים שלכם ל-Firestore ולגשת אליהם מכל מכשיר.</li>
+                <li>**👥 ניהול גישה:** הענקו גישה למשתמשים אחרים לפרויקטים שלכם (צפייה בלבד או עריכה).</li>
+                <li>**📬 הודעות:** שלחו וקבלו הודעות ממשתמשים אחרים במערכת.</li>
             </ul>
             <h4>כיצד להשתמש:</h4>
             <ul>
@@ -740,7 +864,10 @@
                 <li>**דוח כספי:** קבלו סיכום פיננסי רק לפרויקט הנוכחי.</li>
                 <li>**דוח כספי כולל:** קבלו סיכום פיננסי משולב מכל הפרויקטים שלכם.</li>
                 <li>**תזכורות:** הוסיפו תזכורות עם טקסט ותאריך/שעה, ותקבלו הודעה בדפדפן כשהזמן מגיע.</li>
-                <li>**תיבת דואר:** צפו בתזכורות שהתקבלו.</li>
+                <li>**תיבת דואר:** צפו בהודעות ותזכורות שהתקבלו. ניתן להשיב להודעות ממשתמשים אחרים.</li>
+                <li>**ניהול גישה:** הענקו או שללו גישה למשתמשים אחרים. בחרו אם הם יכולים לערוך או רק לצפות.</li>
+                <li>**הודעות Firebase:** שלחו הודעות לחברי החשבון, נהלו חשבונות משותפים.</li>
+            </ul>
                 <li>**מצב כהה:** עברו למצב תצוגה כהה לנוחות מירבית.</li>
             </ul>
         </div>
@@ -793,7 +920,10 @@
                         
                         <div class="form-group">
                             <label for="newUserEmail"><i class="fas fa-envelope"></i> כתובת מייל:</label>
-                            <input type="email" id="newUserEmail" placeholder="user@example.com" required>
+                            <div style="position: relative;">
+                                <input type="email" id="newUserEmail" placeholder="user@example.com" required autocomplete="off">
+                                <div id="userSearchResults" class="search-results" style="display: none;"></div>
+                            </div>
                         </div>
                         
                         <div class="form-group">
@@ -1158,6 +1288,39 @@
             } else {
                 sharedAccessNotice.style.display = 'none';
             }
+            
+            // Update UI based on permissions
+            updateUIBasedOnPermissions();
+        }
+        
+        /**
+         * Update UI elements based on current permissions
+         */
+        function updateUIBasedOnPermissions() {
+            const hasEditPermission = !sharedAccessContext.active || sharedAccessContext.allowEdit;
+            const hasFinancePermission = !sharedAccessContext.active || sharedAccessContext.allowFinance;
+            
+            // Hide/show add metric button
+            const addDataCube = document.querySelector('.add-data-cube');
+            if (addDataCube) {
+                addDataCube.style.display = hasEditPermission ? 'flex' : 'none';
+            }
+            
+            // Hide/show finance add button
+            const financeAddBtn = document.getElementById('addFinanceEntryBtn');
+            if (financeAddBtn) {
+                financeAddBtn.style.display = hasFinancePermission ? 'inline-block' : 'none';
+            }
+            
+            // Hide/show custom property add button
+            const customPropertyBtn = document.querySelector('[onclick="openCustomPropertyModal()"]');
+            if (customPropertyBtn) {
+                customPropertyBtn.style.display = hasEditPermission ? 'inline-block' : 'none';
+            }
+            
+            // Add view-only class to body for CSS-based hiding
+            document.body.classList.toggle('view-only-access', !hasEditPermission);
+            document.body.classList.toggle('no-finance-access', !hasFinancePermission);
         }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
@@ -1661,6 +1824,23 @@
             inboxModal.style.display = 'none';
             showMainContent();
         }
+        
+        /**
+         * Escape HTML to prevent XSS
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        /**
+         * Escape single quotes for use in onclick attributes
+         */
+        function escapeSingleQuotes(text) {
+            return text.replace(/'/g, "\\'");
+        }
+        
         function renderInboxList() {
             inboxList.innerHTML = '';
             inbox.forEach((reminder, index) => {
@@ -1672,22 +1852,28 @@
                 
                 const imageHtml = reminder.imageUrl ? 
                     `<div class="inbox-message-image">
-                        <img src="${reminder.imageUrl}" alt="תמונה" class="inbox-item-image" onclick="window.open('${reminder.imageUrl}', '_blank')">
+                        <img src="${escapeHtml(reminder.imageUrl)}" alt="תמונה" class="inbox-item-image" onclick="window.open('${escapeSingleQuotes(reminder.imageUrl)}', '_blank')">
                     </div>` : '';
                 
                 const dateStr = new Date(reminder.datetime).toLocaleDateString('he-IL');
                 const timeStr = new Date(reminder.datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+                
+                // Check if this is a Firestore notification (has senderEmail)
+                const isFirestoreNotif = reminder.senderEmail !== undefined;
+                const subject = isFirestoreNotif ? `הודעה מ-${escapeHtml(reminder.senderName || reminder.senderEmail)}` : `${soundLabel} תזכורת`;
+                const escapedText = escapeHtml(reminder.text);
+                const escapedSnippet = escapeHtml(reminder.text.substring(0, 50)) + (reminder.text.length > 50 ? '...' : '');
                 
                 const li = document.createElement('li');
                 li.className = 'inbox-item';
                 li.innerHTML = `
                     <div class="inbox-message-header" onclick="toggleInboxMessage(${index})">
                         <div class="inbox-icon">
-                            <i class="fas fa-envelope"></i>
+                            <i class="fas fa-envelope${isFirestoreNotif && !reminder.read ? '' : '-open'}"></i>
                         </div>
                         <div class="inbox-preview">
-                            <div class="inbox-subject">${soundLabel} תזכורת</div>
-                            <div class="inbox-snippet">${reminder.text.substring(0, 50)}${reminder.text.length > 50 ? '...' : ''}</div>
+                            <div class="inbox-subject">${subject}</div>
+                            <div class="inbox-snippet">${escapedSnippet}</div>
                         </div>
                         <div class="inbox-meta">
                             <div class="inbox-date">${dateStr}</div>
@@ -1697,11 +1883,16 @@
                     </div>
                     <div class="inbox-message-body" id="inbox-body-${index}" style="display:none;">
                         <div class="inbox-message-content">
-                            <p>${reminder.text}</p>
+                            <p style="white-space: pre-wrap;">${escapedText}</p>
                             ${imageHtml}
                         </div>
                         <div class="inbox-message-actions">
-                            <button onclick="deleteInbox(${reminder.id})" class="inbox-delete-btn">
+                            ${isFirestoreNotif ? `
+                                <button onclick="replyToMessage('${escapeSingleQuotes(reminder.senderEmail)}', '${escapeSingleQuotes(reminder.senderName || '')}', ${index})" class="inbox-reply-btn">
+                                    <i class="fas fa-reply"></i> השב
+                                </button>
+                            ` : ''}
+                            <button onclick="deleteInbox('${escapeSingleQuotes(reminder.id)}')" class="inbox-delete-btn">
                                 <i class="fas fa-trash"></i> מחק
                             </button>
                         </div>
@@ -1729,10 +1920,146 @@
         async function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
             localStorage.setItem('inbox', JSON.stringify(inbox));
-            // Inbox auto-saved to localStorage
+            
+            // Also delete from Firestore if it's a Firestore notification
+            const FIRESTORE_NOTIF_PREFIX = 'notif_';
+            try {
+                if (window.deleteNotification && id.startsWith(FIRESTORE_NOTIF_PREFIX)) {
+                    const firestoreId = id.substring(FIRESTORE_NOTIF_PREFIX.length);
+                    await window.deleteNotification(firestoreId);
+                }
+            } catch (error) {
+                console.error('Error deleting notification from Firestore:', error);
+            }
+            
             renderInboxList();
             updateInboxBadge();
         }
+        
+        /**
+         * Clear all inbox messages
+         */
+        async function clearAllInbox() {
+            if (!confirm('האם אתה בטוח שברצונך למחוק את כל ההודעות?')) {
+                return;
+            }
+            
+            const FIRESTORE_NOTIF_PREFIX = 'notif_';
+            try {
+                // Delete all Firestore notifications
+                const firestoreNotifs = inbox.filter(item => item.id.startsWith(FIRESTORE_NOTIF_PREFIX));
+                for (const notif of firestoreNotifs) {
+                    if (window.deleteNotification) {
+                        const firestoreId = notif.id.substring(FIRESTORE_NOTIF_PREFIX.length);
+                        await window.deleteNotification(firestoreId);
+                    }
+                }
+                
+                // Clear all inbox
+                inbox = [];
+                localStorage.setItem('inbox', JSON.stringify(inbox));
+                
+                renderInboxList();
+                updateInboxBadge();
+                
+                alert('כל ההודעות נמחקו');
+            } catch (error) {
+                console.error('Error clearing inbox:', error);
+                alert('שגיאה במחיקת הודעות: ' + error.message);
+            }
+        }
+        
+        /**
+         * Update inbox with Firestore notifications
+         */
+        function updateInboxWithNotifications(notifications) {
+            // Convert Firestore notifications to inbox format
+            const firestoreInbox = notifications.map(notif => {
+                const timestamp = notif.timestamp?.toDate ? notif.timestamp.toDate() : new Date();
+                return {
+                    id: 'notif_' + notif.id,
+                    text: `מאת: ${notif.senderName || notif.senderEmail}\n\n${notif.text}`,
+                    datetime: timestamp.toISOString(),
+                    sound: 'none',
+                    popup: false,
+                    imageUrl: null,
+                    senderEmail: notif.senderEmail,
+                    senderName: notif.senderName,
+                    read: notif.read || false
+                };
+            });
+            
+            // Get local inbox items (not from Firestore)
+            const localInbox = inbox.filter(item => !item.id.startsWith('notif_'));
+            
+            // Merge local and Firestore items
+            inbox = [...firestoreInbox, ...localInbox];
+            
+            // Update UI if inbox modal is open
+            if (inboxModal && inboxModal.style.display === 'flex') {
+                renderInboxList();
+            }
+            
+            updateInboxBadge();
+        }
+        
+        /**
+         * Open reply modal for a message
+         */
+        function replyToMessage(senderEmail, senderName, messageIndex) {
+            const replyModal = document.getElementById('replyMessageModal');
+            const replyToEmailInput = document.getElementById('replyToEmail');
+            const replyTextArea = document.getElementById('replyMessageText');
+            
+            if (!replyModal || !replyToEmailInput || !replyTextArea) return;
+            
+            replyToEmailInput.value = senderEmail;
+            replyTextArea.value = '';
+            replyModal.style.display = 'flex';
+            
+            setTimeout(() => replyTextArea.focus(), 100);
+        }
+        
+        /**
+         * Close reply message modal
+         */
+        function closeReplyMessageModal() {
+            const replyModal = document.getElementById('replyMessageModal');
+            if (replyModal) {
+                replyModal.style.display = 'none';
+            }
+        }
+        
+        /**
+         * Send reply message
+         */
+        async function sendReplyMessage() {
+            const replyToEmailInput = document.getElementById('replyToEmail');
+            const replyTextArea = document.getElementById('replyMessageText');
+            
+            const targetEmail = replyToEmailInput?.value;
+            const message = replyTextArea?.value.trim();
+            
+            if (!targetEmail || !message) {
+                alert('אנא הזן הודעה');
+                return;
+            }
+            
+            try {
+                if (window.sendNotificationToUser) {
+                    const user = SimpleAuth.currentUser;
+                    await window.sendNotificationToUser(targetEmail, message, user?.displayName || user?.email);
+                    alert('ההודעה נשלחה בהצלחה');
+                    closeReplyMessageModal();
+                } else {
+                    alert('שליחת הודעות זמינה רק למשתמשים מחוברים ב-Firebase');
+                }
+            } catch (error) {
+                console.error('Error sending reply:', error);
+                alert('שגיאה בשליחת ההודעה: ' + error.message);
+            }
+        }
+        
         function openRemindersModal() {
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
@@ -1848,23 +2175,60 @@
                     SimpleAuth.signOut();
                 });
             }
-            SimpleAuth.onAuthStateChanged((user) => {
+            SimpleAuth.onAuthStateChanged(async (user) => {
                 if (user) {
                     if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
                     if (loginBtn) loginBtn.style.display = 'none';
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = ENABLE_SITE_PASSWORD_PROMPT ? 'inline-block' : 'none';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
-                    // Data already loaded from localStorage
+                    
+                    // Try to load data from Firestore
+                    try {
+                        updateCloudSyncStatus('syncing');
+                        const accountId = window.firebaseApp?.currentAccount?.id || user.uid;
+                        const firestoreData = await window.loadProjectsFromFirestore(accountId);
+                        
+                        if (firestoreData && firestoreData.projects && Object.keys(firestoreData.projects).length > 0) {
+                            // Merge Firestore data with local data
+                            projects = firestoreData.projects;
+                            if (firestoreData.stagesConfig) {
+                                stagesConfig = firestoreData.stagesConfig;
+                            }
+                            
+                            // Update localStorage
+                            localStorage.setItem('projects', JSON.stringify(projects));
+                            if (firestoreData.stagesConfig) {
+                                localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig));
+                            }
+                            
+                            // Refresh UI
+                            if (currentProjectId && !projects[currentProjectId]) {
+                                currentProjectId = Object.keys(projects)[0];
+                                localStorage.setItem('currentProjectId', currentProjectId);
+                            }
+                            updateProjectDisplay();
+                            filterProjectsByYear();
+                            
+                            console.log('Loaded projects from Firestore');
+                        }
+                        updateCloudSyncStatus('synced');
+                    } catch (error) {
+                        console.error('Error loading from Firestore:', error);
+                        updateCloudSyncStatus('error');
+                    }
+                    
+                    // Setup real-time notifications listener
+                    if (window.setupNotificationsListener) {
+                        window.setupNotificationsListener((notifications) => {
+                            // Update inbox with Firestore notifications
+                            updateInboxWithNotifications(notifications);
+                        });
+                    }
                     
                     // Load reminders and inbox from localStorage
                     renderRemindersList();
                     renderInboxList();
                     updateInboxBadge();
-                    
-                    // Set up real-time synchronization for all data
-                    // Realtime sync disabled (localStorage only)
-                    // Inbox sync disabled
-                    // Reminders sync disabled
                     
                     closeLoginModal();
                     
@@ -1882,9 +2246,7 @@
                     if (logoutBtn) logoutBtn.style.display = 'none';
                     
                     // Clean up real-time listeners
-                    // Realtime sync disabled (localStorage only)
-                    // Inbox sync disabled
-                    // Reminders sync disabled
+                    updateCloudSyncStatus('offline');
                     
                     openLoginModal();
                 }
@@ -2042,7 +2404,56 @@
             }
             return loaded;
         }
-        function saveAllProjects() {
+        
+        /**
+         * Update cloud sync status indicator
+         * @param {string} status - 'synced', 'syncing', 'error', or 'offline'
+         */
+        function updateCloudSyncStatus(status) {
+            const statusEl = document.getElementById('cloudSyncStatus');
+            const iconEl = document.getElementById('cloudSyncIcon');
+            const textEl = document.getElementById('cloudSyncText');
+            
+            if (!statusEl || !iconEl || !textEl) return;
+            
+            // Show status indicator when authenticated
+            if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.auth.currentUser) {
+                statusEl.style.display = 'block';
+            } else {
+                statusEl.style.display = 'none';
+                return;
+            }
+            
+            switch (status) {
+                case 'synced':
+                    statusEl.style.background = '#e8f5e9';
+                    statusEl.style.color = '#2e7d32';
+                    iconEl.className = 'fas fa-cloud-check';
+                    textEl.textContent = 'מסונכרן';
+                    break;
+                case 'syncing':
+                    statusEl.style.background = '#fff3e0';
+                    statusEl.style.color = '#f57c00';
+                    iconEl.className = 'fas fa-cloud-arrow-up';
+                    textEl.textContent = 'מסנכרן...';
+                    break;
+                case 'error':
+                    statusEl.style.background = '#ffebee';
+                    statusEl.style.color = '#c62828';
+                    iconEl.className = 'fas fa-cloud-exclamation';
+                    textEl.textContent = 'שגיאה בסנכרון';
+                    break;
+                case 'offline':
+                default:
+                    statusEl.style.background = '#e3f2fd';
+                    statusEl.style.color = '#1976d2';
+                    iconEl.className = 'fas fa-cloud-slash';
+                    textEl.textContent = 'לא מחובר';
+                    break;
+            }
+        }
+        
+        async function saveAllProjects() {
             if (sharedAccessContext.active && !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance) {
                 console.warn('View-only mode - changes not saved');
                 return;
@@ -2053,12 +2464,19 @@
             } catch (storageErr) {
                 handleLocalStorageError(storageErr);
             }
+            
+            // Sync to Firestore if user is authenticated
             try {
-                if (auth && auth.currentUser) {
-                    // State auto-saved to localStorage
+                if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.auth.currentUser) {
+                    const user = window.firebaseApp.auth.currentUser;
+                    const accountId = window.firebaseApp.currentAccount?.id || user.uid;
+                    
+                    await window.syncProjectsToFirestore(accountId, projects, stagesConfig);
+                    updateCloudSyncStatus('synced');
                 }
             } catch (e) {
-                // null not available, skip cloud save
+                console.error('Firestore sync error:', e);
+                updateCloudSyncStatus('error');
             }
         }
         
@@ -2153,6 +2571,7 @@
             populateUserProjectSelect();
             loadActiveUsers();
             clearAccessForm();
+            setupUserSearch();
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
@@ -2228,6 +2647,61 @@
             if (viewRadio) viewRadio.checked = true;
             if (financeCheckbox) financeCheckbox.checked = false;
         }
+        
+        /**
+         * Setup user email search functionality
+         */
+        function setupUserSearch() {
+            const emailInput = document.getElementById('newUserEmail');
+            const searchResults = document.getElementById('userSearchResults');
+            
+            if (!emailInput || !searchResults) return;
+            
+            const MIN_SEARCH_LENGTH = 3; // Minimum characters before showing search results
+            
+            emailInput.addEventListener('input', async (e) => {
+                const searchTerm = e.target.value.trim();
+                
+                if (searchTerm.length < MIN_SEARCH_LENGTH) {
+                    searchResults.style.display = 'none';
+                    return;
+                }
+                
+                // Search in Firestore users (if available)
+                try {
+                    if (window.firebaseApp?.db) {
+                        // For now, just show the entered email as a suggestion
+                        // In a real implementation, you'd search a users collection
+                        searchResults.innerHTML = '';
+                        
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'search-result-item';
+                        resultItem.innerHTML = `
+                            <div class="search-result-email">${escapeHtml(searchTerm)}</div>
+                            <div class="search-result-name">לחץ לבחירה</div>
+                        `;
+                        
+                        resultItem.addEventListener('click', () => {
+                            emailInput.value = searchTerm;
+                            searchResults.style.display = 'none';
+                        });
+                        
+                        searchResults.appendChild(resultItem);
+                        searchResults.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Error searching users:', error);
+                }
+            });
+            
+            // Hide search results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!emailInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        }
+        
         async function grantUserAccess() {
             const user = SimpleAuth.currentUser;
             if (!user) {
@@ -2258,13 +2732,31 @@
             }
             
             try {
-                // Store user access directly in Firestore
-                const accessId = AccessManagement.grantAccess(
-                    targetEmail,
-                    projectId,
-                    allowEdit,
-                    allowFinance
-                );
+                // Try to use Firestore if available, otherwise use localStorage
+                if (window.firebaseApp?.auth?.currentUser && window.grantAccessFirestore) {
+                    const accessId = await window.grantAccessFirestore(
+                        targetEmail,
+                        projectId,
+                        allowEdit,
+                        allowFinance
+                    );
+                    
+                    // Send notification to the user
+                    if (window.sendNotificationToUser) {
+                        // Note: Project name is sent as plain text in notification, not rendered as HTML
+                        const projectName = projectId === 'all' ? 'כל הפרויקטים' : (projects[projectId]?.name || projectId);
+                        const message = `קיבלת הרשאת גישה למערכת ניטור יין.\nפרויקטים: ${projectName}\nהרשאות: ${allowEdit ? 'עריכה' : 'צפייה'} ${allowFinance ? '+ כספים' : ''}`;
+                        await window.sendNotificationToUser(targetEmail, message, user.displayName || user.email);
+                    }
+                } else {
+                    // Fallback to localStorage
+                    const accessId = AccessManagement.grantAccess(
+                        targetEmail,
+                        projectId,
+                        allowEdit,
+                        allowFinance
+                    );
+                }
                 
                 alert(`גישה הוענקה בהצלחה ל-${targetEmail}`);
                 clearAccessForm();
@@ -2287,7 +2779,15 @@
             if (!user || !usersList) return;
             
             try {
-                const activeUsers = AccessManagement.getActiveUsers();
+                let activeUsers = [];
+                
+                // Try to load from Firestore if available
+                if (window.firebaseApp?.auth?.currentUser && window.getAccessGrantsFirestore) {
+                    activeUsers = await window.getAccessGrantsFirestore();
+                } else {
+                    // Fallback to localStorage
+                    activeUsers = AccessManagement.getActiveUsers();
+                }
                 
                 usersList.innerHTML = '';
                 
@@ -2368,7 +2868,13 @@
             }
             
             try {
-                AccessManagement.revokeAccess(accessId);
+                // Try to use Firestore if available, otherwise use localStorage
+                if (window.firebaseApp?.auth?.currentUser && window.revokeAccessFirestore) {
+                    await window.revokeAccessFirestore(accessId);
+                } else {
+                    // Fallback to localStorage
+                    AccessManagement.revokeAccess(accessId);
+                }
                 
                 alert('הגישה נשללה בהצלחה');
                 await loadActiveUsers();
@@ -5654,7 +6160,7 @@
   // Import Firebase SDKs (Storage removed - text-only messaging)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, updateDoc, arrayUnion, onSnapshot, addDoc, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, updateDoc, arrayUnion, onSnapshot, addDoc, serverTimestamp, orderBy, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   // Firebase configuration
   const firebaseConfig = {
@@ -6186,7 +6692,242 @@
     if (modal) modal.style.display = 'none';
   }
 
+  // ========== Firestore Data Persistence Functions ==========
+  
+  /**
+   * Sync projects data to Firestore
+   */
+  window.syncProjectsToFirestore = async function(accountId, projects, stagesConfig) {
+    try {
+      const projectsRef = doc(db, 'userData', accountId);
+      await setDoc(projectsRef, {
+        projects: projects,
+        stagesConfig: stagesConfig,
+        lastModified: serverTimestamp(),
+        owner: auth.currentUser?.email || auth.currentUser?.uid
+      }, { merge: true });
+      
+      console.log('Projects synced to Firestore successfully');
+      return true;
+    } catch (error) {
+      console.error('Error syncing to Firestore:', error);
+      throw error;
+    }
+  };
+  
+  /**
+   * Load projects data from Firestore
+   */
+  window.loadProjectsFromFirestore = async function(accountId) {
+    try {
+      const projectsRef = doc(db, 'userData', accountId);
+      const docSnap = await getDoc(projectsRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          projects: data.projects || {},
+          stagesConfig: data.stagesConfig || null
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading from Firestore:', error);
+      throw error;
+    }
+  };
+  
+  // ========== Access Management with Firestore ==========
+  
+  /**
+   * Grant access to a user in Firestore
+   */
+  window.grantAccessFirestore = async function(targetEmail, projectId, allowEdit, allowFinance) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Not authenticated');
+    
+    const accessRef = collection(db, 'access');
+    const accessData = {
+      ownerEmail: currentUser.email,
+      ownerUid: currentUser.uid,
+      targetEmail: targetEmail,
+      projectId: projectId === 'all' ? null : projectId,
+      allowEdit: allowEdit || false,
+      allowFinance: allowFinance || false,
+      status: 'active',
+      createdAt: serverTimestamp()
+    };
+    
+    const docRef = await addDoc(accessRef, accessData);
+    return docRef.id;
+  };
+  
+  /**
+   * Get all access grants for current user
+   */
+  window.getAccessGrantsFirestore = async function() {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return [];
+    
+    const accessRef = collection(db, 'access');
+    const q = query(accessRef, 
+      where('ownerEmail', '==', currentUser.email),
+      where('status', '==', 'active')
+    );
+    
+    const snapshot = await getDocs(q);
+    const grants = [];
+    snapshot.forEach(doc => {
+      grants.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return grants;
+  };
+  
+  /**
+   * Revoke access grant
+   */
+  window.revokeAccessFirestore = async function(accessId) {
+    const accessRef = doc(db, 'access', accessId);
+    await updateDoc(accessRef, {
+      status: 'revoked',
+      revokedAt: serverTimestamp()
+    });
+  };
+  
+  /**
+   * Check if current user has access to a project
+   */
+  window.checkAccessFirestore = async function(projectId) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return null;
+    
+    const accessRef = collection(db, 'access');
+    const q = query(accessRef,
+      where('targetEmail', '==', currentUser.email),
+      where('status', '==', 'active')
+    );
+    
+    const snapshot = await getDocs(q);
+    let accessGrant = null;
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.projectId === null || data.projectId === projectId) {
+        accessGrant = {
+          id: doc.id,
+          ...data
+        };
+      }
+    });
+    
+    return accessGrant;
+  };
+  
+  // ========== Messaging & Inbox System ==========
+  
+  /**
+   * Send a notification/message to a user
+   */
+  window.sendNotificationToUser = async function(targetEmail, message, senderName = null) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Not authenticated');
+    
+    const notificationsRef = collection(db, 'notifications');
+    const notification = {
+      targetEmail: targetEmail,
+      senderEmail: currentUser.email,
+      senderName: senderName || currentUser.displayName || currentUser.email,
+      text: message,
+      timestamp: serverTimestamp(),
+      read: false,
+      type: 'message'
+    };
+    
+    const docRef = await addDoc(notificationsRef, notification);
+    return docRef.id;
+  };
+  
+  /**
+   * Get notifications for current user
+   */
+  window.getNotificationsFirestore = async function() {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return [];
+    
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(notificationsRef,
+      where('targetEmail', '==', currentUser.email),
+      orderBy('timestamp', 'desc'),
+      limit(100)
+    );
+    
+    const snapshot = await getDocs(q);
+    const notifications = [];
+    snapshot.forEach(doc => {
+      notifications.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return notifications;
+  };
+  
+  /**
+   * Setup real-time listener for notifications
+   */
+  window.setupNotificationsListener = function(callback) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return null;
+    
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(notificationsRef,
+      where('targetEmail', '==', currentUser.email),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+    
+    return onSnapshot(q, (snapshot) => {
+      const notifications = [];
+      snapshot.forEach(doc => {
+        notifications.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      callback(notifications);
+    });
+  };
+  
+  /**
+   * Mark notification as read
+   */
+  window.markNotificationRead = async function(notificationId) {
+    const notificationRef = doc(db, 'notifications', notificationId);
+    await updateDoc(notificationRef, {
+      read: true,
+      readAt: serverTimestamp()
+    });
+  };
+  
+  /**
+   * Delete notification
+   */
+  window.deleteNotification = async function(notificationId) {
+    const notificationRef = doc(db, 'notifications', notificationId);
+    await deleteDoc(notificationRef);
+  };
+  
+  // Make auth and db available globally for easier access
+  window.firebaseApp.auth = auth;
+  window.firebaseApp.db = db;
+
   console.log('Firebase initialized successfully');
+
 </script>
 </body>
 </html>
