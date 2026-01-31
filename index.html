@@ -2421,7 +2421,7 @@
             if (!statusEl || !iconEl || !textEl) return;
             
             // Show status indicator when authenticated
-            if (window.firebaseApp && auth && auth.currentUser) {
+            if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.auth.currentUser) {
                 statusEl.style.display = 'block';
             } else {
                 statusEl.style.display = 'none';
@@ -2471,8 +2471,8 @@
             
             // Sync to Firestore if user is authenticated
             try {
-                if (window.firebaseApp && auth && auth.currentUser) {
-                    const user = auth.currentUser;
+                if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.auth.currentUser) {
+                    const user = window.firebaseApp.auth.currentUser;
                     const accountId = window.firebaseApp.currentAccount?.id || user.uid;
                     
                     await window.syncProjectsToFirestore(accountId, projects, stagesConfig);
@@ -2566,7 +2566,8 @@
             renderProjectList(selectedYear);
         }
         function openAccessControlModal() {
-            if (!auth.currentUser) {
+            // Check if user is authenticated via Firebase
+            if (!window.firebaseApp || !window.firebaseApp.auth || !window.firebaseApp.auth.currentUser) {
                 alert('התחבר כדי לנהל הרשאות שיתוף.');
                 openLoginModal();
                 return;
@@ -2624,7 +2625,8 @@
         }
         
         function openAccountSwitcher() {
-            if (!auth.currentUser) {
+            // Check if user is authenticated via Firebase
+            if (!window.firebaseApp || !window.firebaseApp.auth || !window.firebaseApp.auth.currentUser) {
                 alert('עליך להתחבר תחילה כדי לעבור בין חשבונות.');
                 openLoginModal();
                 return;

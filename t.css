@@ -398,9 +398,9 @@
 
 /* Base styles for all screen sizes */
 :root {
-    --primary-color: #6C5CE7;
-    --secondary-color: #5F48D6;
-    --accent-color: #FDCB6E; /* Golden accent */
+    --primary-color: #7B1F3D; /* Burgundy/Wine color */
+    --secondary-color: #5E1A2E; /* Darker wine shade */
+    --accent-color: #D4AF37; /* Gold accent */
     --background-color: #F8F9FA;
     --background-color-mid: #F0F3F7;
     --background-color-end: #E9ECF1;
@@ -408,15 +408,15 @@
     --text-color: #2C2C2C;
     --light-text-color: #5A5A5A;
     --border-color: #E9ECF1;
-    --shadow: 0 4px 20px rgba(108, 92, 231, 0.08);
+    --shadow: 0 4px 20px rgba(123, 31, 61, 0.08);
     --border-radius: 16px;
     --animation-speed: 0.4s;
-    --graph-line-color: #6C5CE7;
-    --graph-area-color: rgba(108, 92, 231, 0.2);
-    --graph-point-color: #5F48D6;
+    --graph-line-color: #7B1F3D;
+    --graph-area-color: rgba(123, 31, 61, 0.2);
+    --graph-point-color: #5E1A2E;
     --graph-average-color: #00B894;
-    --top-section-background: linear-gradient(135deg, #A29BFE, #6C5CE7);
-    --top-section-border: #D1C9FF;
+    --top-section-background: linear-gradient(135deg, #9B3352, #7B1F3D);
+    --top-section-border: #D9A5B3;
     --dark-background-color: #1A1A1D;
     --dark-background-color-mid: #0F0F11;
     --dark-background-color-end: #000000;
@@ -425,9 +425,9 @@
     --dark-light-text-color: #B8AFA0;
     --dark-border-color: #3A3A40;
     --dark-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
-    --dark-primary-color: #A29BFE;
-    --dark-secondary-color: #6C5CE7;
-    --dark-accent-color: #FFC952; /* Golden accent for dark mode */
+    --dark-primary-color: #9B3352;
+    --dark-secondary-color: #7B1F3D;
+    --dark-accent-color: #D4AF37; /* Gold accent for dark mode */
     --dark-graph-line-color: #C73659;
     --dark-graph-area-color: rgba(255, 215, 0, 0.2);
     --font-size-base: 16px;
@@ -596,15 +596,15 @@ p, span, div {
 }
 
 .top-section-wrapper {
-    background: var(--top-section-background);
+    background: transparent; /* Remove background as requested */
     padding-top: 5px;
     padding-left: 25px;
     padding-right: 25px;
     border-bottom-left-radius: var(--border-radius);
     border-bottom-right-radius: var(--border-radius);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    box-shadow: none; /* Remove shadow */
     transition: all var(--animation-speed);
-    border-bottom: 1px solid var(--top-section-border);
+    border-bottom: none; /* Remove border */
     animation: slideInDown 0.5s ease-out;
 }
 
@@ -614,8 +614,8 @@ p, span, div {
 }
 
 body.dark-mode .top-section-wrapper {
-    background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
-    border-color: var(--dark-border-color);
+    background: transparent; /* Remove background in dark mode too */
+    border-color: transparent;
 }
 
 .container {
@@ -685,17 +685,17 @@ body.dark-mode .container {
     flex-wrap: wrap; /* Changed from nowrap to wrap to allow all categories to display */
     overflow-x: visible; /* Changed from auto to visible to show all categories */
     gap: 6px;
-    margin-top: 12px;
-    margin-bottom: 16px;
-    padding: 8px;
-    background: linear-gradient(135deg, #F8F0E3, #E6D7C3);
+    margin-top: 8px; /* Reduced from 12px */
+    margin-bottom: 12px; /* Reduced from 16px */
+    padding: 10px 8px; /* Increased vertical padding for taller appearance */
+    background: linear-gradient(135deg, #F4E8EC, #E8D4D9); /* Wine-tinted background */
     border-radius: var(--border-radius);
     transition: all var(--animation-speed);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 3px rgba(123, 31, 61, 0.08);
 }
 
 body.dark-mode .stage-nav-container {
-    background: linear-gradient(135deg, var(--dark-card-background), #3a3a3a);
+    background: linear-gradient(135deg, var(--dark-card-background), #3a2a2a);
 }
 
 .stage-nav-button {
