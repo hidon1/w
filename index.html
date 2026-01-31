@@ -5645,7 +5645,7 @@
             <div class="message-content">
               ${message.text ? `<p>${escapeHtml(message.text)}</p>` : ''}
               ${message.imageUrl ? `<img src="${message.imageUrl}" alt="תמונה" style="max-width: 200px; border-radius: 8px;">` : ''}
-              <small style="color: #888;">${message.createdAt ? new Date(message.createdAt.toDate()).toLocaleString('he-IL') : ''}</small>
+              <small style="color: #888;">${message.createdAt && typeof message.createdAt.toDate === 'function' ? new Date(message.createdAt.toDate()).toLocaleString('he-IL') : ''}</small>
             </div>
           `;
           messagesList.appendChild(messageEl);
@@ -5680,12 +5680,16 @@
         if (account) {
           window.firebaseApp.currentAccount = account;
           listenToMessages(accountId);
+          updateMembersList();
           showNotification('עברת לחשבון: ' + account.displayName, 'success');
         }
       });
       
       accountSwitcher.appendChild(select);
     }
+    
+    // Update members list for current account
+    updateMembersList();
   }
 
   // Send message with optional image
@@ -5895,9 +5899,8 @@
       
       await ensureUserAccount(user);
       
-      // Show Firebase UI sections
-      const firebaseSection = document.getElementById('firebaseSection');
-      if (firebaseSection) firebaseSection.style.display = 'block';
+      // Note: Firebase section visibility is controlled by toggleFirebaseSection()
+      // User must manually open it from the menu
     } else {
       if (authStatus) authStatus.textContent = 'לא מחובר';
       if (loginBtn) loginBtn.style.display = 'block';
