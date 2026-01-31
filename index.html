@@ -214,6 +214,7 @@
                 </div>
                 <button id="loginBtn">התחבר</button>
                 <button id="changeSitePasswordBtn" class="change-password-btn" style="display:none;" onclick="openPasswordSetupModal()">שנה סיסמת אתר</button>
+                <button id="switchGoogleAccountBtn" class="logout-btn" style="display:none;" onclick="switchGoogleAccount()">החלף חשבון Google</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
             </div>
             <div class="divider"></div>
@@ -6340,7 +6341,7 @@
     <script type="module">
   // Import Firebase SDKs (Storage removed - text-only messaging)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, updateDoc, arrayUnion, onSnapshot, addDoc, serverTimestamp, orderBy, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   // Firebase configuration
@@ -6749,9 +6750,13 @@
     }
   };
 
-  // Google Sign In
+  // Google Sign In with popup and redirect fallback
   window.signInWithGoogle = async function() {
     const provider = new GoogleAuthProvider();
+    // Force account selection to allow switching Google accounts
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
     
     try {
       const result = await signInWithPopup(auth, provider);
@@ -6764,7 +6769,15 @@
       // Handle specific error cases
       let errorMessage = 'שגיאה בהתחברות עם Google';
       if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'החלון הקופץ נחסם על ידי הדפדפן. אנא אפשר חלונות קופצים לאתר זה.';
+        // Fallback to redirect method if popup is blocked
+        console.log('Popup blocked, using redirect method instead');
+        try {
+          await signInWithRedirect(auth, provider);
+          return; // The page will redirect, so we exit here
+        } catch (redirectError) {
+          console.error('Redirect error:', redirectError);
+          errorMessage = 'לא ניתן לבצע התחברות. נסה שוב או אפשר חלונות קופצים.';
+        }
       } else if (error.code === 'auth/popup-closed-by-user') {
         errorMessage = 'ההתחברות בוטלה על ידי המשתמש.';
       } else if (error.code === 'auth/cancelled-popup-request') {
@@ -6790,11 +6803,32 @@
     }
   };
 
+  // Switch Google Account - sign out and redirect to account selection
+  window.switchGoogleAccount = async function() {
+    try {
+      await signOut(auth);
+      window.firebaseApp.currentAccount = null;
+      window.firebaseApp.userAccounts = [];
+      showNotification('מתנתק... אנא בחר חשבון Google אחר', 'info');
+      // Open login modal and trigger Google sign in with account selection
+      setTimeout(() => {
+        openLoginModal();
+        setTimeout(() => {
+          signInWithGoogle();
+        }, 500);
+      }, 1000);
+    } catch (error) {
+      console.error('Switch account error:', error);
+      showNotification('שגיאה בהחלפת חשבון: ' + error.message, 'error');
+    }
+  };
+
   // Auth state observer
   onAuthStateChanged(auth, async (user) => {
     const authStatus = document.getElementById('authStatus');
     const loginBtn = document.getElementById('loginBtn');
     const logoutBtn = document.getElementById('logoutBtn');
+    const switchGoogleAccountBtn = document.getElementById('switchGoogleAccountBtn');
     
     if (user) {
       // User is signed in
@@ -6805,6 +6839,10 @@
       if (logoutBtn) {
         logoutBtn.style.display = 'block';
         logoutBtn.onclick = signOutUser;
+      }
+      // Show switch account button only for Google users
+      if (switchGoogleAccountBtn && user.providerData.some(p => p.providerId === 'google.com')) {
+        switchGoogleAccountBtn.style.display = 'block';
       }
       
       await ensureUserAccount(user);
@@ -6817,6 +6855,7 @@
       if (authStatus) authStatus.textContent = 'לא מחובר';
       if (loginBtn) loginBtn.style.display = 'block';
       if (logoutBtn) logoutBtn.style.display = 'none';
+      if (switchGoogleAccountBtn) switchGoogleAccountBtn.style.display = 'none';
       
       window.firebaseApp.currentAccount = null;
       window.firebaseApp.userAccounts = [];
@@ -6827,6 +6866,21 @@
       if (firebaseSection) firebaseSection.style.display = 'none';
     }
   });
+
+  // Handle redirect result (for when popup is blocked and redirect is used)
+  getRedirectResult(auth)
+    .then(async (result) => {
+      if (result && result.user) {
+        showNotification('✓ התחברת עם Google בהצלחה!', 'success');
+        await ensureUserAccount(result.user);
+      }
+    })
+    .catch((error) => {
+      if (error.code !== 'auth/operation-not-allowed') {
+        console.error('Redirect result error:', error);
+        showNotification('שגיאה בהתחברות: ' + error.message, 'error');
+      }
+    });
 
   // Utility function to escape HTML
   function escapeHtml(text) {
@@ -6906,10 +6960,16 @@
   // ========== Firestore Data Persistence Functions ==========
   
   /**
-   * Sync projects data to Firestore
+   * Sync projects data to Firestore with improved error handling
    */
-  window.syncProjectsToFirestore = async function(accountId, projects, stagesConfig) {
+  window.syncProjectsToFirestore = async function(accountId, projects, stagesConfig, retryCount = 0) {
     try {
+      // Check if user is authenticated
+      if (!auth.currentUser) {
+        console.warn('No authenticated user - skipping Firestore sync');
+        return false;
+      }
+      
       const projectsRef = doc(db, 'userData', accountId);
       await setDoc(projectsRef, {
         projects: projects,
@@ -6922,15 +6982,39 @@
       return true;
     } catch (error) {
       console.error('Error syncing to Firestore:', error);
+      
+      // Handle specific Firestore errors
+      if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
+        console.error('Firestore permission error - check security rules');
+        showNotification('שגיאת הרשאות: אנא וודא שאתה מחובר ויש לך הרשאות לשמור נתונים', 'error');
+      } else if (error.code === 'unavailable' || error.message?.includes('UNAVAILABLE')) {
+        console.error('Firestore unavailable - network issue');
+        // Retry up to 3 times for network errors
+        if (retryCount < 3) {
+          console.log(`Retrying Firestore sync (attempt ${retryCount + 1})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          return await window.syncProjectsToFirestore(accountId, projects, stagesConfig, retryCount + 1);
+        }
+        showNotification('שגיאת רשת: לא ניתן להתחבר ל-Firestore. הנתונים נשמרו מקומית.', 'error');
+      } else {
+        showNotification('שגיאה בשמירת נתונים: ' + (error.message || 'שגיאה לא ידועה'), 'error');
+      }
+      
       throw error;
     }
   };
   
   /**
-   * Load projects data from Firestore
+   * Load projects data from Firestore with improved error handling
    */
-  window.loadProjectsFromFirestore = async function(accountId) {
+  window.loadProjectsFromFirestore = async function(accountId, retryCount = 0) {
     try {
+      // Check if user is authenticated
+      if (!auth.currentUser) {
+        console.warn('No authenticated user - skipping Firestore load');
+        return null;
+      }
+      
       const projectsRef = doc(db, 'userData', accountId);
       const docSnap = await getDoc(projectsRef);
       
@@ -6944,6 +7028,22 @@
       return null;
     } catch (error) {
       console.error('Error loading from Firestore:', error);
+      
+      // Handle specific Firestore errors
+      if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
+        console.error('Firestore permission error - check security rules');
+        showNotification('שגיאת הרשאות: אין גישה לנתונים', 'error');
+      } else if (error.code === 'unavailable' || error.message?.includes('UNAVAILABLE')) {
+        console.error('Firestore unavailable - network issue');
+        // Retry up to 3 times for network errors
+        if (retryCount < 3) {
+          console.log(`Retrying Firestore load (attempt ${retryCount + 1})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          return await window.loadProjectsFromFirestore(accountId, retryCount + 1);
+        }
+        showNotification('שגיאת רשת: לא ניתן להתחבר ל-Firestore', 'error');
+      }
+      
       throw error;
     }
   };
