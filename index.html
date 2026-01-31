@@ -5472,5 +5472,28 @@
           initStageNavFix();
         }
     </script>
+    <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyB4VV2dV6SsmwzMcLl_0_JOYHdhRZh3tiU",
+    authDomain: "nitur-wine.firebaseapp.com",
+    projectId: "nitur-wine",
+    storageBucket: "nitur-wine.firebasestorage.app",
+    messagingSenderId: "266624981870",
+    appId: "1:266624981870:web:a73189856f4ac8952bbf7f",
+    measurementId: "G-XXBHFQ5DLW"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
 </body>
 </html>
