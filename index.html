@@ -199,6 +199,7 @@
             <li><button onclick="openInboxModal();">תיבת דואר <span id="inboxBadge" class="inbox-badge" style="display:none;">0</span></button></li>
             <li><button onclick="openRemindersModal();">תזכורות</button></li>
             <li><button onclick="openAccessControlModal();">ניהול גישה</button></li>
+            <li><button onclick="toggleFirebaseSection();">הודעות Firebase</button></li>
             <li class="divider"></li>
             <li><button onclick="openInstructionsModal()">הוראות</button></li>
             <li><button onclick="openTimelineModal()">ציר זמן</button></li>
@@ -259,6 +260,11 @@
                     <button class="register-btn" onclick="registerWithEmailPassword()">הרשם</button>
                 </div>
                 <button class="toggle-form-btn" onclick="toggleLoginMode()">כבר רשום? התחבר כאן</button>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                    <button class="google-signin-btn" onclick="signInWithGoogle()" style="width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                        <i class="fab fa-google"></i> התחבר עם Google
+                    </button>
+                </div>
             </div>
             
             <!-- Login Form (hidden by default) -->
@@ -269,6 +275,11 @@
                     <button class="login-btn" onclick="loginWithEmailPassword()">התחבר</button>
                 </div>
                 <button class="toggle-form-btn" onclick="toggleLoginMode()">עדיין לא נרשמת? הרשם כאן</button>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                    <button class="google-signin-btn" onclick="signInWithGoogle()" style="width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                        <i class="fab fa-google"></i> התחבר עם Google
+                    </button>
+                </div>
             </div>
             
             <button class="skip-btn" onclick="skipLogin()">המשך ללא התחברות</button>
@@ -288,6 +299,48 @@
             </div>
         </div>
     </div>
+    
+    <!-- Firebase Features Section -->
+    <div id="firebaseSection" style="display: none; position: fixed; top: 60px; left: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 400px; z-index: 900; direction: rtl;">
+        <h3 style="margin-top: 0;">ניהול חשבון והודעות</h3>
+        
+        <!-- Account Switcher -->
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">בחר חשבון:</label>
+            <div id="accountSwitcher"></div>
+        </div>
+        
+        <!-- Add Member Section -->
+        <div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+            <h4 style="margin-top: 0;">הוסף משתמש לחשבון</h4>
+            <input type="email" id="newMemberEmail" placeholder="אימייל של המשתמש" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+            <button onclick="addMemberToAccount()" style="width: 100%; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">הוסף משתמש</button>
+            <div style="margin-top: 10px;">
+                <strong>משתמשים בחשבון:</strong>
+                <ul id="membersList" style="list-style: none; padding: 0; margin: 5px 0 0 0;"></ul>
+            </div>
+        </div>
+        
+        <!-- Send Message Section -->
+        <div style="padding: 15px; background: #f5f5f5; border-radius: 5px;">
+            <h4 style="margin-top: 0;">שלח הודעה</h4>
+            <textarea id="messageText" placeholder="הקלד הודעה..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; min-height: 60px; resize: vertical;"></textarea>
+            <input type="file" id="messageImage" accept="image/*" style="margin-bottom: 10px; display: block; width: 100%;">
+            <button id="sendMessageBtn" onclick="sendMessageWithImage()" style="width: 100%; padding: 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">שלח</button>
+        </div>
+        
+        <!-- Messages List -->
+        <div style="margin-top: 20px;">
+            <h4>הודעות:</h4>
+            <div id="messagesList" style="max-height: 300px; overflow-y: auto; padding: 10px; background: #fafafa; border-radius: 5px;">
+                <!-- Messages will be loaded here -->
+            </div>
+        </div>
+        
+        <!-- Toggle Button -->
+        <button onclick="toggleFirebaseSection()" style="position: absolute; top: 10px; left: 10px; padding: 5px 10px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">סגור</button>
+    </div>
+    
     <div class="top-section-wrapper">
         <div class="container">
             <div class="project-header">
@@ -1992,6 +2045,18 @@
             document.querySelector('.top-section-wrapper').style.display = 'none';
             fixedDashboardSection.style.display = 'none';
             accessControlModal.style.display = 'flex';
+        }
+        
+        // Toggle Firebase Section visibility
+        function toggleFirebaseSection() {
+            const firebaseSection = document.getElementById('firebaseSection');
+            if (firebaseSection) {
+                if (firebaseSection.style.display === 'none' || !firebaseSection.style.display) {
+                    firebaseSection.style.display = 'block';
+                } else {
+                    firebaseSection.style.display = 'none';
+                }
+            }
         }
         
         function switchAccessTab(tabName) {
@@ -5473,14 +5538,13 @@
         }
     </script>
     <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  // Import Firebase SDKs
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, updateDoc, arrayUnion, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  // Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyB4VV2dV6SsmwzMcLl_0_JOYHdhRZh3tiU",
     authDomain: "nitur-wine.firebaseapp.com",
@@ -5493,7 +5557,388 @@
 
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+  
+  // Global state
+  window.firebaseApp = {
+    auth,
+    db,
+    storage,
+    currentAccount: null,
+    userAccounts: []
+  };
+
+  // Generate anonymous account ID (hash-based)
+  function generateAnonymousAccountId(ownerUid) {
+    const hash = btoa(ownerUid + Date.now()).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+    return `acc_${hash}`;
+  }
+
+  // Create or get account for user
+  async function ensureUserAccount(user) {
+    try {
+      const accountsRef = collection(db, 'accounts');
+      const q = query(accountsRef, where('members', 'array-contains', user.email));
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        // User has existing accounts - load them
+        window.firebaseApp.userAccounts = [];
+        snapshot.forEach(doc => {
+          window.firebaseApp.userAccounts.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        // Set current account to first one
+        if (window.firebaseApp.userAccounts.length > 0) {
+          window.firebaseApp.currentAccount = window.firebaseApp.userAccounts[0];
+          updateAccountUI();
+        }
+      } else {
+        // Create new account
+        const accountId = generateAnonymousAccountId(user.uid);
+        const accountData = {
+          ownerUid: user.uid,
+          members: [user.email],
+          createdAt: serverTimestamp(),
+          displayName: `חשבון של ${user.email.split('@')[0]}`
+        };
+        
+        await setDoc(doc(db, 'accounts', accountId), accountData);
+        
+        window.firebaseApp.currentAccount = {
+          id: accountId,
+          ...accountData
+        };
+        window.firebaseApp.userAccounts = [window.firebaseApp.currentAccount];
+        updateAccountUI();
+      }
+      
+      // Listen to messages for current account
+      if (window.firebaseApp.currentAccount) {
+        listenToMessages(window.firebaseApp.currentAccount.id);
+      }
+    } catch (error) {
+      console.error('Error ensuring user account:', error);
+      showNotification('שגיאה ביצירת חשבון: ' + error.message, 'error');
+    }
+  }
+
+  // Listen to messages in real-time
+  function listenToMessages(accountId) {
+    const messagesRef = collection(db, 'accounts', accountId, 'messages');
+    const q = query(messagesRef);
+    
+    onSnapshot(q, (snapshot) => {
+      const messagesList = document.getElementById('messagesList');
+      if (messagesList) {
+        messagesList.innerHTML = '';
+        snapshot.forEach(doc => {
+          const message = doc.data();
+          const messageEl = document.createElement('div');
+          messageEl.className = 'message-item';
+          messageEl.innerHTML = `
+            <div class="message-content">
+              ${message.text ? `<p>${escapeHtml(message.text)}</p>` : ''}
+              ${message.imageUrl ? `<img src="${message.imageUrl}" alt="תמונה" style="max-width: 200px; border-radius: 8px;">` : ''}
+              <small style="color: #888;">${message.createdAt && typeof message.createdAt.toDate === 'function' ? new Date(message.createdAt.toDate()).toLocaleString('he-IL') : ''}</small>
+            </div>
+          `;
+          messagesList.appendChild(messageEl);
+        });
+      }
+    });
+  }
+
+  // Update account UI
+  function updateAccountUI() {
+    const accountSwitcher = document.getElementById('accountSwitcher');
+    if (!accountSwitcher) return;
+    
+    accountSwitcher.innerHTML = '';
+    
+    if (window.firebaseApp.userAccounts.length > 0) {
+      const select = document.createElement('select');
+      select.id = 'accountSelect';
+      select.className = 'account-select';
+      
+      window.firebaseApp.userAccounts.forEach(account => {
+        const option = document.createElement('option');
+        option.value = account.id;
+        option.textContent = account.displayName || account.id;
+        option.selected = window.firebaseApp.currentAccount?.id === account.id;
+        select.appendChild(option);
+      });
+      
+      select.addEventListener('change', async (e) => {
+        const accountId = e.target.value;
+        const account = window.firebaseApp.userAccounts.find(a => a.id === accountId);
+        if (account) {
+          window.firebaseApp.currentAccount = account;
+          listenToMessages(accountId);
+          updateMembersList();
+          showNotification('עברת לחשבון: ' + account.displayName, 'success');
+        }
+      });
+      
+      accountSwitcher.appendChild(select);
+    }
+    
+    // Update members list for current account
+    updateMembersList();
+  }
+
+  // Send message with optional image
+  window.sendMessageWithImage = async function() {
+    const textInput = document.getElementById('messageText');
+    const fileInput = document.getElementById('messageImage');
+    const sendBtn = document.getElementById('sendMessageBtn');
+    
+    if (!window.firebaseApp.currentAccount) {
+      showNotification('אנא התחבר תחילה', 'error');
+      return;
+    }
+    
+    const text = textInput?.value.trim();
+    const file = fileInput?.files[0];
+    
+    if (!text && !file) {
+      showNotification('נא להזין טקסט או להעלות תמונה', 'error');
+      return;
+    }
+    
+    try {
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'שולח...';
+      
+      let imageUrl = null;
+      
+      // Upload image if provided
+      if (file) {
+        const storageRef = ref(storage, `messages/${window.firebaseApp.currentAccount.id}/${Date.now()}_${file.name}`);
+        const uploadResult = await uploadBytes(storageRef, file);
+        imageUrl = await getDownloadURL(uploadResult.ref);
+      }
+      
+      // Save message to Firestore
+      const messagesRef = collection(db, 'accounts', window.firebaseApp.currentAccount.id, 'messages');
+      await addDoc(messagesRef, {
+        text: text || null,
+        imageUrl: imageUrl,
+        createdAt: serverTimestamp(),
+        sender: auth.currentUser.email
+      });
+      
+      // Clear inputs
+      if (textInput) textInput.value = '';
+      if (fileInput) fileInput.value = '';
+      
+      showNotification('ההודעה נשלחה בהצלחה', 'success');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      showNotification('שגיאה בשליחת הודעה: ' + error.message, 'error');
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'שלח';
+    }
+  };
+
+  // Add member to current account
+  window.addMemberToAccount = async function() {
+    const emailInput = document.getElementById('newMemberEmail');
+    const email = emailInput?.value.trim();
+    
+    if (!email) {
+      showNotification('נא להזין כתובת אימייל', 'error');
+      return;
+    }
+    
+    if (!window.firebaseApp.currentAccount) {
+      showNotification('אין חשבון פעיל', 'error');
+      return;
+    }
+    
+    // Verify user is owner
+    if (window.firebaseApp.currentAccount.ownerUid !== auth.currentUser.uid) {
+      showNotification('רק בעל החשבון יכול להוסיף משתמשים', 'error');
+      return;
+    }
+    
+    try {
+      const accountRef = doc(db, 'accounts', window.firebaseApp.currentAccount.id);
+      await updateDoc(accountRef, {
+        members: arrayUnion(email)
+      });
+      
+      emailInput.value = '';
+      showNotification(`המשתמש ${email} נוסף בהצלחה`, 'success');
+      
+      // Refresh account data
+      const accountDoc = await getDoc(accountRef);
+      if (accountDoc.exists()) {
+        window.firebaseApp.currentAccount = {
+          id: accountDoc.id,
+          ...accountDoc.data()
+        };
+        updateMembersList();
+      }
+    } catch (error) {
+      console.error('Error adding member:', error);
+      showNotification('שגיאה בהוספת משתמש: ' + error.message, 'error');
+    }
+  };
+
+  // Update members list display
+  function updateMembersList() {
+    const membersList = document.getElementById('membersList');
+    if (!membersList || !window.firebaseApp.currentAccount) return;
+    
+    membersList.innerHTML = '';
+    const members = window.firebaseApp.currentAccount.members || [];
+    
+    members.forEach(email => {
+      const li = document.createElement('li');
+      li.textContent = email;
+      li.className = 'member-item';
+      membersList.appendChild(li);
+    });
+  }
+
+  // Email/Password Registration
+  window.registerWithEmailPassword = async function() {
+    const email = document.getElementById('registerEmailInput')?.value;
+    const password = document.getElementById('registerPasswordInput')?.value;
+    
+    if (!email || !password) {
+      showNotification('נא למלא את כל השדות', 'error');
+      return;
+    }
+    
+    if (password.length < 6) {
+      showNotification('הסיסמה חייבת להכיל לפחות 6 תווים', 'error');
+      return;
+    }
+    
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      showNotification('נרשמת בהצלחה!', 'success');
+      closeLoginModal();
+      await ensureUserAccount(userCredential.user);
+    } catch (error) {
+      console.error('Registration error:', error);
+      showNotification('שגיאה ברישום: ' + error.message, 'error');
+    }
+  };
+
+  // Email/Password Login
+  window.loginWithEmailPassword = async function() {
+    const email = document.getElementById('loginEmailInput')?.value;
+    const password = document.getElementById('loginPasswordInput')?.value;
+    
+    if (!email || !password) {
+      showNotification('נא למלא את כל השדות', 'error');
+      return;
+    }
+    
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      showNotification('התחברת בהצלחה!', 'success');
+      closeLoginModal();
+      await ensureUserAccount(userCredential.user);
+    } catch (error) {
+      console.error('Login error:', error);
+      showNotification('שגיאה בהתחברות: ' + error.message, 'error');
+    }
+  };
+
+  // Google Sign In
+  window.signInWithGoogle = async function() {
+    const provider = new GoogleAuthProvider();
+    
+    try {
+      const result = await signInWithPopup(auth, provider);
+      showNotification('התחברת עם Google בהצלחה!', 'success');
+      closeLoginModal();
+      await ensureUserAccount(result.user);
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      showNotification('שגיאה בהתחברות עם Google: ' + error.message, 'error');
+    }
+  };
+
+  // Sign Out
+  window.signOutUser = async function() {
+    try {
+      await signOut(auth);
+      window.firebaseApp.currentAccount = null;
+      window.firebaseApp.userAccounts = [];
+      showNotification('התנתקת בהצלחה', 'success');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      showNotification('שגיאה בהתנתקות: ' + error.message, 'error');
+    }
+  };
+
+  // Auth state observer
+  onAuthStateChanged(auth, async (user) => {
+    const authStatus = document.getElementById('authStatus');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (user) {
+      if (authStatus) authStatus.textContent = `מחובר: ${user.email}`;
+      if (loginBtn) loginBtn.style.display = 'none';
+      if (logoutBtn) {
+        logoutBtn.style.display = 'block';
+        logoutBtn.onclick = signOutUser;
+      }
+      
+      await ensureUserAccount(user);
+      
+      // Note: Firebase section visibility is controlled by toggleFirebaseSection()
+      // User must manually open it from the menu
+    } else {
+      if (authStatus) authStatus.textContent = 'לא מחובר';
+      if (loginBtn) loginBtn.style.display = 'block';
+      if (logoutBtn) logoutBtn.style.display = 'none';
+      
+      window.firebaseApp.currentAccount = null;
+      window.firebaseApp.userAccounts = [];
+      
+      // Hide Firebase UI sections
+      const firebaseSection = document.getElementById('firebaseSection');
+      if (firebaseSection) firebaseSection.style.display = 'none';
+    }
+  });
+
+  // Utility function to escape HTML
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Utility function to show notifications
+  function showNotification(message, type = 'info') {
+    // Try to use existing notification system or create simple alert
+    if (window.showToast) {
+      window.showToast(message);
+    } else {
+      alert(message);
+    }
+  }
+
+  // Close login modal
+  function closeLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  console.log('Firebase initialized successfully');
 </script>
 </body>
 </html>
