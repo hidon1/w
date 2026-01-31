@@ -2421,7 +2421,7 @@
             if (!statusEl || !iconEl || !textEl) return;
             
             // Show status indicator when authenticated
-            if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.auth.currentUser) {
+            if (window.firebaseApp && auth && auth.currentUser) {
                 statusEl.style.display = 'block';
             } else {
                 statusEl.style.display = 'none';
