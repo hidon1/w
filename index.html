@@ -199,7 +199,8 @@
             <li><button onclick="openInboxModal();">תיבת דואר <span id="inboxBadge" class="inbox-badge" style="display:none;">0</span></button></li>
             <li><button onclick="openRemindersModal();">תזכורות</button></li>
             <li><button onclick="openAccessControlModal();">ניהול גישה</button></li>
-            <li><button onclick="toggleFirebaseSection();">הודעות Firebase</button></li>
+            <li><button onclick="openAccountSwitcher();">התחבר לחשבון אחר</button></li>
+            <li><button onclick="toggleFirebaseSection();">הודעות מערכת</button></li>
             <li class="divider"></li>
             <li><button onclick="openInstructionsModal()">הוראות</button></li>
             <li><button onclick="openTimelineModal()">ציר זמן</button></li>
@@ -305,10 +306,10 @@
     </div>
     
     <!-- Firebase Features Section -->
-    <div id="firebaseSection" style="display: none; position: fixed; top: 60px; left: 20px; right: 20px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-width: 500px; z-index: 900; direction: rtl; max-height: calc(100vh - 100px); overflow-y: auto;">
+    <div id="firebaseSection" style="display: none; position: fixed; top: 60px; left: 50%; transform: translateX(-50%); background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-width: 500px; width: calc(100% - 40px); z-index: 900; direction: rtl; max-height: calc(100vh - 100px); overflow-y: auto;">
         <button onclick="toggleFirebaseSection()" style="position: absolute; top: 15px; left: 15px; padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: all 0.3s;">✕ סגור</button>
         
-        <h3 style="margin-top: 0; margin-bottom: 15px; color: #333; font-size: 22px;">💬 צ׳אט Firebase</h3>
+        <h3 style="margin-top: 0; margin-bottom: 15px; color: #333; font-size: 22px;">💬 צ׳אט מערכת</h3>
         
         <!-- Connection Status -->
         <div id="connectionStatus" style="display: flex; align-items: center; justify-content: center; padding: 10px; margin-bottom: 20px; background: #e3f2fd; border-radius: 8px; border: 1px solid #2196F3;">
@@ -336,6 +337,9 @@
         <!-- Send Message Section -->
         <div style="padding: 15px; background: #e3f2fd; border-radius: 8px; border: 1px solid #90caf9; margin-bottom: 20px;">
             <h4 style="margin: 0 0 12px 0; color: #1565c0; font-size: 16px;">✉️ שלח הודעה</h4>
+            <select id="messageRecipient" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px;">
+                <option value="all">כל חברי החשבון</option>
+            </select>
             <textarea id="messageText" placeholder="הקלד את ההודעה שלך כאן..." style="width: 100%; padding: 12px; margin-bottom: 12px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; min-height: 80px; resize: vertical; font-size: 14px; font-family: inherit; transition: border-color 0.3s;" onfocus="this.style.borderColor='#2196F3'" onblur="this.style.borderColor='#ddd'"></textarea>
             <button id="sendMessageBtn" onclick="sendMessageWithImage()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #2196F3, #1976d2); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(33, 150, 243, 0.4)'" onmouseout="this.style.transform=''; this.style.boxShadow='0 2px 8px rgba(33, 150, 243, 0.3)'">📤 שלח הודעה</button>
         </div>
@@ -866,7 +870,7 @@
                 <li>**תזכורות:** הוסיפו תזכורות עם טקסט ותאריך/שעה, ותקבלו הודעה בדפדפן כשהזמן מגיע.</li>
                 <li>**תיבת דואר:** צפו בהודעות ותזכורות שהתקבלו. ניתן להשיב להודעות ממשתמשים אחרים.</li>
                 <li>**ניהול גישה:** הענקו או שללו גישה למשתמשים אחרים. בחרו אם הם יכולים לערוך או רק לצפות.</li>
-                <li>**הודעות Firebase:** שלחו הודעות לחברי החשבון, נהלו חשבונות משותפים.</li>
+                <li>**הודעות מערכת:** שלחו הודעות לחברי החשבון, נהלו חשבונות משותפים.</li>
             </ul>
                 <li>**מצב כהה:** עברו למצב תצוגה כהה לנוחות מירבית.</li>
             </ul>
@@ -2467,8 +2471,8 @@
             
             // Sync to Firestore if user is authenticated
             try {
-                if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.auth.currentUser) {
-                    const user = window.firebaseApp.auth.currentUser;
+                if (window.firebaseApp && auth && auth.currentUser) {
+                    const user = auth.currentUser;
                     const accountId = window.firebaseApp.currentAccount?.id || user.uid;
                     
                     await window.syncProjectsToFirestore(accountId, projects, stagesConfig);
@@ -2562,8 +2566,7 @@
             renderProjectList(selectedYear);
         }
         function openAccessControlModal() {
-            const user = SimpleAuth.currentUser;
-            if (!user) {
+            if (!auth.currentUser) {
                 alert('התחבר כדי לנהל הרשאות שיתוף.');
                 openLoginModal();
                 return;
@@ -2617,6 +2620,135 @@
             if (accessControlModal) {
                 accessControlModal.style.display = 'none';
                 showMainContent();
+            }
+        }
+        
+        function openAccountSwitcher() {
+            if (!auth.currentUser) {
+                alert('עליך להתחבר תחילה כדי לעבור בין חשבונות.');
+                openLoginModal();
+                return;
+            }
+            
+            closeSidebar();
+            document.querySelector('.container').style.display = 'none';
+            document.querySelector('.top-section-wrapper').style.display = 'none';
+            fixedDashboardSection.style.display = 'none';
+            
+            // Show account switcher modal
+            showAccountSwitcherModal();
+        }
+
+        function showAccountSwitcherModal() {
+            const modalHtml = `
+                <div id="accountSwitcherModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; direction: rtl;">
+                        <h2 style="margin-top: 0; color: #333;">החלף חשבון</h2>
+                        <div id="availableAccounts"></div>
+                        <button onclick="closeAccountSwitcherModal()" style="margin-top: 20px; padding: 10px 20px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer;">סגור</button>
+                    </div>
+                </div>
+            `;
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = modalHtml;
+            document.body.appendChild(tempDiv.firstElementChild);
+            
+            // Populate available accounts
+            populateAvailableAccounts();
+        }
+
+        function closeAccountSwitcherModal() {
+            const modal = document.getElementById('accountSwitcherModal');
+            if (modal) modal.remove();
+            showMainContent();
+        }
+
+        async function populateAvailableAccounts() {
+            const container = document.getElementById('availableAccounts');
+            if (!container) return;
+            
+            const accounts = window.firebaseApp.userAccounts || [];
+            
+            if (accounts.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center;">לא נמצאו חשבונות נוספים.</p>';
+                return;
+            }
+            
+            let html = '<div style="margin-bottom: 15px;">';
+            html += '<p style="color: #666; margin-bottom: 10px;">בחר חשבון למעבר:</p>';
+            
+            accounts.forEach(account => {
+                const isCurrent = window.firebaseApp.currentAccount?.id === account.id;
+                html += `
+                    <div style="padding: 15px; margin-bottom: 10px; background: ${isCurrent ? '#e3f2fd' : '#f5f5f5'}; border-radius: 8px; border: 2px solid ${isCurrent ? '#2196F3' : '#ddd'}; cursor: ${isCurrent ? 'default' : 'pointer'};" ${!isCurrent ? `onclick="switchToAccount('${account.id}')"` : ''}>
+                        <div style="font-weight: bold; color: #333; margin-bottom: 5px;">${account.displayName || account.id}</div>
+                        <div style="font-size: 13px; color: #666;">בעלים: ${account.members ? account.members[0] : 'לא ידוע'}</div>
+                        ${isCurrent ? '<div style="margin-top: 8px; color: #2196F3; font-weight: bold; font-size: 12px;">📍 חשבון נוכחי</div>' : ''}
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        async function switchToAccount(accountId) {
+            try {
+                const account = window.firebaseApp.userAccounts.find(a => a.id === accountId);
+                if (!account) {
+                    alert('חשבון לא נמצא');
+                    return;
+                }
+                
+                window.firebaseApp.currentAccount = account;
+                
+                // Load projects from this account
+                updateCloudSyncStatus('syncing');
+                const firestoreData = await window.loadProjectsFromFirestore(accountId);
+                
+                if (firestoreData && firestoreData.projects) {
+                    projects = firestoreData.projects;
+                    if (firestoreData.stagesConfig) {
+                        stagesConfig = firestoreData.stagesConfig;
+                    }
+                    
+                    // Update localStorage
+                    localStorage.setItem('projects', JSON.stringify(projects));
+                    if (firestoreData.stagesConfig) {
+                        localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig));
+                    }
+                    
+                    // Reset current project
+                    if (Object.keys(projects).length > 0) {
+                        currentProjectId = Object.keys(projects)[0];
+                        localStorage.setItem('currentProjectId', currentProjectId);
+                    }
+                } else {
+                    // No projects in this account, reset
+                    projects = {};
+                    currentProjectId = null;
+                    localStorage.setItem('projects', JSON.stringify(projects));
+                    localStorage.removeItem('currentProjectId');
+                }
+                
+                updateProjectDisplay();
+                filterProjectsByYear();
+                updateCloudSyncStatus('synced');
+                updateAccountUI();
+                
+                // Close modal and show success
+                closeAccountSwitcherModal();
+                showNotification('עברת לחשבון: ' + (account.displayName || account.id), 'success');
+                
+                // Refresh messages for new account
+                if (window.firebaseApp.currentAccount) {
+                    listenToMessages(window.firebaseApp.currentAccount.id);
+                }
+            } catch (error) {
+                console.error('Error switching account:', error);
+                alert('שגיאה במעבר לחשבון: ' + error.message);
+                updateCloudSyncStatus('error');
             }
         }
         
@@ -6347,6 +6479,7 @@
   // Send text message (no image upload - Firestore only)
   window.sendMessageWithImage = async function() {
     const textInput = document.getElementById('messageText');
+    const recipientSelect = document.getElementById('messageRecipient');
     const sendBtn = document.getElementById('sendMessageBtn');
     
     if (!window.firebaseApp.currentAccount) {
@@ -6355,6 +6488,7 @@
     }
     
     const text = textInput?.value.trim();
+    const recipient = recipientSelect?.value || 'all';
     
     if (!text) {
       showNotification('נא להזין טקסט להודעה', 'error');
@@ -6370,7 +6504,8 @@
       await addDoc(messagesRef, {
         text: text,
         createdAt: serverTimestamp(),
-        sender: auth.currentUser.email
+        sender: auth.currentUser.email,
+        recipient: recipient
       });
       
       // Clear input
@@ -6434,6 +6569,8 @@
   // Update members list display
   function updateMembersList() {
     const membersList = document.getElementById('membersList');
+    const recipientSelect = document.getElementById('messageRecipient');
+    
     if (!membersList || !window.firebaseApp.currentAccount) return;
     
     membersList.innerHTML = '';
@@ -6441,6 +6578,9 @@
     
     if (members.length === 0) {
       membersList.innerHTML = '<li style="padding: 8px; color: #999; font-size: 13px;">אין חברים עדיין</li>';
+      if (recipientSelect) {
+        recipientSelect.innerHTML = '<option value="all">כל חברי החשבון</option>';
+      }
       return;
     }
     
@@ -6450,6 +6590,19 @@
       li.className = 'member-item';
       membersList.appendChild(li);
     });
+    
+    // Update recipient selector
+    if (recipientSelect) {
+      recipientSelect.innerHTML = '<option value="all">כל חברי החשבון</option>';
+      members.forEach(email => {
+        if (email !== auth.currentUser.email) {
+          const option = document.createElement('option');
+          option.value = email;
+          option.textContent = email;
+          recipientSelect.appendChild(option);
+        }
+      });
+    }
   }
   
   // Update connection status indicator

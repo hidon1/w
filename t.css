@@ -398,25 +398,25 @@
 
 /* Base styles for all screen sizes */
 :root {
-    --primary-color: #7B1F3D;
-    --secondary-color: #9D2449;
-    --accent-color: #D4AF37; /* Golden accent */
-    --background-color: #FAF7F2;
-    --background-color-mid: #F5EEE6;
-    --background-color-end: #E8DFD5;
+    --primary-color: #6C5CE7;
+    --secondary-color: #5F48D6;
+    --accent-color: #FDCB6E; /* Golden accent */
+    --background-color: #F8F9FA;
+    --background-color-mid: #F0F3F7;
+    --background-color-end: #E9ECF1;
     --card-background: #ffffff;
     --text-color: #2C2C2C;
     --light-text-color: #5A5A5A;
-    --border-color: #E8DFD5;
-    --shadow: 0 4px 20px rgba(123, 31, 61, 0.08);
+    --border-color: #E9ECF1;
+    --shadow: 0 4px 20px rgba(108, 92, 231, 0.08);
     --border-radius: 16px;
     --animation-speed: 0.4s;
-    --graph-line-color: #DAA520;
-    --graph-area-color: rgba(218, 165, 32, 0.2);
-    --graph-point-color: #B8860B;
-    --graph-average-color: #6B8E23;
-    --top-section-background: linear-gradient(135deg, #FFF8E1, #F5F5DC);
-    --top-section-border: #D4C6B1;
+    --graph-line-color: #6C5CE7;
+    --graph-area-color: rgba(108, 92, 231, 0.2);
+    --graph-point-color: #5F48D6;
+    --graph-average-color: #00B894;
+    --top-section-background: linear-gradient(135deg, #A29BFE, #6C5CE7);
+    --top-section-border: #D1C9FF;
     --dark-background-color: #1A1A1D;
     --dark-background-color-mid: #0F0F11;
     --dark-background-color-end: #000000;
@@ -425,9 +425,9 @@
     --dark-light-text-color: #B8AFA0;
     --dark-border-color: #3A3A40;
     --dark-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
-    --dark-primary-color: #C73659;
-    --dark-secondary-color: #9D2449;
-    --dark-accent-color: #E5C158; /* Golden accent for dark mode */
+    --dark-primary-color: #A29BFE;
+    --dark-secondary-color: #6C5CE7;
+    --dark-accent-color: #FFC952; /* Golden accent for dark mode */
     --dark-graph-line-color: #C73659;
     --dark-graph-area-color: rgba(255, 215, 0, 0.2);
     --font-size-base: 16px;
