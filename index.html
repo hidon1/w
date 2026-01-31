@@ -6805,21 +6805,19 @@
 
   // Switch Google Account - sign out and redirect to account selection
   window.switchGoogleAccount = async function() {
-    // Delays to ensure UI updates complete before next action
-    const SIGNOUT_DELAY_MS = 1000; // Wait for sign out to complete and notification to display
-    const SIGNIN_DELAY_MS = 500;   // Wait for modal to render before triggering sign-in
-    
     try {
       await signOut(auth);
       window.firebaseApp.currentAccount = null;
       window.firebaseApp.userAccounts = [];
       showNotification('מתנתק... אנא בחר חשבון Google אחר', 'info');
       
-      // Open login modal and trigger Google sign in with account selection
-      await new Promise(resolve => setTimeout(resolve, SIGNOUT_DELAY_MS));
-      openLoginModal();
-      await new Promise(resolve => setTimeout(resolve, SIGNIN_DELAY_MS));
-      signInWithGoogle();
+      // Small delay to allow sign-out notification to be visible, then trigger Google sign-in
+      // Note: openLoginModal() is synchronous, so we don't need to wait for it
+      setTimeout(() => {
+        openLoginModal();
+        // Trigger sign-in immediately after modal opens (modal opening is synchronous)
+        signInWithGoogle();
+      }, 1000); // 1 second delay to show sign-out notification
     } catch (error) {
       console.error('Switch account error:', error);
       showNotification('שגיאה בהחלפת חשבון: ' + error.message, 'error');
@@ -6880,8 +6878,9 @@
     })
     .catch((error) => {
       if (error.code === 'auth/operation-not-allowed') {
-        // This can mean either: 1) No redirect in progress (normal), or 2) Provider not enabled in Firebase Console
-        console.log('Redirect result: auth/operation-not-allowed - Either no redirect operation in progress, or Google provider not enabled in Firebase Console');
+        // Usually means no redirect in progress. If you see this repeatedly with sign-in failures,
+        // verify that Google sign-in is enabled in Firebase Console > Authentication > Sign-in method
+        console.log('Redirect result: auth/operation-not-allowed - typically means no redirect operation in progress');
       } else {
         console.error('Redirect result error:', error);
         showNotification('שגיאה בהתחברות: ' + error.message, 'error');
