@@ -490,6 +490,38 @@
             margin-top: 2px;
         }
         
+        /* Inbox action buttons */
+        .inbox-reply-btn {
+            padding: 6px 12px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: 8px;
+            transition: background-color 0.2s;
+        }
+        
+        .inbox-reply-btn:hover {
+            background: #1976d2;
+        }
+        
+        .inbox-delete-btn {
+            padding: 6px 12px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+        
+        .inbox-delete-btn:hover {
+            background: #c62828;
+        }
+        
         #messagesList::-webkit-scrollbar-thumb {
             background: #888;
             border-radius: 4px;
@@ -714,7 +746,34 @@
         <div class="reminders-modal-content">
             <span class="close-button" onclick="closeInboxModal()">&times;</span>
             <h3>תיבת דואר</h3>
+            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <button onclick="clearAllInbox()" style="padding: 8px 15px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-trash-alt"></i> נקה הכל
+                </button>
+            </div>
             <ul id="inboxList" class="reminders-list"></ul>
+        </div>
+    </div>
+    <div id="replyMessageModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-button" onclick="closeReplyMessageModal()">&times;</span>
+            <h3><i class="fas fa-reply"></i> שלח הודעה</h3>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">אל:</label>
+                <input type="text" id="replyToEmail" readonly style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: #f5f5f5;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">הודעה:</label>
+                <textarea id="replyMessageText" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: vertical;" placeholder="הקלד את ההודעה כאן..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="closeReplyMessageModal()" style="padding: 10px 20px; background: #ccc; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-times"></i> ביטול
+                </button>
+                <button onclick="sendReplyMessage()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-paper-plane"></i> שלח
+                </button>
+            </div>
         </div>
     </div>
     <div id="remindersModal" class="reminders-modal">
@@ -1727,15 +1786,19 @@
                 const dateStr = new Date(reminder.datetime).toLocaleDateString('he-IL');
                 const timeStr = new Date(reminder.datetime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
                 
+                // Check if this is a Firestore notification (has senderEmail)
+                const isFirestoreNotif = reminder.senderEmail !== undefined;
+                const subject = isFirestoreNotif ? `הודעה מ-${reminder.senderName || reminder.senderEmail}` : `${soundLabel} תזכורת`;
+                
                 const li = document.createElement('li');
                 li.className = 'inbox-item';
                 li.innerHTML = `
                     <div class="inbox-message-header" onclick="toggleInboxMessage(${index})">
                         <div class="inbox-icon">
-                            <i class="fas fa-envelope"></i>
+                            <i class="fas fa-envelope${isFirestoreNotif && !reminder.read ? '' : '-open'}"></i>
                         </div>
                         <div class="inbox-preview">
-                            <div class="inbox-subject">${soundLabel} תזכורת</div>
+                            <div class="inbox-subject">${subject}</div>
                             <div class="inbox-snippet">${reminder.text.substring(0, 50)}${reminder.text.length > 50 ? '...' : ''}</div>
                         </div>
                         <div class="inbox-meta">
@@ -1746,11 +1809,16 @@
                     </div>
                     <div class="inbox-message-body" id="inbox-body-${index}" style="display:none;">
                         <div class="inbox-message-content">
-                            <p>${reminder.text}</p>
+                            <p style="white-space: pre-wrap;">${reminder.text}</p>
                             ${imageHtml}
                         </div>
                         <div class="inbox-message-actions">
-                            <button onclick="deleteInbox(${reminder.id})" class="inbox-delete-btn">
+                            ${isFirestoreNotif ? `
+                                <button onclick="replyToMessage('${reminder.senderEmail}', '${(reminder.senderName || '').replace(/'/g, "\\'")}', ${index})" class="inbox-reply-btn">
+                                    <i class="fas fa-reply"></i> השב
+                                </button>
+                            ` : ''}
+                            <button onclick="deleteInbox('${reminder.id}')" class="inbox-delete-btn">
                                 <i class="fas fa-trash"></i> מחק
                             </button>
                         </div>
@@ -1794,6 +1862,38 @@
         }
         
         /**
+         * Clear all inbox messages
+         */
+        async function clearAllInbox() {
+            if (!confirm('האם אתה בטוח שברצונך למחוק את כל ההודעות?')) {
+                return;
+            }
+            
+            try {
+                // Delete all Firestore notifications
+                const firestoreNotifs = inbox.filter(item => item.id.startsWith('notif_'));
+                for (const notif of firestoreNotifs) {
+                    if (window.deleteNotification) {
+                        const firestoreId = notif.id.substring(6);
+                        await window.deleteNotification(firestoreId);
+                    }
+                }
+                
+                // Clear all inbox
+                inbox = [];
+                localStorage.setItem('inbox', JSON.stringify(inbox));
+                
+                renderInboxList();
+                updateInboxBadge();
+                
+                alert('כל ההודעות נמחקו');
+            } catch (error) {
+                console.error('Error clearing inbox:', error);
+                alert('שגיאה במחיקת הודעות: ' + error.message);
+            }
+        }
+        
+        /**
          * Update inbox with Firestore notifications
          */
         function updateInboxWithNotifications(notifications) {
@@ -1825,6 +1925,63 @@
             }
             
             updateInboxBadge();
+        }
+        
+        /**
+         * Open reply modal for a message
+         */
+        function replyToMessage(senderEmail, senderName, messageIndex) {
+            const replyModal = document.getElementById('replyMessageModal');
+            const replyToEmailInput = document.getElementById('replyToEmail');
+            const replyTextArea = document.getElementById('replyMessageText');
+            
+            if (!replyModal || !replyToEmailInput || !replyTextArea) return;
+            
+            replyToEmailInput.value = senderEmail;
+            replyTextArea.value = '';
+            replyModal.style.display = 'flex';
+            
+            setTimeout(() => replyTextArea.focus(), 100);
+        }
+        
+        /**
+         * Close reply message modal
+         */
+        function closeReplyMessageModal() {
+            const replyModal = document.getElementById('replyMessageModal');
+            if (replyModal) {
+                replyModal.style.display = 'none';
+            }
+        }
+        
+        /**
+         * Send reply message
+         */
+        async function sendReplyMessage() {
+            const replyToEmailInput = document.getElementById('replyToEmail');
+            const replyTextArea = document.getElementById('replyMessageText');
+            
+            const targetEmail = replyToEmailInput?.value;
+            const message = replyTextArea?.value.trim();
+            
+            if (!targetEmail || !message) {
+                alert('אנא הזן הודעה');
+                return;
+            }
+            
+            try {
+                if (window.sendNotificationToUser) {
+                    const user = SimpleAuth.currentUser;
+                    await window.sendNotificationToUser(targetEmail, message, user?.displayName || user?.email);
+                    alert('ההודעה נשלחה בהצלחה');
+                    closeReplyMessageModal();
+                } else {
+                    alert('שליחת הודעות זמינה רק למשתמשים מחוברים ב-Firebase');
+                }
+            } catch (error) {
+                console.error('Error sending reply:', error);
+                alert('שגיאה בשליחת ההודעה: ' + error.message);
+            }
         }
         
         function openRemindersModal() {
@@ -2338,6 +2495,7 @@
             populateUserProjectSelect();
             loadActiveUsers();
             clearAccessForm();
+            setupUserSearch();
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
@@ -2413,6 +2571,59 @@
             if (viewRadio) viewRadio.checked = true;
             if (financeCheckbox) financeCheckbox.checked = false;
         }
+        
+        /**
+         * Setup user email search functionality
+         */
+        function setupUserSearch() {
+            const emailInput = document.getElementById('newUserEmail');
+            const searchResults = document.getElementById('userSearchResults');
+            
+            if (!emailInput || !searchResults) return;
+            
+            emailInput.addEventListener('input', async (e) => {
+                const searchTerm = e.target.value.trim();
+                
+                if (searchTerm.length < 3) {
+                    searchResults.style.display = 'none';
+                    return;
+                }
+                
+                // Search in Firestore users (if available)
+                try {
+                    if (window.firebaseApp?.db) {
+                        // For now, just show the entered email as a suggestion
+                        // In a real implementation, you'd search a users collection
+                        searchResults.innerHTML = '';
+                        
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'search-result-item';
+                        resultItem.innerHTML = `
+                            <div class="search-result-email">${searchTerm}</div>
+                            <div class="search-result-name">לחץ לבחירה</div>
+                        `;
+                        
+                        resultItem.addEventListener('click', () => {
+                            emailInput.value = searchTerm;
+                            searchResults.style.display = 'none';
+                        });
+                        
+                        searchResults.appendChild(resultItem);
+                        searchResults.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Error searching users:', error);
+                }
+            });
+            
+            // Hide search results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!emailInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        }
+        
         async function grantUserAccess() {
             const user = SimpleAuth.currentUser;
             if (!user) {
