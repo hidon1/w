@@ -1824,6 +1824,23 @@
             inboxModal.style.display = 'none';
             showMainContent();
         }
+        
+        /**
+         * Escape HTML to prevent XSS
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        /**
+         * Escape single quotes for use in onclick attributes
+         */
+        function escapeSingleQuotes(text) {
+            return text.replace(/'/g, "\\'");
+        }
+        
         function renderInboxList() {
             inboxList.innerHTML = '';
             inbox.forEach((reminder, index) => {
@@ -1835,7 +1852,7 @@
                 
                 const imageHtml = reminder.imageUrl ? 
                     `<div class="inbox-message-image">
-                        <img src="${reminder.imageUrl}" alt="תמונה" class="inbox-item-image" onclick="window.open('${reminder.imageUrl}', '_blank')">
+                        <img src="${escapeHtml(reminder.imageUrl)}" alt="תמונה" class="inbox-item-image" onclick="window.open('${escapeSingleQuotes(reminder.imageUrl)}', '_blank')">
                     </div>` : '';
                 
                 const dateStr = new Date(reminder.datetime).toLocaleDateString('he-IL');
@@ -1843,7 +1860,9 @@
                 
                 // Check if this is a Firestore notification (has senderEmail)
                 const isFirestoreNotif = reminder.senderEmail !== undefined;
-                const subject = isFirestoreNotif ? `הודעה מ-${reminder.senderName || reminder.senderEmail}` : `${soundLabel} תזכורת`;
+                const subject = isFirestoreNotif ? `הודעה מ-${escapeHtml(reminder.senderName || reminder.senderEmail)}` : `${soundLabel} תזכורת`;
+                const escapedText = escapeHtml(reminder.text);
+                const escapedSnippet = escapeHtml(reminder.text.substring(0, 50)) + (reminder.text.length > 50 ? '...' : '');
                 
                 const li = document.createElement('li');
                 li.className = 'inbox-item';
@@ -1854,7 +1873,7 @@
                         </div>
                         <div class="inbox-preview">
                             <div class="inbox-subject">${subject}</div>
-                            <div class="inbox-snippet">${reminder.text.substring(0, 50)}${reminder.text.length > 50 ? '...' : ''}</div>
+                            <div class="inbox-snippet">${escapedSnippet}</div>
                         </div>
                         <div class="inbox-meta">
                             <div class="inbox-date">${dateStr}</div>
@@ -1864,16 +1883,16 @@
                     </div>
                     <div class="inbox-message-body" id="inbox-body-${index}" style="display:none;">
                         <div class="inbox-message-content">
-                            <p style="white-space: pre-wrap;">${reminder.text}</p>
+                            <p style="white-space: pre-wrap;">${escapedText}</p>
                             ${imageHtml}
                         </div>
                         <div class="inbox-message-actions">
                             ${isFirestoreNotif ? `
-                                <button onclick="replyToMessage('${reminder.senderEmail}', '${(reminder.senderName || '').replace(/'/g, "\\'")}', ${index})" class="inbox-reply-btn">
+                                <button onclick="replyToMessage('${escapeSingleQuotes(reminder.senderEmail)}', '${escapeSingleQuotes(reminder.senderName || '')}', ${index})" class="inbox-reply-btn">
                                     <i class="fas fa-reply"></i> השב
                                 </button>
                             ` : ''}
-                            <button onclick="deleteInbox('${reminder.id}')" class="inbox-delete-btn">
+                            <button onclick="deleteInbox('${escapeSingleQuotes(reminder.id)}')" class="inbox-delete-btn">
                                 <i class="fas fa-trash"></i> מחק
                             </button>
                         </div>
@@ -1903,9 +1922,10 @@
             localStorage.setItem('inbox', JSON.stringify(inbox));
             
             // Also delete from Firestore if it's a Firestore notification
+            const FIRESTORE_NOTIF_PREFIX = 'notif_';
             try {
-                if (window.deleteNotification && id.startsWith('notif_')) {
-                    const firestoreId = id.substring(6); // Remove 'notif_' prefix
+                if (window.deleteNotification && id.startsWith(FIRESTORE_NOTIF_PREFIX)) {
+                    const firestoreId = id.substring(FIRESTORE_NOTIF_PREFIX.length);
                     await window.deleteNotification(firestoreId);
                 }
             } catch (error) {
@@ -1924,12 +1944,13 @@
                 return;
             }
             
+            const FIRESTORE_NOTIF_PREFIX = 'notif_';
             try {
                 // Delete all Firestore notifications
-                const firestoreNotifs = inbox.filter(item => item.id.startsWith('notif_'));
+                const firestoreNotifs = inbox.filter(item => item.id.startsWith(FIRESTORE_NOTIF_PREFIX));
                 for (const notif of firestoreNotifs) {
                     if (window.deleteNotification) {
-                        const firestoreId = notif.id.substring(6);
+                        const firestoreId = notif.id.substring(FIRESTORE_NOTIF_PREFIX.length);
                         await window.deleteNotification(firestoreId);
                     }
                 }
@@ -2636,10 +2657,12 @@
             
             if (!emailInput || !searchResults) return;
             
+            const MIN_SEARCH_LENGTH = 3; // Minimum characters before showing search results
+            
             emailInput.addEventListener('input', async (e) => {
                 const searchTerm = e.target.value.trim();
                 
-                if (searchTerm.length < 3) {
+                if (searchTerm.length < MIN_SEARCH_LENGTH) {
                     searchResults.style.display = 'none';
                     return;
                 }
@@ -2654,7 +2677,7 @@
                         const resultItem = document.createElement('div');
                         resultItem.className = 'search-result-item';
                         resultItem.innerHTML = `
-                            <div class="search-result-email">${searchTerm}</div>
+                            <div class="search-result-email">${escapeHtml(searchTerm)}</div>
                             <div class="search-result-name">לחץ לבחירה</div>
                         `;
                         
@@ -2720,7 +2743,9 @@
                     
                     // Send notification to the user
                     if (window.sendNotificationToUser) {
-                        const message = `קיבלת הרשאת גישה למערכת ניטור יין.\nפרויקטים: ${projectId === 'all' ? 'כל הפרויקטים' : projects[projectId]?.name || projectId}\nהרשאות: ${allowEdit ? 'עריכה' : 'צפייה'} ${allowFinance ? '+ כספים' : ''}`;
+                        // Note: Project name is sent as plain text in notification, not rendered as HTML
+                        const projectName = projectId === 'all' ? 'כל הפרויקטים' : (projects[projectId]?.name || projectId);
+                        const message = `קיבלת הרשאת גישה למערכת ניטור יין.\nפרויקטים: ${projectName}\nהרשאות: ${allowEdit ? 'עריכה' : 'צפייה'} ${allowFinance ? '+ כספים' : ''}`;
                         await window.sendNotificationToUser(targetEmail, message, user.displayName || user.email);
                     }
                 } else {
