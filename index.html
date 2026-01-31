@@ -2709,7 +2709,15 @@
                 const ownerDiv = document.createElement('div');
                 ownerDiv.style.fontSize = '13px';
                 ownerDiv.style.color = '#666';
-                const ownerName = (account.members && account.members.length > 0) ? account.members[0] : 'לא ידוע';
+                // Try to find owner from ownerUid field, fall back to first member
+                let ownerName = 'לא ידוע';
+                if (account.members && account.members.length > 0) {
+                    // Look for user that matches ownerUid
+                    const ownerEmail = account.members.find(email => 
+                        email === account.ownerUid || email.includes(account.ownerUid)
+                    ) || account.members[0];
+                    ownerName = ownerEmail;
+                }
                 ownerDiv.textContent = `בעלים: ${ownerName}`;
                 
                 accountDiv.appendChild(nameDiv);
@@ -6532,6 +6540,15 @@
     if (!text) {
       showNotification('נא להזין טקסט להודעה', 'error');
       return;
+    }
+    
+    // Validate recipient if not 'all'
+    if (recipient !== 'all') {
+      const members = window.firebaseApp.currentAccount.members || [];
+      if (!members.includes(recipient)) {
+        showNotification('נמען לא חוקי', 'error');
+        return;
+      }
     }
     
     try {
