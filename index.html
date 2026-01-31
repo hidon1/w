@@ -6805,8 +6805,9 @@
 
   // Switch Google Account - sign out and redirect to account selection
   window.switchGoogleAccount = async function() {
-    const SIGNOUT_DELAY_MS = 1000;
-    const SIGNIN_DELAY_MS = 500;
+    // Delays to ensure UI updates complete before next action
+    const SIGNOUT_DELAY_MS = 1000; // Wait for sign out to complete and notification to display
+    const SIGNIN_DELAY_MS = 500;   // Wait for modal to render before triggering sign-in
     
     try {
       await signOut(auth);
@@ -6879,7 +6880,8 @@
     })
     .catch((error) => {
       if (error.code === 'auth/operation-not-allowed') {
-        console.log('Redirect result: No redirect operation in progress (this is normal on page load)');
+        // This can mean either: 1) No redirect in progress (normal), or 2) Provider not enabled in Firebase Console
+        console.log('Redirect result: auth/operation-not-allowed - Either no redirect operation in progress, or Google provider not enabled in Firebase Console');
       } else {
         console.error('Redirect result error:', error);
         showNotification('שגיאה בהתחברות: ' + error.message, 'error');
@@ -6964,6 +6966,16 @@
   // ========== Firestore Data Persistence Functions ==========
   
   /**
+   * Calculate exponential backoff delay
+   * @param {number} retryCount - Current retry attempt (0-indexed)
+   * @param {number} baseDelayMs - Base delay in milliseconds (default: 1000ms)
+   * @returns {number} Delay in milliseconds
+   */
+  function getExponentialBackoffDelay(retryCount, baseDelayMs = 1000) {
+    return Math.pow(2, retryCount) * baseDelayMs; // 1s, 2s, 4s, 8s, etc.
+  }
+  
+  /**
    * Sync projects data to Firestore with improved error handling
    */
   window.syncProjectsToFirestore = async function(accountId, projects, stagesConfig, retryCount = 0) {
@@ -6995,7 +7007,7 @@
         console.error('Firestore unavailable - network issue');
         // Retry up to 3 times for network errors with exponential backoff
         if (retryCount < 3) {
-          const delayMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          const delayMs = getExponentialBackoffDelay(retryCount);
           console.log(`Retrying Firestore sync in ${delayMs}ms (attempt ${retryCount + 1})...`);
           await new Promise(resolve => setTimeout(resolve, delayMs));
           return await window.syncProjectsToFirestore(accountId, projects, stagesConfig, retryCount + 1);
@@ -7042,7 +7054,7 @@
         console.error('Firestore unavailable - network issue');
         // Retry up to 3 times for network errors with exponential backoff
         if (retryCount < 3) {
-          const delayMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          const delayMs = getExponentialBackoffDelay(retryCount);
           console.log(`Retrying Firestore load in ${delayMs}ms (attempt ${retryCount + 1})...`);
           await new Promise(resolve => setTimeout(resolve, delayMs));
           return await window.loadProjectsFromFirestore(accountId, retryCount + 1);
