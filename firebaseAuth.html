@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="he">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Firebase Auth + קישור חשבונות</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 1rem; }
+    fieldset { border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; }
+    label { display: block; margin: 0.25rem 0; }
+    input { width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; }
+    button { padding: 0.5rem 1rem; margin-right: 0.5rem; }
+    .row { display: flex; gap: 0.5rem; align-items: center; }
+  </style>
+</head>
+<body>
+  <h1>התחברות, הרשאות וקישור חשבונות</h1>
+  <p id="status">לא מחובר/ת</p>
+
+  <fieldset>
+    <legend>התחברות בסיסית</legend>
+    <label>מייל</label>
+    <input id="email" type="email" placeholder="you@example.com" />
+    <label>סיסמה</label>
+    <input id="password" type="password" placeholder="••••••••" />
+    <div class="row">
+      <button id="signupBtn">הרשמה (מייל/סיסמה)</button>
+      <button id="loginEmailBtn">התחברות (מייל/סיסמה)</button>
+      <button id="loginGoogleBtn">התחברות עם Google</button>
+      <button id="logoutBtn">יציאה</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>בעל/ת חשבון: הרשאות לקישור</legend>
+    <label>הוסף/י מייל שמורשה להתקשר לחשבון שלך</label>
+    <input id="allowEmailInput" type="email" placeholder="friend@example.com" />
+    <button id="allowEmailBtn">אשר/י מייל לקישור</button>
+    <p>רק בעל/ת החשבון יכול/ה לנהל את הרשימה. הכללים מונעים גישה מכל אחד אחר.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>קישור לחשבון של מישהו אחר</legend>
+    <label>הכנס/י מייל של בעל/ת החשבון</label>
+    <input id="linkOwnerInput" type="email" placeholder="owner@example.com" />
+    <button id="linkOwnerBtn">קשר/י לחשבון</button>
+    <p>המערכת בודקת אם המייל שלך נמצא ברשימת ההרשאות של אותו/ה בעל/ת חשבון.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>מעבר בין חשבונות</legend>
+    <label>בחר/י חשבון פעיל לעבודה (אני או בעלים שקושרו)</label>
+    <select id="activeOwnerSelect"></select>
+  </fieldset>
+
+  <fieldset>
+    <legend>דוגמה לשמירת דאטה תחת החשבון הפעיל</legend>
+    <button id="saveExampleBtn">שמור דאטה לדוגמה</button>
+  </fieldset>
+
+  <script type="module">
+    import { saveExampleData } from "./scripts/auth.js";
+    const btn = document.getElementById('saveExampleBtn');
+    btn.addEventListener('click', async () => {
+      try {
+        await saveExampleData({ note: 'שלום עולם', value: Math.random() });
+        alert('נשמר!');
+      } catch (e) { alert(e.message); }
+    });
+  </script>
+  <script type="module" src="./scripts/auth.js"></script>
+</body>
+</html>
