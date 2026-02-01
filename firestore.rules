@@ -32,7 +32,7 @@ service cloud.firestore {
       // 1) הבעלים יכול ליצור קישור ישיר
       // 2) המשתמש יכול ליצור קישור אם המייל שלו מופיע ב-allowlist של הבעלים
       allow create: if
-        (isOwner(ownerUid) && request.auth.uid == ownerUid) ||
+        isOwner(ownerUid) ||
         (isAuthenticated() && request.auth.uid == memberUid &&
          exists(/databases/$(database)/documents/allowlists/$(ownerUid)/emails/$(request.auth.token.email)));
 

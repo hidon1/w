@@ -73,8 +73,8 @@ export async function logout() {
 export async function allowEmailForLink(emailToAllow) {
   const user = auth.currentUser;
   if (!user) throw new Error("לא מחובר/ת");
-  const normalized = (emailToAllow || '').trim();
-  const ref = doc(db, "allowlists", user.uid, "emails", normalized);
+  const trimmedEmail = (emailToAllow || '').trim();
+  const ref = doc(db, "allowlists", user.uid, "emails", trimmedEmail);
   await setDoc(ref, { createdAt: new Date().toISOString() });
 }
 
@@ -112,8 +112,8 @@ export async function switchActiveOwner(uid) {
 export async function saveExampleData(payload) {
   const user = auth.currentUser;
   if (!user) throw new Error("לא מחובר/ת");
-  const targetOwner = activeOwnerUid || user.uid;
-  const col = collection(db, "userData", targetOwner, "examples");
+  const targetOwnerUid = activeOwnerUid || user.uid;
+  const col = collection(db, "userData", targetOwnerUid, "examples");
   await addDoc(col, { ...payload, savedAt: new Date().toISOString() });
 }
 
