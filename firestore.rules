@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(ownerUid) {
+      return isAuthenticated() && request.auth.uid == ownerUid;
+    }
+    function isLinkedTo(ownerUid) {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/links/$(ownerUid)/members/$(request.auth.uid));
+    }
+
+    // בעלי חשבון (פרופיל בסיסי לצורך חיפוש לפי מייל)
+    match /owners/{ownerUid} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isOwner(ownerUid);
+    }
+
+    // רשימת מיילים שמורשים להתקשר לחשבון הבעלים
+    match /allowlists/{ownerUid}/emails/{email} {
+      allow read, write: if isOwner(ownerUid);
+    }
+
+    // קישורים בין בעל חשבון (owner) למשתמש מקושר (member)
+    match /links/{ownerUid}/members/{memberUid} {
+      // קריאה: הבעלים או המשתמש המקושר
+      allow read: if isOwner(ownerUid) || (isAuthenticated() && request.auth.uid == memberUid);
+
+      // יצירה:
+      // 1) הבעלים יכול ליצור קישור ישיר
+      // 2) המשתמש יכול ליצור קישור אם המייל שלו מופיע ב-allowlist של הבעלים
+      allow create: if
+        (isOwner(ownerUid) && request.auth.uid == ownerUid) ||
+        (isAuthenticated() && request.auth.uid == memberUid &&
+         exists(/databases/$(database)/documents/allowlists/$(ownerUid)/emails/$(request.auth.token.email)));
+
+      // מחיקה: רק הבעלים
+      allow delete: if isOwner(ownerUid);
+
+      // עדכון אסור (כדי לשמור מודל הרשאות פשוט)
+      allow update: if false;
+    }
+
+    // מסמכי פרופיל משתמש (אופציונלי)
+    match /users/{userUid} {
+      allow read, write: if isOwner(userUid) || isLinkedTo(userUid);
+    }
+
+    // כל דאטה של הבעלים תחת userData/{ownerUid}/...
+    match /userData/{ownerUid}/{document=**} {
+      allow read, write: if isOwner(ownerUid) || isLinkedTo(ownerUid);
+    }
+  }
+}

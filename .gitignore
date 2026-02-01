@@ -1,0 +1,26 @@
+# Node modules
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files (if used in future)
+.env
+.env.local
