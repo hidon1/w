@@ -81,10 +81,12 @@ export async function allowEmailForLink(emailToAllow) {
 export async function linkToOwnerByEmail(ownerEmail) {
   const user = auth.currentUser;
   if (!user) throw new Error("לא מחובר/ת");
-  // חיפוש ownerUid לפי אימייל (בקריאה מותרת לפי הכללים) — אמור להיות ייחודי
+  // חיפוש ownerUid לפי אימייל (בקריאה מותרת לפי הכללים)
+  // הערה: Firebase Auth מבטיח ייחודיות של אימייל לכל ספק התחברות
   const ownersQ = query(collection(db, "owners"), where("email", "==", ownerEmail));
   const ownersSnap = await getDocs(ownersQ);
   if (ownersSnap.empty) throw new Error("לא נמצא בעל חשבון עם המייל הזה");
+  if (ownersSnap.docs.length > 1) throw new Error("נמצאו מספר חשבונות עם אותו מייל");
   const ownerDoc = ownersSnap.docs[0];
   const ownerUid = ownerDoc.id;
 
@@ -154,9 +156,16 @@ async function renderLinkedAccounts() {
   const options = [{ uid: user.uid, label: `אני (${user.email || user.uid})` }];
   owners.forEach(uid => options.push({ uid, label: `בעל חשבון: ${uid}` }));
   els.activeOwnerSelect.innerHTML = options.map(o => `<option value="${o.uid}">${o.label}</option>`).join('');
-  // בחירת ברירת מחדל
+  // בחירת ברירת מחדל - ודא שהערך קיים ברשימה
   const defaultUid = activeOwnerUid || user.uid;
-  els.activeOwnerSelect.value = defaultUid;
+  const validUids = options.map(o => o.uid);
+  if (validUids.includes(defaultUid)) {
+    els.activeOwnerSelect.value = defaultUid;
+  } else {
+    // אם החשבון הפעיל לא קיים יותר, חזור לחשבון המשתמש
+    activeOwnerUid = user.uid;
+    els.activeOwnerSelect.value = user.uid;
+  }
   setStatus(`חשבון פעיל: ${defaultUid}`);
 }
 

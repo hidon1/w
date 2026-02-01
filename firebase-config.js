@@ -3,6 +3,6 @@ export const firebaseConfig = {
   apiKey: "PASTE_HERE",
   authDomain: "PASTE_HERE",
   projectId: "PASTE_HERE",
-  appId: "PASTE_HERE"
+  appId: "PASTE_HERE",
   // אם יש: storageBucket, messagingSenderId וכו' — ניתן להוסיף כאן
 };
