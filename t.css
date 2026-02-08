@@ -3671,6 +3671,35 @@ body.dark-mode .login-modal-content {
     height: 20px;
 }
 
+.login-separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.login-separator::before,
+.login-separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.login-separator span {
+    padding: 0 10px;
+    color: var(--text-color);
+    font-size: calc(var(--font-size-base) * 0.9);
+}
+
+body.dark-mode .login-separator::before,
+body.dark-mode .login-separator::after {
+    border-color: var(--dark-border-color);
+}
+
+body.dark-mode .login-separator span {
+    color: var(--dark-text-color);
+}
+
 .login-modal-content .email-form {
     display: flex;
     flex-direction: column;
