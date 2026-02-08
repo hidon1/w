@@ -20,6 +20,14 @@
     </script>
 </head>
 <body class="preload">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner-border"></div>
+            <p id="loadingText">טוען...</p>
+        </div>
+    </div>
+    
     <script>
         // Firebase Authentication wrapper - will be initialized after Firebase loads
         let auth = null;
@@ -59,6 +67,54 @@
             waitForFirebase().then(() => {
                 window.firebaseOnAuthStateChanged(auth, callback);
             });
+        }
+        
+        // Update Firebase connection status
+        function updateFirebaseStatus(connected) {
+            const statusEl = document.getElementById('firebaseStatus');
+            if (statusEl) {
+                if (connected) {
+                    statusEl.style.display = 'inline-flex';
+                    statusEl.classList.remove('disconnected');
+                    statusEl.querySelector('span').textContent = 'מחובר לענן';
+                } else {
+                    statusEl.style.display = 'none';
+                }
+            }
+        }
+        
+        // UI Helper Functions
+        function showLoading(message = 'טוען...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const text = document.getElementById('loadingText');
+            if (overlay) {
+                if (text) text.textContent = message;
+                overlay.style.display = 'flex';
+            }
+        }
+        
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+        
+        function showNotification(message, type = 'success') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `firebase-notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('fade-out');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
         
         // Firestore-based Access Management
@@ -184,6 +240,10 @@
         <div class="sidebar-footer">
             <div class="auth-section">
                 <div class="auth-status" id="authStatus">לא מחובר</div>
+                <div class="firebase-status" id="firebaseStatus" style="display:none;">
+                    <i class="fas fa-circle"></i>
+                    <span>מחובר לענן</span>
+                </div>
                 <button id="loginBtn">התחבר</button>
                 <button id="changeSitePasswordBtn" class="change-password-btn" style="display:none;" onclick="openPasswordSetupModal()">שנה סיסמת אתר</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
@@ -1663,8 +1723,12 @@
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = ENABLE_SITE_PASSWORD_PROMPT ? 'inline-block' : 'none';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     
+                    // Show Firebase connected status
+                    updateFirebaseStatus(true);
+                    
                     // Load data from Firestore
                     try {
+                        showLoading('טוען נתונים מהענן...');
                         const projectsLoaded = await loadProjectsFromFirestore();
                         if (projectsLoaded) {
                             renderCurrentProject();
@@ -1679,8 +1743,13 @@
                         if (firestoreInbox && firestoreInbox.length > 0) {
                             inbox = firestoreInbox;
                         }
+                        
+                        hideLoading();
+                        showNotification('הנתונים נטענו בהצלחה', 'success');
                     } catch (error) {
+                        hideLoading();
                         console.error('Error loading data from Firestore:', error);
+                        showNotification('שגיאה בטעינת נתונים מהענן', 'error');
                     }
                     
                     // Render UI
@@ -1697,6 +1766,9 @@
                     if (loginBtn) loginBtn.style.display = 'inline-block';
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'none';
                     if (logoutBtn) logoutBtn.style.display = 'none';
+                    
+                    // Hide Firebase status when logged out
+                    updateFirebaseStatus(false);
                     
                     openLoginModal();
                 }
@@ -4895,7 +4967,7 @@
         /**
          * Register a new user with email and password
          */
-        function registerWithEmailPassword() {
+        async function registerWithEmailPassword() {
             const emailInput = document.getElementById('registerEmailInput');
             const passwordInput = document.getElementById('registerPasswordInput');
             
@@ -4905,20 +4977,23 @@
             const password = passwordInput.value;
             
             if (!email || !password) {
-                alert('אנא הזן אימייל וסיסמה');
+                showNotification('אנא הזן אימייל וסיסמה', 'error');
                 return;
             }
             
             if (password.length < 6) {
-                alert('הסיסמה חייבת להכיל לפחות 6 תווים');
+                showNotification('הסיסמה חייבת להכיל לפחות 6 תווים', 'error');
                 return;
             }
             
             try {
+                showLoading('מבצע רישום...');
                 await signUpWithEmail(email, password);
+                hideLoading();
                 closeLoginModal();
-                alert('רישום בוצע בהצלחה!');
+                showNotification('רישום בוצע בהצלחה!', 'success');
             } catch (error) {
+                hideLoading();
                 console.error('Registration error:', error);
                 let errorMessage = 'שגיאה ברישום';
                 if (error.code === 'auth/email-already-in-use') {
@@ -4928,7 +5003,7 @@
                 } else if (error.code === 'auth/weak-password') {
                     errorMessage = 'הסיסמה חלשה מדי';
                 }
-                alert(errorMessage + ': ' + error.message);
+                showNotification(errorMessage, 'error');
             }
         }
         
@@ -4945,14 +5020,18 @@
             const password = passwordInput.value;
             
             if (!email || !password) {
-                alert('אנא הזן אימייל וסיסמה');
+                showNotification('אנא הזן אימייל וסיסמה', 'error');
                 return;
             }
             
             try {
+                showLoading('מתחבר...');
                 await signInWithEmail(email, password);
+                hideLoading();
                 closeLoginModal();
+                showNotification('התחברת בהצלחה!', 'success');
             } catch (error) {
+                hideLoading();
                 console.error('Login error:', error);
                 let errorMessage = 'שגיאה בהתחברות';
                 if (error.code === 'auth/user-not-found') {
@@ -4962,7 +5041,7 @@
                 } else if (error.code === 'auth/invalid-email') {
                     errorMessage = 'כתובת אימייל לא תקינה';
                 }
-                alert(errorMessage + ': ' + error.message);
+                showNotification(errorMessage, 'error');
             }
         }
         
