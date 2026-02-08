@@ -4563,3 +4563,206 @@ body.dark-mode .permission-badge.finance-no {
         padding: 3px 8px;
     }
 }
+
+/* ========== Firebase UI Components ========== */
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(5px);
+}
+
+.loading-spinner {
+    text-align: center;
+    color: white;
+}
+
+.spinner-border {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#loadingText {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0;
+    color: white;
+}
+
+/* Firebase Notifications */
+.firebase-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 9999;
+    animation: slideIn 0.3s ease-out;
+    max-width: 400px;
+    font-family: 'Heebo', 'Noto Sans Hebrew', sans-serif;
+}
+
+.firebase-notification.success {
+    border-right: 4px solid #4CAF50;
+}
+
+.firebase-notification.success i {
+    color: #4CAF50;
+}
+
+.firebase-notification.error {
+    border-right: 4px solid #f44336;
+}
+
+.firebase-notification.error i {
+    color: #f44336;
+}
+
+.firebase-notification i {
+    font-size: 24px;
+}
+
+.firebase-notification span {
+    flex: 1;
+    font-size: 14px;
+    color: #333;
+}
+
+.firebase-notification.fade-out {
+    animation: slideOut 0.3s ease-out;
+    opacity: 0;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+/* Enhanced Auth Section */
+.auth-section {
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.auth-status {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: inherit;
+    font-weight: 500;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    text-align: center;
+}
+
+/* Improved Button Styles for Auth */
+#loginBtn, #logoutBtn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-family: 'Heebo', 'Noto Sans Hebrew', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 5px;
+}
+
+#loginBtn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+#loginBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+#logoutBtn {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+#logoutBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+}
+
+/* Firebase Connection Status Indicator */
+.firebase-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    margin-top: 5px;
+}
+
+.firebase-status.disconnected {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+}
+
+.firebase-status i {
+    font-size: 8px;
+}
+
+/* Dark mode adjustments */
+body.dark-mode .firebase-notification {
+    background: #2d2d2d;
+    color: #fff;
+}
+
+body.dark-mode .firebase-notification span {
+    color: #fff;
+}
+
+body.dark-mode .auth-status {
+    background: rgba(255, 255, 255, 0.05);
+}

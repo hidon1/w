@@ -20,109 +20,114 @@
     </script>
 </head>
 <body class="preload">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner-border"></div>
+            <p id="loadingText">טוען...</p>
+        </div>
+    </div>
+    
     <script>
-        // Simplified Authentication System (replaces null
-        const SimpleAuth = {
-            currentUser: null,
-            users: {},
-            
-            init() {
-                const storedUsers = localStorage.getItem('simpleAuth_users');
-                if (storedUsers) {
-                    this.users = JSON.parse(storedUsers);
+        // Firebase Authentication wrapper - will be initialized after Firebase loads
+        let auth = null;
+        
+        // Wait for Firebase to be initialized
+        function waitForFirebase() {
+            return new Promise((resolve) => {
+                const checkFirebase = setInterval(() => {
+                    if (window.firebaseAuth) {
+                        clearInterval(checkFirebase);
+                        auth = window.firebaseAuth;
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+        
+        // Firebase Auth helper functions
+        async function signUpWithEmail(email, password) {
+            await waitForFirebase();
+            const userCredential = await window.firebaseCreateUser(auth, email, password);
+            return userCredential.user;
+        }
+        
+        async function signInWithEmail(email, password) {
+            await waitForFirebase();
+            const userCredential = await window.firebaseSignIn(auth, email, password);
+            return userCredential.user;
+        }
+        
+        async function signOutUser() {
+            await waitForFirebase();
+            await window.firebaseSignOut(auth);
+        }
+        
+        function onAuthChanged(callback) {
+            waitForFirebase().then(() => {
+                window.firebaseOnAuthStateChanged(auth, callback);
+            });
+        }
+        
+        // Update Firebase connection status
+        function updateFirebaseStatus(connected) {
+            const statusEl = document.getElementById('firebaseStatus');
+            if (statusEl) {
+                if (connected) {
+                    statusEl.style.display = 'inline-flex';
+                    statusEl.classList.remove('disconnected');
+                    statusEl.querySelector('span').textContent = 'מחובר לענן';
+                } else {
+                    statusEl.style.display = 'none';
                 }
-                const sessionUser = sessionStorage.getItem('currentUser');
-                if (sessionUser) {
-                    this.currentUser = JSON.parse(sessionUser);
-                }
-            },
-            
-            signUp(email, password) {
-                if (this.users[email]) {
-                    throw new Error('המשתמש כבר קיים');
-                }
-                this.users[email] = {
-                    email: email,
-                    passwordHash: this.hashPassword(password),
-                    uid: email,
-                    createdAt: Date.now()
-                };
-                localStorage.setItem('simpleAuth_users', JSON.stringify(this.users));
-                return this.signIn(email, password);
-            },
-            
-            signIn(email, password) {
-                const user = this.users[email];
-                if (!user || user.passwordHash !== this.hashPassword(password)) {
-                    throw new Error('אימייל או סיסמה שגויים');
-                }
-                this.currentUser = {
-                    email: email,
-                    uid: email,
-                    displayName: email
-                };
-                sessionStorage.setItem('currentUser', JSON.stringify(this.currentUser));
-                if (this._authCallback) {
-                    this._authCallback(this.currentUser);
-                }
-                return this.currentUser;
-            },
-            
-            signOut() {
-                this.currentUser = null;
-                sessionStorage.removeItem('currentUser');
-                if (this._authCallback) {
-                    this._authCallback(null);
-                }
-            },
-            
-            hashPassword(password) {
-                let hash = 0;
-                for (let i = 0; i < password.length; i++) {
-                    const char = password.charCodeAt(i);
-                    hash = ((hash << 5) - hash) + char;
-                    hash = hash & hash;
-                }
-                return hash.toString();
-            },
-            
-            onAuthStateChanged(callback) {
-                this._authCallback = callback;
-                // Call immediately with current state
-                if (callback) {
-                    callback(this.currentUser);
-                }
-            },
-            
-            getRedirectResult() {
-                return Promise.resolve({});
             }
-        };
+        }
         
-        // Initialize auth
-        SimpleAuth.init();
+        // UI Helper Functions
+        function showLoading(message = 'טוען...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const text = document.getElementById('loadingText');
+            if (overlay) {
+                if (text) text.textContent = message;
+                overlay.style.display = 'flex';
+            }
+        }
         
-        // Create compatible auth object with getter for currentUser
-        const auth = {
-            get currentUser() {
-                return SimpleAuth.currentUser;
-            },
-            signOut: () => SimpleAuth.signOut(),
-            onAuthStateChanged: (callback) => SimpleAuth.onAuthStateChanged(callback),
-            getRedirectResult: () => SimpleAuth.getRedirectResult()
-        };
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
         
-        // Simplified Access Management
+        function showNotification(message, type = 'success') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `firebase-notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('fade-out');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Firestore-based Access Management
         const AccessManagement = {
             ACCESS_KEY: 'userAccess',
             
-            grantAccess(targetEmail, projectId, allowEdit, allowFinance) {
-                const currentEmail = SimpleAuth.currentUser?.email;
+            async grantAccess(targetEmail, projectId, allowEdit, allowFinance) {
+                await waitForFirebase();
+                const currentEmail = auth?.currentUser?.email;
                 if (!currentEmail) throw new Error('Not authenticated');
                 
-                const accessData = this.getAccessData();
                 const accessId = Date.now().toString();
-                accessData[accessId] = {
+                const accessData = {
                     id: accessId,
                     ownerEmail: currentEmail,
                     userEmail: targetEmail,
@@ -130,50 +135,79 @@
                     allowEdit: allowEdit || false,
                     allowFinance: allowFinance || false,
                     status: 'active',
-                    createdAt: Date.now()
+                    createdAt: window.firestoreServerTimestamp()
                 };
-                this.saveAccessData(accessData);
+                
+                await window.firestoreSetDoc(
+                    window.firestoreDoc(window.firebaseDb, 'access', accessId),
+                    accessData
+                );
                 return accessId;
             },
             
-            getActiveUsers() {
-                const currentEmail = SimpleAuth.currentUser?.email;
+            async getActiveUsers() {
+                await waitForFirebase();
+                const currentEmail = auth?.currentUser?.email;
                 if (!currentEmail) return [];
-                const accessData = this.getAccessData();
-                return Object.values(accessData).filter(access => 
-                    access.ownerEmail === currentEmail && access.status === 'active'
+                
+                const q = window.firestoreQuery(
+                    window.firestoreCollection(window.firebaseDb, 'access'),
+                    window.firestoreWhere('ownerEmail', '==', currentEmail),
+                    window.firestoreWhere('status', '==', 'active')
+                );
+                
+                const snapshot = await window.firestoreGetDocs(q);
+                return snapshot.docs.map(doc => doc.data());
+            },
+            
+            async revokeAccess(accessId) {
+                await waitForFirebase();
+                await window.firestoreUpdateDoc(
+                    window.firestoreDoc(window.firebaseDb, 'access', accessId),
+                    { status: 'revoked' }
                 );
             },
             
-            revokeAccess(accessId) {
-                const accessData = this.getAccessData();
-                if (accessData[accessId]) {
-                    accessData[accessId].status = 'revoked';
-                    this.saveAccessData(accessData);
-                }
-            },
-            
-            checkAccess(userEmail, projectId) {
-                const accessData = this.getAccessData();
-                return Object.values(accessData).find(access => 
-                    access.userEmail === userEmail &&
-                    access.status === 'active' &&
-                    (access.projectId === null || access.projectId === projectId)
+            async checkAccess(userEmail, projectId) {
+                await waitForFirebase();
+                const q = window.firestoreQuery(
+                    window.firestoreCollection(window.firebaseDb, 'access'),
+                    window.firestoreWhere('userEmail', '==', userEmail),
+                    window.firestoreWhere('status', '==', 'active')
                 );
+                
+                const snapshot = await window.firestoreGetDocs(q);
+                return snapshot.docs.find(doc => {
+                    const data = doc.data();
+                    return data.projectId === null || data.projectId === projectId;
+                })?.data();
             },
             
-            getAccessData() {
+            async getAccessData() {
                 try {
-                    const data = localStorage.getItem(this.ACCESS_KEY);
-                    return data ? JSON.parse(data) : {};
+                    await waitForFirebase();
+                    const snapshot = await window.firestoreGetDocs(
+                        window.firestoreCollection(window.firebaseDb, 'access')
+                    );
+                    const data = {};
+                    snapshot.docs.forEach(doc => {
+                        data[doc.id] = doc.data();
+                    });
+                    return data;
                 } catch (e) {
                     return {};
                 }
             },
             
-            saveAccessData(data) {
+            async saveAccessData(data) {
                 try {
-                    localStorage.setItem(this.ACCESS_KEY, JSON.stringify(data));
+                    await waitForFirebase();
+                    for (const [id, accessInfo] of Object.entries(data)) {
+                        await window.firestoreSetDoc(
+                            window.firestoreDoc(window.firebaseDb, 'access', id),
+                            accessInfo
+                        );
+                    }
                 } catch (e) {
                     console.error('Error saving access data:', e);
                 }
@@ -206,6 +240,10 @@
         <div class="sidebar-footer">
             <div class="auth-section">
                 <div class="auth-status" id="authStatus">לא מחובר</div>
+                <div class="firebase-status" id="firebaseStatus" style="display:none;">
+                    <i class="fas fa-circle"></i>
+                    <span>מחובר לענן</span>
+                </div>
                 <button id="loginBtn">התחבר</button>
                 <button id="changeSitePasswordBtn" class="change-password-btn" style="display:none;" onclick="openPasswordSetupModal()">שנה סיסמת אתר</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
@@ -1181,29 +1219,23 @@
             
             if (remindersUpdated) {
                 localStorage.setItem('reminders', JSON.stringify(reminders));
-                // Reminders auto-saved to localStorage
+                saveRemindersToFirestore(reminders).catch(e => console.error('Firestore reminders save error:', e));
                 renderRemindersList();
             }
             
             if (inboxUpdated) {
                 localStorage.setItem('inbox', JSON.stringify(inbox));
-                // Inbox auto-saved to localStorage
+                saveInboxToFirestore(inbox).catch(e => console.error('Firestore inbox save error:', e));
             }
         }
-        function syncRemindersToFirebase() { 
-            // Firebase removed - localStorage only
-        }
         
-        function loadRemindersFromFirebase() { 
-            // Firebase removed - localStorage only
+        // Legacy function names for compatibility
+        function syncRemindersToFirebase() { 
+            saveRemindersToFirestore(reminders).catch(e => console.error('Firestore reminders save error:', e));
         }
         
         function syncInboxToFirebase() { 
-            // Firebase removed - localStorage only
-        }
-        
-        function loadInboxFromFirebase() { 
-            // Firebase removed - localStorage only
+            saveInboxToFirestore(inbox).catch(e => console.error('Firestore inbox save error:', e));
         }
         
         // Image upload functions for reminders
@@ -1626,7 +1658,7 @@
             
             setInterval(checkReminders, 60000);
             checkReminders();
-            const user = SimpleAuth.currentUser;
+            const user = auth?.currentUser;
             // Allow offline usage - don't force login modal
             // Users can still login via sidebar if they want cloud sync
             // Cloud sync disabled
@@ -1671,54 +1703,72 @@
             const logoutBtn = document.getElementById('logoutBtn');
             const changeSitePasswordBtn = document.getElementById('changeSitePasswordBtn');
             const authStatus = document.getElementById('authStatus');
-            // SimpleAuth doesn't need redirect result
+            
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
                     openLoginModal();
                 });
             }
             if (logoutBtn) {
-                logoutBtn.addEventListener('click', () => {
-                    SimpleAuth.signOut();
+                logoutBtn.addEventListener('click', async () => {
+                    await signOutUser();
                 });
             }
-            SimpleAuth.onAuthStateChanged((user) => {
+            
+            // Setup Firebase Auth state listener
+            onAuthChanged(async (user) => {
                 if (user) {
                     if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
                     if (loginBtn) loginBtn.style.display = 'none';
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = ENABLE_SITE_PASSWORD_PROMPT ? 'inline-block' : 'none';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
-                    // Data already loaded from localStorage
                     
-                    // Load reminders and inbox from localStorage
+                    // Show Firebase connected status
+                    updateFirebaseStatus(true);
+                    
+                    // Load data from Firestore
+                    try {
+                        showLoading('טוען נתונים מהענן...');
+                        const projectsLoaded = await loadProjectsFromFirestore();
+                        if (projectsLoaded) {
+                            renderCurrentProject();
+                        }
+                        
+                        const firestoreReminders = await loadRemindersFromFirestore();
+                        if (firestoreReminders && firestoreReminders.length > 0) {
+                            reminders = firestoreReminders;
+                        }
+                        
+                        const firestoreInbox = await loadInboxFromFirestore();
+                        if (firestoreInbox && firestoreInbox.length > 0) {
+                            inbox = firestoreInbox;
+                        }
+                        
+                        hideLoading();
+                        showNotification('הנתונים נטענו בהצלחה', 'success');
+                    } catch (error) {
+                        hideLoading();
+                        console.error('Error loading data from Firestore:', error);
+                        showNotification('שגיאה בטעינת נתונים מהענן', 'error');
+                    }
+                    
+                    // Render UI
                     renderRemindersList();
                     renderInboxList();
                     updateInboxBadge();
                     
-                    // Set up real-time synchronization for all data
-                    // Realtime sync disabled (localStorage only)
-                    // Inbox sync disabled
-                    // Reminders sync disabled
+                    // Set up real-time synchronization
+                    setupFirestoreListeners();
                     
                     closeLoginModal();
-                    
-                    // Check if user signed in with Google and needs to set site password
-                    if (ENABLE_SITE_PASSWORD_PROMPT && user.providerData && user.providerData.length > 0) {
-                        const googleProvider = null;
-                        if (googleProvider) {
-                            // Site password prompt removed
-                        }
-                    }
                 } else {
                     if (authStatus) authStatus.textContent = 'לא מחובר';
                     if (loginBtn) loginBtn.style.display = 'inline-block';
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = 'none';
                     if (logoutBtn) logoutBtn.style.display = 'none';
                     
-                    // Clean up real-time listeners
-                    // Realtime sync disabled (localStorage only)
-                    // Inbox sync disabled
-                    // Reminders sync disabled
+                    // Hide Firebase status when logged out
+                    updateFirebaseStatus(false);
                     
                     openLoginModal();
                 }
@@ -1876,6 +1926,202 @@
             }
             return loaded;
         }
+        
+        // ========== Firestore Data Management Functions ==========
+        
+        /**
+         * Save projects to Firestore
+         */
+        async function saveProjectsToFirestore() {
+            try {
+                await waitForFirebase();
+                if (!auth?.currentUser) {
+                    console.warn('User not authenticated, skipping Firestore save');
+                    return;
+                }
+                
+                const userId = auth.currentUser.uid;
+                await window.firestoreSetDoc(
+                    window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'projects'),
+                    { projects: projects, stagesConfig: stagesConfig, updatedAt: window.firestoreServerTimestamp() }
+                );
+                console.log('Projects saved to Firestore');
+            } catch (error) {
+                console.error('Error saving projects to Firestore:', error);
+            }
+        }
+        
+        /**
+         * Load projects from Firestore
+         */
+        async function loadProjectsFromFirestore() {
+            try {
+                await waitForFirebase();
+                if (!auth?.currentUser) {
+                    console.warn('User not authenticated, loading from localStorage');
+                    return false;
+                }
+                
+                const userId = auth.currentUser.uid;
+                const docRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'projects');
+                const docSnap = await window.firestoreGetDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.projects) {
+                        projects = data.projects;
+                    }
+                    if (data.stagesConfig) {
+                        stagesConfig = data.stagesConfig;
+                    }
+                    console.log('Projects loaded from Firestore');
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error('Error loading projects from Firestore:', error);
+                return false;
+            }
+        }
+        
+        /**
+         * Save reminders to Firestore
+         */
+        async function saveRemindersToFirestore(reminders) {
+            try {
+                await waitForFirebase();
+                if (!auth?.currentUser) return;
+                
+                const userId = auth.currentUser.uid;
+                await window.firestoreSetDoc(
+                    window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'reminders'),
+                    { reminders: reminders, updatedAt: window.firestoreServerTimestamp() }
+                );
+                console.log('Reminders saved to Firestore');
+            } catch (error) {
+                console.error('Error saving reminders to Firestore:', error);
+            }
+        }
+        
+        /**
+         * Load reminders from Firestore
+         */
+        async function loadRemindersFromFirestore() {
+            try {
+                await waitForFirebase();
+                if (!auth?.currentUser) return [];
+                
+                const userId = auth.currentUser.uid;
+                const docRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'reminders');
+                const docSnap = await window.firestoreGetDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    console.log('Reminders loaded from Firestore');
+                    return data.reminders || [];
+                }
+                return [];
+            } catch (error) {
+                console.error('Error loading reminders from Firestore:', error);
+                return [];
+            }
+        }
+        
+        /**
+         * Save inbox to Firestore
+         */
+        async function saveInboxToFirestore(inbox) {
+            try {
+                await waitForFirebase();
+                if (!auth?.currentUser) return;
+                
+                const userId = auth.currentUser.uid;
+                await window.firestoreSetDoc(
+                    window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'inbox'),
+                    { inbox: inbox, updatedAt: window.firestoreServerTimestamp() }
+                );
+                console.log('Inbox saved to Firestore');
+            } catch (error) {
+                console.error('Error saving inbox to Firestore:', error);
+            }
+        }
+        
+        /**
+         * Load inbox from Firestore
+         */
+        async function loadInboxFromFirestore() {
+            try {
+                await waitForFirebase();
+                if (!auth?.currentUser) return [];
+                
+                const userId = auth.currentUser.uid;
+                const docRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'inbox');
+                const docSnap = await window.firestoreGetDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    console.log('Inbox loaded from Firestore');
+                    return data.inbox || [];
+                }
+                return [];
+            } catch (error) {
+                console.error('Error loading inbox from Firestore:', error);
+                return [];
+            }
+        }
+        
+        /**
+         * Setup real-time listeners for Firestore
+         */
+        function setupFirestoreListeners() {
+            waitForFirebase().then(() => {
+                if (!auth?.currentUser) return;
+                
+                const userId = auth.currentUser.uid;
+                
+                // Listen to projects changes
+                const projectsRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'projects');
+                window.firestoreOnSnapshot(projectsRef, (doc) => {
+                    if (doc.exists()) {
+                        const data = doc.data();
+                        if (data.projects) {
+                            projects = data.projects;
+                            renderCurrentProject();
+                        }
+                        if (data.stagesConfig) {
+                            stagesConfig = data.stagesConfig;
+                        }
+                    }
+                });
+                
+                // Listen to reminders changes
+                const remindersRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'reminders');
+                window.firestoreOnSnapshot(remindersRef, (doc) => {
+                    if (doc.exists()) {
+                        const data = doc.data();
+                        if (data.reminders) {
+                            reminders = data.reminders;
+                            updateRemindersDisplay();
+                        }
+                    }
+                });
+                
+                // Listen to inbox changes
+                const inboxRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'inbox');
+                window.firestoreOnSnapshot(inboxRef, (doc) => {
+                    if (doc.exists()) {
+                        const data = doc.data();
+                        if (data.inbox) {
+                            inbox = data.inbox;
+                            updateInboxBadge();
+                        }
+                    }
+                });
+                
+                console.log('Firestore real-time listeners setup complete');
+            });
+        }
+        
         function saveAllProjects() {
             if (sharedAccessContext.active && !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance) {
                 console.warn('View-only mode - changes not saved');
@@ -1887,13 +2133,8 @@
             } catch (storageErr) {
                 handleLocalStorageError(storageErr);
             }
-            try {
-                if (auth && auth.currentUser) {
-                    // State auto-saved to localStorage
-                }
-            } catch (e) {
-                // null not available, skip cloud save
-            }
+            // Save to Firestore
+            saveProjectsToFirestore().catch(e => console.error('Firestore save error:', e));
         }
         
         /**
@@ -1978,7 +2219,7 @@
             renderProjectList(selectedYear);
         }
         function openAccessControlModal() {
-            const user = SimpleAuth.currentUser;
+            const user = auth?.currentUser;
             if (!user) {
                 alert('התחבר כדי לנהל הרשאות שיתוף.');
                 openLoginModal();
@@ -2051,7 +2292,7 @@
             if (financeCheckbox) financeCheckbox.checked = false;
         }
         async function grantUserAccess() {
-            const user = SimpleAuth.currentUser;
+            const user = auth?.currentUser;
             if (!user) {
                 alert('נדרש להתחבר כדי להעניק גישה.');
                 return;
@@ -2102,7 +2343,7 @@
         }
         
         async function loadActiveUsers() {
-            const user = SimpleAuth.currentUser;
+            const user = auth?.currentUser;
             const usersList = document.getElementById('activeUsersList');
             const noUsersMsg = document.getElementById('noUsersMessage');
             
@@ -4630,7 +4871,7 @@
         }
         
         async function saveSitePassword() {
-            const user = SimpleAuth.currentUser;
+            const user = auth?.currentUser;
             if (!user || !user.email) {
                 alert('אנא התחבר קודם.');
                 return;
@@ -4726,7 +4967,7 @@
         /**
          * Register a new user with email and password
          */
-        function registerWithEmailPassword() {
+        async function registerWithEmailPassword() {
             const emailInput = document.getElementById('registerEmailInput');
             const passwordInput = document.getElementById('registerPasswordInput');
             
@@ -4736,28 +4977,40 @@
             const password = passwordInput.value;
             
             if (!email || !password) {
-                alert('אנא הזן אימייל וסיסמה');
+                showNotification('אנא הזן אימייל וסיסמה', 'error');
                 return;
             }
             
             if (password.length < 6) {
-                alert('הסיסמה חייבת להכיל לפחות 6 תווים');
+                showNotification('הסיסמה חייבת להכיל לפחות 6 תווים', 'error');
                 return;
             }
             
             try {
-                SimpleAuth.signUp(email, password);
+                showLoading('מבצע רישום...');
+                await signUpWithEmail(email, password);
+                hideLoading();
                 closeLoginModal();
+                showNotification('רישום בוצע בהצלחה!', 'success');
             } catch (error) {
+                hideLoading();
                 console.error('Registration error:', error);
-                alert('שגיאה ברישום: ' + error.message);
+                let errorMessage = 'שגיאה ברישום';
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'המשתמש כבר קיים';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'כתובת אימייל לא תקינה';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = 'הסיסמה חלשה מדי';
+                }
+                showNotification(errorMessage, 'error');
             }
         }
         
         /**
          * Login with existing email and password
          */
-        function loginWithEmailPassword() {
+        async function loginWithEmailPassword() {
             const emailInput = document.getElementById('loginEmailInput');
             const passwordInput = document.getElementById('loginPasswordInput');
             
@@ -4767,23 +5020,35 @@
             const password = passwordInput.value;
             
             if (!email || !password) {
-                alert('אנא הזן אימייל וסיסמה');
+                showNotification('אנא הזן אימייל וסיסמה', 'error');
                 return;
             }
             
             try {
-                SimpleAuth.signIn(email, password);
+                showLoading('מתחבר...');
+                await signInWithEmail(email, password);
+                hideLoading();
                 closeLoginModal();
+                showNotification('התחברת בהצלחה!', 'success');
             } catch (error) {
+                hideLoading();
                 console.error('Login error:', error);
-                alert('שגיאה בהתחברות: ' + error.message);
+                let errorMessage = 'שגיאה בהתחברות';
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = 'משתמש לא נמצא';
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage = 'אימייל או סיסמה שגויים';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'כתובת אימייל לא תקינה';
+                }
+                showNotification(errorMessage, 'error');
             }
         }
         
         /**
          * Legacy function for site password login (kept for compatibility with existing code)
          */
-        function loginWithSitePassword() {
+        async function loginWithSitePassword() {
             const email = document.getElementById('siteEmailInput') ? document.getElementById('siteEmailInput').value : '';
             const password = document.getElementById('sitePasswordInput') ? document.getElementById('sitePasswordInput').value : '';
             
@@ -4793,8 +5058,8 @@
             }
             
             try {
-                // Use SimpleAuth instead of Firebase
-                SimpleAuth.signIn(email, password);
+                // Use Firebase Auth instead of SimpleAuth
+                await signInWithEmail(email, password);
                 closeLoginModal();
             } catch (error) {
                 console.error('Error during site password login:', error);
@@ -4836,7 +5101,7 @@
          * This redirects to the unified modal for better UX
          */
         function openManageEmailsModal() {
-            const user = SimpleAuth.currentUser;
+            const user = auth?.currentUser;
             if (!user) {
                 alert('אנא התחבר תחילה כדי לנהל כתובות מייל.');
                 openLoginModal();
@@ -4863,7 +5128,7 @@
          * Shows which email addresses are currently linked to this null account
          */
         async function loadLinkedEmails() {
-            const user = SimpleAuth.currentUser;
+            const user = auth?.currentUser;
             if (!user) {
                 return;
             }
@@ -4915,7 +5180,7 @@
          * This allows users to sign in with multiple email addresses to the same account
          */
         async function linkNewEmail() {
-            const user = SimpleAuth.currentUser;
+            const user = auth?.currentUser;
             if (!user) {
                 showLinkEmailStatus('אנא התחבר תחילה.', 'error');
                 return;
@@ -5473,27 +5738,76 @@
         }
     </script>
     <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  // Import Firebase SDKs
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
+  import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut as firebaseSignOut,
+    onAuthStateChanged 
+  } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+  import { 
+    getFirestore, 
+    collection, 
+    doc, 
+    setDoc, 
+    getDoc, 
+    getDocs,
+    updateDoc,
+    deleteDoc,
+    onSnapshot,
+    serverTimestamp,
+    query,
+    where,
+    orderBy
+  } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  // Firebase configuration
   const firebaseConfig = {
-    apiKey: "AIzaSyB4VV2dV6SsmwzMcLl_0_JOYHdhRZh3tiU",
-    authDomain: "nitur-wine.firebaseapp.com",
-    projectId: "nitur-wine",
-    storageBucket: "nitur-wine.firebasestorage.app",
-    messagingSenderId: "266624981870",
-    appId: "1:266624981870:web:a73189856f4ac8952bbf7f",
-    measurementId: "G-XXBHFQ5DLW"
+    apiKey: "AIzaSyCKyhyXjm1J1I2Xf3ef6CgJlWD7Tm-ktBs",
+    authDomain: "wine-cd8b9.firebaseapp.com",
+    projectId: "wine-cd8b9",
+    storageBucket: "wine-cd8b9.firebasestorage.app",
+    messagingSenderId: "1021236266417",
+    appId: "1:1021236266417:web:6da8f1f8e59da695aea990",
+    measurementId: "G-G1523R5BXC"
   };
 
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Make Firebase services globally available
+  window.firebaseApp = app;
+  window.firebaseAuth = auth;
+  window.firebaseDb = db;
+  window.firebaseAnalytics = analytics;
+  
+  // Firebase Authentication functions
+  window.firebaseCreateUser = createUserWithEmailAndPassword;
+  window.firebaseSignIn = signInWithEmailAndPassword;
+  window.firebaseSignOut = firebaseSignOut;
+  window.firebaseOnAuthStateChanged = onAuthStateChanged;
+  
+  // Firestore functions
+  window.firestoreCollection = collection;
+  window.firestoreDoc = doc;
+  window.firestoreSetDoc = setDoc;
+  window.firestoreGetDoc = getDoc;
+  window.firestoreGetDocs = getDocs;
+  window.firestoreUpdateDoc = updateDoc;
+  window.firestoreDeleteDoc = deleteDoc;
+  window.firestoreOnSnapshot = onSnapshot;
+  window.firestoreServerTimestamp = serverTimestamp;
+  window.firestoreQuery = query;
+  window.firestoreWhere = where;
+  window.firestoreOrderBy = orderBy;
+
+  console.log('Firebase initialized successfully');
 </script>
 </body>
 </html>
