@@ -5001,10 +5001,11 @@
                 
                 if (!userDoc.exists()) {
                     // Create user document
+                    const userEmail = email || user.email;
                     const userData = {
-                        email: email || user.email,
+                        email: userEmail,
                         createdAt: window.firestoreServerTimestamp(),
-                        displayName: user.displayName || email.split('@')[0],
+                        displayName: user.displayName || (userEmail ? userEmail.split('@')[0] : 'User'),
                         uid: user.uid
                     };
                     
