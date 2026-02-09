@@ -3582,6 +3582,27 @@ body.dark-mode .inbox-message-content p {
     background: linear-gradient(135deg, #FFB366, #FFC999);
 }
 
+.auth-section .switch-back-btn {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    font-size: calc(var(--font-size-base) * 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px;
+}
+
+.auth-section .switch-back-btn:hover {
+    background: linear-gradient(135deg, #45a049, #3d8b40);
+}
+
+.auth-section .switch-back-btn i {
+    font-size: 0.9em;
+}
+
 .login-modal {
     display: none;
     position: fixed;
@@ -4492,6 +4513,99 @@ body.dark-mode .permission-badge.finance-no {
 .btn-delete:hover {
     background: linear-gradient(135deg, #D32F2F, #B71C1C);
     transform: scale(1.1);
+}
+
+/* Connected Accounts Styles */
+.connected-accounts-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.connected-accounts-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.connected-account-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 12px;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #d0e0ff;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .connected-account-item {
+    background: var(--dark-card-background);
+    border-color: var(--dark-border-color);
+}
+
+.connected-account-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--secondary-color);
+}
+
+.account-info {
+    flex: 1;
+}
+
+.account-email {
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 8px;
+    font-size: calc(var(--font-size-base) * 1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.account-email i {
+    color: var(--secondary-color);
+}
+
+.account-permissions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.account-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.account-actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: calc(var(--font-size-base) * 0.9);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.current-account-card {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #f0f4ff, #e6f0ff);
+    border-radius: 12px;
+    border: 2px solid var(--primary-color);
+    margin-bottom: 15px;
+}
+
+body.dark-mode .current-account-card {
+    background: linear-gradient(135deg, #1a1a2e, #0a0a1e);
+    border-color: var(--primary-color);
 }
 
 /* Confirmation Modal Styles */
