@@ -2857,13 +2857,27 @@
         /**
          * Disconnect a connected account
          */
-        function disconnectAccount(index) {
+        async function disconnectAccount(index) {
             if (index < 0 || index >= connectedAccounts.length) return;
             
             const account = connectedAccounts[index];
-            if (!confirm(`האם לנתק את החיבור לחשבון ${account.email}?`)) {
-                return;
-            }
+            
+            // Use custom confirmation modal if available
+            const confirmed = await new Promise((resolve) => {
+                if (typeof showConfirmation === 'function') {
+                    showConfirmation(
+                        'ניתוק חשבון',
+                        `האם לנתק את החיבור לחשבון ${account.email}?`,
+                        () => resolve(true),
+                        () => resolve(false)
+                    );
+                } else {
+                    // Fallback to native confirm
+                    resolve(confirm(`האם לנתק את החיבור לחשבון ${account.email}?`));
+                }
+            });
+            
+            if (!confirmed) return;
             
             connectedAccounts.splice(index, 1);
             saveConnectedAccounts();
@@ -5503,9 +5517,15 @@
                     showNotification('התחברת בהצלחה עם Google!', 'success');
                 }
             } catch (error) {
+                // Log all errors for debugging
                 console.error('Redirect result error:', error);
-                if (error.code && error.code !== 'auth/invalid-api-key') {
-                    showNotification('שגיאה בהתחברות: ' + (error.message || 'שגיאה לא ידועה'), 'error');
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                
+                // Only show user-facing notifications for real errors, not expected states
+                // auth/invalid-api-key might occur during initial page load before Firebase is ready
+                if (error.code && error.code !== 'auth/invalid-api-key' && error.message) {
+                    showNotification('שגיאה בהתחברות: ' + error.message, 'error');
                 }
             }
         }
