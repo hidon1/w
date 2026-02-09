@@ -2033,13 +2033,21 @@
                 }
                 
                 const userId = auth.currentUser.uid;
+                console.log('Saving projects to Firestore for user:', userId);
                 await window.firestoreSetDoc(
                     window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'projects'),
                     { projects: projects, stagesConfig: stagesConfig, updatedAt: window.firestoreServerTimestamp() }
                 );
-                console.log('Projects saved to Firestore');
+                console.log('✓ Projects saved to Firestore successfully');
             } catch (error) {
-                console.error('Error saving projects to Firestore:', error);
+                console.error('❌ Error saving projects to Firestore:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                
+                if (error.code === 'permission-denied') {
+                    console.error('Permission denied - check Firestore security rules');
+                    showNotification('שגיאת הרשאה בשמירת פרויקטים', 'error');
+                }
             }
         }
         
@@ -2055,6 +2063,7 @@
                 }
                 
                 const userId = auth.currentUser.uid;
+                console.log('Loading projects from Firestore for user:', userId);
                 const docRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'projects');
                 const docSnap = await window.firestoreGetDoc(docRef);
                 
@@ -2066,12 +2075,15 @@
                     if (data.stagesConfig) {
                         stagesConfig = data.stagesConfig;
                     }
-                    console.log('Projects loaded from Firestore');
+                    console.log('✓ Projects loaded from Firestore successfully');
                     return true;
                 }
+                console.log('No projects found in Firestore');
                 return false;
             } catch (error) {
-                console.error('Error loading projects from Firestore:', error);
+                console.error('❌ Error loading projects from Firestore:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
                 return false;
             }
         }
@@ -5382,6 +5394,8 @@
             try {
                 await waitForFirebase();
                 
+                console.log('Attempting to save user to Firestore:', user.uid);
+                
                 // Check if user already exists in Firestore
                 const userDocRef = window.firestoreDoc(window.firebaseDb, 'users', user.uid);
                 const userDoc = await window.firestoreGetDoc(userDocRef);
@@ -5396,11 +5410,26 @@
                         uid: user.uid
                     };
                     
+                    console.log('Saving new user data:', userData);
                     await window.firestoreSetDoc(userDocRef, userData);
-                    console.log('User data saved to Firestore');
+                    console.log('✓ User data saved to Firestore successfully');
+                } else {
+                    console.log('User already exists in Firestore, skipping creation');
                 }
             } catch (error) {
-                console.error('Error saving user to Firestore:', error);
+                console.error('❌ Error saving user to Firestore:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                
+                // More specific error messages
+                if (error.code === 'permission-denied') {
+                    console.error('Permission denied - check Firestore security rules');
+                    showNotification('שגיאת הרשאה בשמירת נתונים. אנא פנה למנהל המערכת', 'error');
+                } else if (error.code === 'unavailable') {
+                    console.error('Firestore unavailable - check network connection');
+                    showNotification('שירות הענן אינו זמין כרגע. נסה שוב מאוחר יותר', 'error');
+                }
+                
                 throw error;
             }
         }
