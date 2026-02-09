@@ -233,6 +233,7 @@
             <li><button onclick="openInboxModal();">תיבת דואר <span id="inboxBadge" class="inbox-badge" style="display:none;">0</span></button></li>
             <li><button onclick="openRemindersModal();">תזכורות</button></li>
             <li><button onclick="openAccessControlModal();">ניהול גישה</button></li>
+            <li><button onclick="openAccountSwitchModal();">חיבור חשבונות</button></li>
             <li class="divider"></li>
             <li><button onclick="openInstructionsModal()">הוראות</button></li>
             <li><button onclick="openTimelineModal()">ציר זמן</button></li>
@@ -244,6 +245,9 @@
                     <i class="fas fa-circle"></i>
                     <span>מחובר לענן</span>
                 </div>
+                <button id="switchBackBtn" class="switch-back-btn" style="display:none;" onclick="switchToOwnAccount()">
+                    <i class="fas fa-undo"></i> חזור לחשבון שלי
+                </button>
                 <button id="loginBtn">התחבר</button>
                 <button id="changeSitePasswordBtn" class="change-password-btn" style="display:none;" onclick="openPasswordSetupModal()">שנה סיסמת אתר</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">יציאה</button>
@@ -743,6 +747,53 @@
                             <div id="noUsersMessage" class="no-users-message" style="display:none;">
                                 <i class="fas fa-info-circle"></i>
                                 <p>אין משתמשים עם גישה כרגע</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="accountSwitchModal" class="modal">
+            <div class="modal-content access-modal-content">
+                <span class="close-button" onclick="closeAccountSwitchModal()">&times;</span>
+                <h3><i class="fas fa-users"></i> חיבור חשבונות</h3>
+                
+                <div class="access-content">
+                    <!-- Current Account Section -->
+                    <div class="access-section">
+                        <h4><i class="fas fa-user"></i> החשבון הנוכחי שלי</h4>
+                        <div id="currentAccountDisplay" class="current-account-info">
+                            <p>טוען...</p>
+                        </div>
+                    </div>
+                    
+                    <hr class="section-divider">
+                    
+                    <!-- Connect Account Section -->
+                    <div class="access-section">
+                        <h4><i class="fas fa-link"></i> חבר חשבון נוסף</h4>
+                        <p class="section-description">הזן את כתובת המייל של החשבון שאליו יש לך הרשאת גישה</p>
+                        
+                        <div class="form-group">
+                            <label for="connectAccountEmail"><i class="fas fa-envelope"></i> כתובת מייל:</label>
+                            <input type="email" id="connectAccountEmail" placeholder="user@example.com" required>
+                        </div>
+                        
+                        <button class="btn-primary" onclick="connectToAccount()">
+                            <i class="fas fa-link"></i> התחבר לחשבון
+                        </button>
+                    </div>
+                    
+                    <hr class="section-divider">
+                    
+                    <!-- Connected Accounts Section -->
+                    <div class="access-section">
+                        <h4><i class="fas fa-exchange-alt"></i> חשבונות מחוברים</h4>
+                        <div class="connected-accounts-container">
+                            <ul id="connectedAccountsList" class="connected-accounts-list"></ul>
+                            <div id="noConnectedAccountsMessage" class="no-users-message" style="display:none;">
+                                <i class="fas fa-info-circle"></i>
+                                <p>אין חשבונות מחוברים</p>
                             </div>
                         </div>
                     </div>
@@ -1678,6 +1729,9 @@
             updateInboxBadge();
             requestNotificationPermission();
             
+            // Initialize account switching
+            loadConnectedAccounts();
+            
             // Firebase messaging removed - service worker registration removed
             
             setInterval(checkReminders, 60000);
@@ -1726,6 +1780,7 @@
             const loginBtn = document.getElementById('loginBtn');
             const logoutBtn = document.getElementById('logoutBtn');
             const changeSitePasswordBtn = document.getElementById('changeSitePasswordBtn');
+            const switchBackBtn = document.getElementById('switchBackBtn');
             const authStatus = document.getElementById('authStatus');
             
             if (loginBtn) {
@@ -1742,7 +1797,17 @@
             // Setup Firebase Auth state listener
             onAuthChanged(async (user) => {
                 if (user) {
-                    if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
+                    // Update auth status with account switching info
+                    if (currentActiveAccount) {
+                        if (authStatus) {
+                            authStatus.innerHTML = `מחובר כ: ${user.email}<br><small style="color: var(--secondary-color);">צופה ב: ${currentActiveAccount.ownerEmail}</small>`;
+                        }
+                        if (switchBackBtn) switchBackBtn.style.display = 'block';
+                    } else {
+                        if (authStatus) authStatus.textContent = 'מחובר כ: ' + (user.email || user.displayName || user.uid);
+                        if (switchBackBtn) switchBackBtn.style.display = 'none';
+                    }
+                    
                     if (loginBtn) loginBtn.style.display = 'none';
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = ENABLE_SITE_PASSWORD_PROMPT ? 'inline-block' : 'none';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
@@ -1797,6 +1862,9 @@
                     openLoginModal();
                 }
             });
+            
+            // Handle Google sign-in redirect result on page load
+            handleRedirectResult();
         });
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
@@ -2475,6 +2543,325 @@
             // TODO: Implement edit functionality
             alert('עריכת הרשאות תתאפשר בקרוב');
         }
+        
+        // ============= Account Switching Functions =============
+        
+        /**
+         * Store for connected accounts
+         */
+        let connectedAccounts = [];
+        let currentActiveAccount = null;
+        
+        /**
+         * Load connected accounts from localStorage
+         */
+        function loadConnectedAccounts() {
+            try {
+                const stored = localStorage.getItem('connectedAccounts');
+                if (stored) {
+                    connectedAccounts = JSON.parse(stored);
+                }
+                const activeAccount = localStorage.getItem('activeAccount');
+                if (activeAccount) {
+                    currentActiveAccount = JSON.parse(activeAccount);
+                }
+            } catch (error) {
+                console.error('Error loading connected accounts:', error);
+                connectedAccounts = [];
+                currentActiveAccount = null;
+            }
+        }
+        
+        /**
+         * Save connected accounts to localStorage
+         */
+        function saveConnectedAccounts() {
+            try {
+                localStorage.setItem('connectedAccounts', JSON.stringify(connectedAccounts));
+                if (currentActiveAccount) {
+                    localStorage.setItem('activeAccount', JSON.stringify(currentActiveAccount));
+                }
+            } catch (error) {
+                console.error('Error saving connected accounts:', error);
+            }
+        }
+        
+        /**
+         * Open account switching modal
+         */
+        function openAccountSwitchModal() {
+            const modal = document.getElementById('accountSwitchModal');
+            if (!modal) return;
+            
+            loadConnectedAccounts();
+            updateCurrentAccountDisplay();
+            renderConnectedAccounts();
+            
+            modal.style.display = 'flex';
+        }
+        
+        /**
+         * Close account switching modal
+         */
+        function closeAccountSwitchModal() {
+            const modal = document.getElementById('accountSwitchModal');
+            if (modal) {
+                modal.style.display = 'none';
+                showMainContent();
+            }
+        }
+        
+        /**
+         * Update current account display
+         */
+        function updateCurrentAccountDisplay() {
+            const display = document.getElementById('currentAccountDisplay');
+            if (!display) return;
+            
+            const user = auth?.currentUser;
+            if (user) {
+                display.innerHTML = `
+                    <div class="current-account-card">
+                        <i class="fas fa-user-circle" style="font-size: 3em; color: var(--primary-color);"></i>
+                        <div style="margin-right: 15px;">
+                            <p style="font-weight: bold; margin: 5px 0;">${user.email || user.displayName || 'משתמש'}</p>
+                            <p style="color: var(--text-light); font-size: 0.9em;">UID: ${user.uid.substring(0, 8)}...</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                display.innerHTML = '<p style="color: var(--text-light);">לא מחובר</p>';
+            }
+        }
+        
+        /**
+         * Connect to another account
+         */
+        async function connectToAccount() {
+            const emailInput = document.getElementById('connectAccountEmail');
+            if (!emailInput) return;
+            
+            const targetEmail = emailInput.value.trim();
+            if (!targetEmail) {
+                showNotification('אנא הזן כתובת מייל', 'error');
+                return;
+            }
+            
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(targetEmail)) {
+                showNotification('כתובת המייל אינה תקינה', 'error');
+                return;
+            }
+            
+            const currentUser = auth?.currentUser;
+            if (!currentUser) {
+                showNotification('נדרש להתחבר תחילה', 'error');
+                return;
+            }
+            
+            // Don't allow connecting to own account
+            if (targetEmail === currentUser.email) {
+                showNotification('לא ניתן להתחבר לחשבון שלך עצמך', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('בודק הרשאות גישה...');
+                await waitForFirebase();
+                
+                // Check if the current user has access to the target account
+                // Query the access collection to see if targetEmail granted access to currentUser.email
+                const accessQuery = window.firestoreQuery(
+                    window.firestoreCollection(window.firebaseDb, 'access'),
+                    window.firestoreWhere('ownerEmail', '==', targetEmail),
+                    window.firestoreWhere('userEmail', '==', currentUser.email)
+                );
+                
+                const querySnapshot = await window.firestoreGetDocs(accessQuery);
+                
+                if (querySnapshot.empty) {
+                    hideLoading();
+                    showNotification('אין לך הרשאת גישה לחשבון זה', 'error');
+                    return;
+                }
+                
+                // Access granted, add to connected accounts
+                const accessDoc = querySnapshot.docs[0];
+                const accessData = accessDoc.data();
+                
+                // Check if already connected
+                const alreadyConnected = connectedAccounts.find(acc => acc.email === targetEmail);
+                if (alreadyConnected) {
+                    hideLoading();
+                    showNotification('החשבון כבר מחובר', 'warning');
+                    return;
+                }
+                
+                connectedAccounts.push({
+                    email: targetEmail,
+                    connectedAt: new Date().toISOString(),
+                    permissions: {
+                        allowEdit: accessData.allowEdit || false,
+                        allowFinance: accessData.allowFinance || false,
+                        projectId: accessData.projectId || 'all'
+                    }
+                });
+                
+                saveConnectedAccounts();
+                renderConnectedAccounts();
+                
+                emailInput.value = '';
+                hideLoading();
+                showNotification('החשבון חובר בהצלחה!', 'success');
+            } catch (error) {
+                hideLoading();
+                console.error('Error connecting account:', error);
+                showNotification('שגיאה בחיבור החשבון: ' + (error.message || 'נסה שוב'), 'error');
+            }
+        }
+        
+        /**
+         * Render connected accounts list
+         */
+        function renderConnectedAccounts() {
+            const list = document.getElementById('connectedAccountsList');
+            const noAccountsMsg = document.getElementById('noConnectedAccountsMessage');
+            
+            if (!list || !noAccountsMsg) return;
+            
+            list.innerHTML = '';
+            
+            if (connectedAccounts.length === 0) {
+                list.style.display = 'none';
+                noAccountsMsg.style.display = 'block';
+                return;
+            }
+            
+            list.style.display = 'block';
+            noAccountsMsg.style.display = 'none';
+            
+            connectedAccounts.forEach((account, index) => {
+                const li = document.createElement('li');
+                li.className = 'connected-account-item';
+                li.innerHTML = `
+                    <div class="account-info">
+                        <div class="account-email">
+                            <i class="fas fa-envelope"></i>
+                            <strong>${account.email}</strong>
+                        </div>
+                        <div class="account-permissions">
+                            <span class="permission-badge ${account.permissions.allowEdit ? 'edit' : 'view'}">
+                                <i class="fas ${account.permissions.allowEdit ? 'fa-edit' : 'fa-eye'}"></i>
+                                ${account.permissions.allowEdit ? 'עריכה' : 'צפייה'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="account-actions">
+                        <button class="btn-primary" onclick="switchToAccount('${account.email}')" title="עבור לחשבון">
+                            <i class="fas fa-exchange-alt"></i> עבור
+                        </button>
+                        <button class="btn-delete" onclick="disconnectAccount(${index})" title="נתק חשבון">
+                            <i class="fas fa-unlink"></i>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+        
+        /**
+         * Switch to a connected account
+         */
+        async function switchToAccount(targetEmail) {
+            const currentUser = auth?.currentUser;
+            if (!currentUser) {
+                showNotification('נדרש להתחבר תחילה', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('עובר לחשבון...');
+                
+                // Find the connected account
+                const account = connectedAccounts.find(acc => acc.email === targetEmail);
+                if (!account) {
+                    hideLoading();
+                    showNotification('חשבון לא נמצא', 'error');
+                    return;
+                }
+                
+                // Set the active account context
+                currentActiveAccount = {
+                    ownerEmail: targetEmail,
+                    viewerEmail: currentUser.email,
+                    permissions: account.permissions
+                };
+                
+                saveConnectedAccounts();
+                
+                // Reload data for the new account
+                // This is a simplified implementation - in production, you'd need to
+                // query Firestore with the owner's email to get their data
+                showNotification(`עברת לחשבון של ${targetEmail}`, 'success');
+                
+                // Update UI to show we're viewing another account
+                const authStatus = document.getElementById('authStatus');
+                if (authStatus) {
+                    authStatus.innerHTML = `מחובר כ: ${currentUser.email}<br><small style="color: var(--secondary-color);">צופה ב: ${targetEmail}</small>`;
+                }
+                
+                hideLoading();
+                closeAccountSwitchModal();
+                
+                // Reload the page to refresh all data
+                location.reload();
+            } catch (error) {
+                hideLoading();
+                console.error('Error switching account:', error);
+                showNotification('שגיאה במעבר לחשבון: ' + (error.message || 'נסה שוב'), 'error');
+            }
+        }
+        
+        /**
+         * Switch back to own account
+         */
+        async function switchToOwnAccount() {
+            currentActiveAccount = null;
+            localStorage.removeItem('activeAccount');
+            
+            const currentUser = auth?.currentUser;
+            const authStatus = document.getElementById('authStatus');
+            if (authStatus && currentUser) {
+                authStatus.textContent = 'מחובר כ: ' + (currentUser.email || currentUser.displayName || currentUser.uid);
+            }
+            
+            showNotification('חזרת לחשבון שלך', 'success');
+            
+            // Reload the page to refresh all data
+            location.reload();
+        }
+        
+        /**
+         * Disconnect a connected account
+         */
+        function disconnectAccount(index) {
+            if (index < 0 || index >= connectedAccounts.length) return;
+            
+            const account = connectedAccounts[index];
+            if (!confirm(`האם לנתק את החיבור לחשבון ${account.email}?`)) {
+                return;
+            }
+            
+            connectedAccounts.splice(index, 1);
+            saveConnectedAccounts();
+            renderConnectedAccounts();
+            
+            showNotification('החשבון נותק בהצלחה', 'success');
+        }
+        
+        // ============= End Account Switching Functions =============
+        
         function renderProjectList(yearFilter = 'all') {
             projectList.innerHTML = '';
             let projectsToDisplay = Object.keys(projects).map(id => ({ id, ...projects[id] }));
@@ -5027,15 +5414,30 @@
                 await waitForFirebase();
                 
                 const provider = new window.firebaseGoogleAuthProvider();
-                const result = await window.firebaseSignInWithPopup(auth, provider);
-                const user = result.user;
                 
-                // Save user data to Firestore
-                await saveUserToFirestore(user, user.email);
-                
-                hideLoading();
-                closeLoginModal();
-                showNotification('התחברת בהצלחה עם Google!', 'success');
+                try {
+                    // Try popup first
+                    const result = await window.firebaseSignInWithPopup(auth, provider);
+                    const user = result.user;
+                    
+                    // Save user data to Firestore
+                    await saveUserToFirestore(user, user.email);
+                    
+                    hideLoading();
+                    closeLoginModal();
+                    showNotification('התחברת בהצלחה עם Google!', 'success');
+                } catch (popupError) {
+                    // If popup fails, try redirect method
+                    if (popupError.code === 'auth/popup-blocked' || 
+                        popupError.code === 'auth/popup-closed-by-user' ||
+                        popupError.code === 'auth/cancelled-popup-request') {
+                        console.log('Popup failed, trying redirect method...');
+                        await window.firebaseSignInWithRedirect(auth, provider);
+                        // Note: redirect will reload the page, so hideLoading won't execute
+                    } else {
+                        throw popupError;
+                    }
+                }
             } catch (error) {
                 hideLoading();
                 console.error('Google sign-in error:', error);
@@ -5043,11 +5445,39 @@
                 if (error.code === 'auth/popup-closed-by-user') {
                     errorMessage = 'ההתחברות בוטלה';
                 } else if (error.code === 'auth/popup-blocked') {
-                    errorMessage = 'חלון ההתחברות נחסם. אנא אפשר חלונות קופצים';
+                    errorMessage = 'חלון ההתחברות נחסם. מנסה שיטה חלופית...';
                 } else if (error.code === 'auth/cancelled-popup-request') {
                     errorMessage = 'בקשת התחברות בוטלה';
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = 'שגיאת רשת. אנא בדוק את החיבור לאינטרנט';
                 }
                 showNotification(errorMessage, 'error');
+            }
+        }
+        
+        /**
+         * Handle redirect result from Google sign-in
+         */
+        async function handleRedirectResult() {
+            try {
+                await waitForFirebase();
+                const result = await window.firebaseGetRedirectResult(auth);
+                
+                if (result && result.user) {
+                    showLoading('מסיים התחברות...');
+                    const user = result.user;
+                    
+                    // Save user data to Firestore
+                    await saveUserToFirestore(user, user.email);
+                    
+                    hideLoading();
+                    showNotification('התחברת בהצלחה עם Google!', 'success');
+                }
+            } catch (error) {
+                console.error('Redirect result error:', error);
+                if (error.code && error.code !== 'auth/invalid-api-key') {
+                    showNotification('שגיאה בהתחברות: ' + (error.message || 'שגיאה לא ידועה'), 'error');
+                }
             }
         }
         
@@ -5839,7 +6269,9 @@
     signOut as firebaseSignOut,
     onAuthStateChanged,
     GoogleAuthProvider,
-    signInWithPopup
+    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult
   } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
   import { 
     getFirestore, 
@@ -5887,6 +6319,8 @@
   window.firebaseOnAuthStateChanged = onAuthStateChanged;
   window.firebaseGoogleAuthProvider = GoogleAuthProvider;
   window.firebaseSignInWithPopup = signInWithPopup;
+  window.firebaseSignInWithRedirect = signInWithRedirect;
+  window.firebaseGetRedirectResult = getRedirectResult;
   
   // Firestore functions
   window.firestoreCollection = collection;
