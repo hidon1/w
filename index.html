@@ -75,7 +75,7 @@
             if (!statusEl) return;
 
             const statusText = statusEl.querySelector('span');
-            const isAuthenticated = Boolean(auth?.currentUser);
+            const isAuthenticated = Boolean(auth && auth.currentUser);
             if (!connected && !isAuthenticated) {
                 statusEl.style.display = 'none';
                 return;
@@ -2205,10 +2205,12 @@
                 if (!auth?.currentUser) return;
                 
                 const userId = auth.currentUser.uid;
+                // Include metadata updates to detect cache/online status for the indicator.
+                const listenerOptions = { includeMetadataChanges: true };
                 
                 // Listen to projects changes
                 const projectsRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'projects');
-                window.firestoreOnSnapshot(projectsRef, { includeMetadataChanges: true }, (doc) => {
+                window.firestoreOnSnapshot(projectsRef, listenerOptions, (doc) => {
                     if (doc.exists()) {
                         const data = doc.data();
                         if (data.projects) {
@@ -2227,7 +2229,7 @@
                 
                 // Listen to reminders changes
                 const remindersRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'reminders');
-                window.firestoreOnSnapshot(remindersRef, { includeMetadataChanges: true }, (doc) => {
+                window.firestoreOnSnapshot(remindersRef, listenerOptions, (doc) => {
                     if (doc.exists()) {
                         const data = doc.data();
                         if (data.reminders) {
@@ -2243,7 +2245,7 @@
                 
                 // Listen to inbox changes
                 const inboxRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'inbox');
-                window.firestoreOnSnapshot(inboxRef, { includeMetadataChanges: true }, (doc) => {
+                window.firestoreOnSnapshot(inboxRef, listenerOptions, (doc) => {
                     if (doc.exists()) {
                         const data = doc.data();
                         if (data.inbox) {
