@@ -290,8 +290,8 @@
         <div class="login-modal-content">
             <button class="close-login-btn" onclick="closeLoginModal()">&times;</button>
             <h2>ברוכים הבאים!</h2>
-            <p class="login-description-desktop">כדי לשמור את הנתונים שלך ולנהל גישה למשתמשים, יש להירשם עם אימייל וסיסמה. הנתונים שלך יישמרו באופן מאובטח במכשיר שלך.</p>
-            <p class="login-description-mobile">כדי לשמור את הנתונים שלך ולנהל גישה למשתמשים, יש להירשם עם אימייל וסיסמה. הנתונים שלך יישמרו במכשיר שלך.</p>
+            <p class="login-description-desktop">כדי לשמור את הנתונים שלך ולנהל גישה למשתמשים, יש להירשם עם אימייל וסיסמה. הנתונים שלך יישמרו בענן בצורה מאובטחת תחת החשבון שלך.</p>
+            <p class="login-description-mobile">כדי לשמור את הנתונים שלך ולנהל גישה למשתמשים, יש להירשם עם אימייל וסיסמה. הנתונים שלך יישמרו בענן תחת החשבון שלך.</p>
             
             <!-- Registration Form (shown by default) -->
             <div class="email-form" id="registrationForm">
@@ -1490,6 +1490,7 @@
                     
                     // Also add to in-memory array
                     reminders.push(newReminder);
+                    saveRemindersToFirestore(reminders).catch(e => console.error('Firestore reminders save error:', e));
                     
                     // Cloud sync disabled
                     try {
@@ -1581,12 +1582,8 @@
                 console.warn('localStorage update failed:', storageErr);
             }
             
-            // Sync to null
-            try {
-                // Reminders auto-saved to localStorage
-            } catch (error) {
-                console.error('null sync error:', error);
-            }
+            // Sync to Firestore
+            saveRemindersToFirestore(reminders).catch(e => console.error('Firestore reminders save error:', e));
             
             renderRemindersList();
         }
@@ -1670,7 +1667,7 @@
         async function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
             localStorage.setItem('inbox', JSON.stringify(inbox));
-            // Inbox auto-saved to localStorage
+            saveInboxToFirestore(inbox).catch(e => console.error('Firestore inbox save error:', e));
             renderInboxList();
             updateInboxBadge();
         }
@@ -1821,16 +1818,22 @@
                         const projectsLoaded = await loadProjectsFromFirestore();
                         if (projectsLoaded) {
                             renderCurrentProject();
+                        } else if (projects && Object.keys(projects).length > 0) {
+                            await saveProjectsToFirestore();
                         }
                         
                         const firestoreReminders = await loadRemindersFromFirestore();
                         if (firestoreReminders && firestoreReminders.length > 0) {
                             reminders = firestoreReminders;
+                        } else if (reminders && reminders.length > 0) {
+                            await saveRemindersToFirestore(reminders);
                         }
                         
                         const firestoreInbox = await loadInboxFromFirestore();
                         if (firestoreInbox && firestoreInbox.length > 0) {
                             inbox = firestoreInbox;
+                        } else if (inbox && inbox.length > 0) {
+                            await saveInboxToFirestore(inbox);
                         }
                         
                         hideLoading();
