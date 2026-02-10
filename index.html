@@ -5225,7 +5225,7 @@
          * @param {Object} response - The credential response from Google
          * @param {string} response.credential - The ID token (JWT) from Google
          */
-        function handleGoogleSignIn(response) {
+        async function handleGoogleSignIn(response) {
             console.log('Google Sign-In via GIS - ID Token received');
             
             // The ID token is in response.credential
@@ -5250,20 +5250,25 @@
             //     console.error('Authentication error:', err);
             // });
             
-            // Cloud sync disabled
-            // This demonstrates the integration while we're in client-side only mode
-            // The second parameter (accessToken) is optional and can be null for ID token only auth
-            // Firebase credential removed
-            
-            auth.signInWithCredential(credential)
-                .then((result) => {
-                    console.log('User signed in with GIS credential:', result.user);
-                    closeLoginModal();
-                })
-                .catch((error) => {
-                    console.error('Error signing in with GIS credential:', error);
-                    alert('שגיאה בהתחברות: ' + error.message);
-                });
+            try {
+                // Create a Firebase credential from the Google ID token
+                const credential = window.firebaseGoogleAuthProvider.credential(idToken);
+                
+                // Sign in to Firebase using the credential
+                const result = await window.firebaseSignInWithCredential(auth, credential);
+                console.log('✓ User signed in with GIS credential:', result.user);
+                
+                // Save user data to Firestore
+                await saveUserToFirestore(result.user, result.user.email);
+                
+                closeLoginModal();
+                showNotification('התחברת בהצלחה עם Google!', 'success');
+            } catch (error) {
+                console.error('❌ Error signing in with GIS credential:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                alert('שגיאה בהתחברות: ' + error.message);
+            }
         }
         
         async function checkAndPromptForSitePassword(user) {
@@ -5274,14 +5279,17 @@
             
             try {
                 // Check if user has a site password set in Firestore
-                const userDoc = await db.collection('userSitePasswords').doc(user.uid).get();
+                const userDocRef = window.firestoreDoc(window.firebaseDb, 'userSitePasswords', user.uid);
+                const userDoc = await window.firestoreGetDoc(userDocRef);
                 
-                if (!userDoc.exists) {
+                if (!userDoc.exists()) {
                     // User doesn't have a site password, prompt them to set one
                     openPasswordSetupModal();
                 }
             } catch (error) {
-                console.error('Error checking site password:', error);
+                console.error('❌ Error checking site password:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
             }
         }
         
@@ -5347,7 +5355,8 @@
                 Promise.reject(new Error("Email linking removed"));
                 
                 // Save a marker in Firestore that this user has set up site password
-                await db.collection('userSitePasswords').doc(user.uid).set({
+                const userPasswordDocRef = window.firestoreDoc(window.firebaseDb, 'userSitePasswords', user.uid);
+                await window.firestoreSetDoc(userPasswordDocRef, {
                     email: user.email,
                     hasPassword: true,
                     createdAt: Date.now(),
@@ -5357,7 +5366,9 @@
                 alert('הסיסמה נשמרה בהצלחה! עכשיו תוכל להתחבר עם ' + user.email + ' והסיסמה שהגדרת ממכשירים אחרים.');
                 closePasswordSetupModal();
             } catch (error) {
-                console.error('Error saving site password:', error);
+                console.error('❌ Error saving site password:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
                 if (error.code === 'auth/provider-already-linked') {
                     // Password provider already linked, try updating instead
                     try {
@@ -6320,7 +6331,8 @@
     GoogleAuthProvider,
     signInWithPopup,
     signInWithRedirect,
-    getRedirectResult
+    getRedirectResult,
+    signInWithCredential
   } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
   import { 
     getFirestore, 
@@ -6370,6 +6382,7 @@
   window.firebaseSignInWithPopup = signInWithPopup;
   window.firebaseSignInWithRedirect = signInWithRedirect;
   window.firebaseGetRedirectResult = getRedirectResult;
+  window.firebaseSignInWithCredential = signInWithCredential;
   
   // Firestore functions
   window.firestoreCollection = collection;
