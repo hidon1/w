@@ -1821,7 +1821,7 @@
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     
                     // Show Firebase connected status
-                    updateFirebaseStatus(navigator.onLine);
+                    updateFirebaseStatus(false);
                     
                     // Load data from Firestore
                     try {
@@ -2205,7 +2205,7 @@
                 if (!auth?.currentUser) return;
                 
                 const userId = auth.currentUser.uid;
-                // Include metadata updates to detect cache/online status for the indicator.
+                // Include metadata updates so cache/server changes trigger status updates via fromCache.
                 const listenerOptions = { includeMetadataChanges: true };
                 
                 // Listen to projects changes
