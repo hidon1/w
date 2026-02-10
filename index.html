@@ -72,14 +72,22 @@
         // Update Firebase connection status
         function updateFirebaseStatus(connected) {
             const statusEl = document.getElementById('firebaseStatus');
-            if (statusEl) {
-                if (connected) {
-                    statusEl.style.display = 'inline-flex';
-                    statusEl.classList.remove('disconnected');
-                    statusEl.querySelector('span').textContent = 'מחובר לענן';
-                } else {
-                    statusEl.style.display = 'none';
-                }
+            if (!statusEl) return;
+
+            const isAuthenticated = Boolean(auth?.currentUser);
+            if (!connected && !isAuthenticated) {
+                statusEl.style.display = 'none';
+                statusEl.classList.remove('disconnected');
+                return;
+            }
+
+            statusEl.style.display = 'inline-flex';
+            if (connected) {
+                statusEl.classList.remove('disconnected');
+                statusEl.querySelector('span').textContent = 'מחובר לענן';
+            } else {
+                statusEl.classList.add('disconnected');
+                statusEl.querySelector('span').textContent = 'מנותק מהענן';
             }
         }
         
@@ -2039,11 +2047,13 @@
                     window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'projects'),
                     { projects: projects, stagesConfig: stagesConfig, updatedAt: window.firestoreServerTimestamp() }
                 );
+                updateFirebaseStatus(true);
                 console.log('✓ Projects saved to Firestore successfully');
             } catch (error) {
                 console.error('❌ Error saving projects to Firestore:', error);
                 console.error('Error code:', error.code);
                 console.error('Error message:', error.message);
+                updateFirebaseStatus(false);
                 
                 if (error.code === 'permission-denied') {
                     console.error('Permission denied - check Firestore security rules');
@@ -2067,6 +2077,7 @@
                 console.log('Loading projects from Firestore for user:', userId);
                 const docRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'projects');
                 const docSnap = await window.firestoreGetDoc(docRef);
+                updateFirebaseStatus(true);
                 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -2085,6 +2096,7 @@
                 console.error('❌ Error loading projects from Firestore:', error);
                 console.error('Error code:', error.code);
                 console.error('Error message:', error.message);
+                updateFirebaseStatus(false);
                 return false;
             }
         }
@@ -2102,9 +2114,11 @@
                     window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'reminders'),
                     { reminders: reminders, updatedAt: window.firestoreServerTimestamp() }
                 );
+                updateFirebaseStatus(true);
                 console.log('Reminders saved to Firestore');
             } catch (error) {
                 console.error('Error saving reminders to Firestore:', error);
+                updateFirebaseStatus(false);
             }
         }
         
@@ -2119,6 +2133,7 @@
                 const userId = auth.currentUser.uid;
                 const docRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'reminders');
                 const docSnap = await window.firestoreGetDoc(docRef);
+                updateFirebaseStatus(true);
                 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -2128,6 +2143,7 @@
                 return [];
             } catch (error) {
                 console.error('Error loading reminders from Firestore:', error);
+                updateFirebaseStatus(false);
                 return [];
             }
         }
@@ -2145,9 +2161,11 @@
                     window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'inbox'),
                     { inbox: inbox, updatedAt: window.firestoreServerTimestamp() }
                 );
+                updateFirebaseStatus(true);
                 console.log('Inbox saved to Firestore');
             } catch (error) {
                 console.error('Error saving inbox to Firestore:', error);
+                updateFirebaseStatus(false);
             }
         }
         
@@ -2162,6 +2180,7 @@
                 const userId = auth.currentUser.uid;
                 const docRef = window.firestoreDoc(window.firebaseDb, 'users', userId, 'data', 'inbox');
                 const docSnap = await window.firestoreGetDoc(docRef);
+                updateFirebaseStatus(true);
                 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -2171,6 +2190,7 @@
                 return [];
             } catch (error) {
                 console.error('Error loading inbox from Firestore:', error);
+                updateFirebaseStatus(false);
                 return [];
             }
         }
@@ -2197,6 +2217,10 @@
                             stagesConfig = data.stagesConfig;
                         }
                     }
+                    updateFirebaseStatus(true);
+                }, (error) => {
+                    console.error('Error in projects listener:', error);
+                    updateFirebaseStatus(false);
                 });
                 
                 // Listen to reminders changes
@@ -2209,6 +2233,10 @@
                             updateRemindersDisplay();
                         }
                     }
+                    updateFirebaseStatus(true);
+                }, (error) => {
+                    console.error('Error in reminders listener:', error);
+                    updateFirebaseStatus(false);
                 });
                 
                 // Listen to inbox changes
@@ -2221,6 +2249,10 @@
                             updateInboxBadge();
                         }
                     }
+                    updateFirebaseStatus(true);
+                }, (error) => {
+                    console.error('Error in inbox listener:', error);
+                    updateFirebaseStatus(false);
                 });
                 
                 console.log('Firestore real-time listeners setup complete');
