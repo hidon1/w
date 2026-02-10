@@ -1490,14 +1490,8 @@
                     
                     // Also add to in-memory array
                     reminders.push(newReminder);
-                    saveRemindersToFirestore(reminders).catch(e => console.error('Firestore reminders save error:', e));
-                    
-                    // Cloud sync disabled
-                    try {
-                        // Reminders auto-saved to localStorage
-                    } catch (syncError) {
-                        console.error('null sync error:', syncError);
-                        // Cloud sync disabled
+                    if (auth?.currentUser) {
+                        saveRemindersToFirestore(reminders).catch(e => console.error('Firestore reminders save error:', e));
                     }
                     
                     // Backup to localStorage (metadata only, without large base64 images)
@@ -1583,7 +1577,9 @@
             }
             
             // Sync to Firestore
-            saveRemindersToFirestore(reminders).catch(e => console.error('Firestore reminders save error:', e));
+            if (auth?.currentUser) {
+                saveRemindersToFirestore(reminders).catch(e => console.error('Firestore reminders save error:', e));
+            }
             
             renderRemindersList();
         }
@@ -1667,7 +1663,9 @@
         async function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
             localStorage.setItem('inbox', JSON.stringify(inbox));
-            saveInboxToFirestore(inbox).catch(e => console.error('Firestore inbox save error:', e));
+            if (auth?.currentUser) {
+                saveInboxToFirestore(inbox).catch(e => console.error('Firestore inbox save error:', e));
+            }
             renderInboxList();
             updateInboxBadge();
         }
