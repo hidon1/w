@@ -5504,7 +5504,20 @@
         
         /**
          * Check if the current domain can use Firebase redirect handler
-         * Returns true only if hosted on Firebase domains (web.app, firebaseapp.com, or authDomain)
+         * 
+         * Firebase's signInWithRedirect requires a special handler at /__/auth/handler
+         * which is only available on Firebase Hosting domains. GitHub Pages doesn't
+         * provide this endpoint, so redirect authentication will fail with 404.
+         * 
+         * This function checks if the current hostname is:
+         * 1. The exact authDomain from Firebase config (e.g., wine-cd8b9.firebaseapp.com)
+         * 2. Any subdomain of .firebaseapp.com
+         * 3. Any subdomain of .web.app (newer Firebase Hosting domains)
+         * 
+         * Returns true only if hosted on Firebase domains where redirect will work.
+         * Returns false on GitHub Pages (*.github.io) and other non-Firebase domains.
+         * 
+         * @returns {boolean} True if redirect authentication can be used
          */
         function canUseRedirectHandler() {
             const host = window.location.hostname || '';
@@ -5514,6 +5527,21 @@
         
         /**
          * Manually trigger redirect login (only works on Firebase hosting domains)
+         * 
+         * This function provides a manual redirect option for users whose browsers
+         * block popups. It should ONLY be called when canUseRedirectHandler() returns true.
+         * 
+         * On GitHub Pages, this will fail because /__/auth/handler doesn't exist.
+         * The UI hides the redirect button on non-Firebase domains to prevent this.
+         * 
+         * Flow:
+         * 1. Check if redirect is available on current domain
+         * 2. Initialize Google provider
+         * 3. Call signInWithRedirect (page will reload and redirect to Google)
+         * 4. After redirect back, handleRedirectResult() will complete the login
+         * 
+         * @see canUseRedirectHandler
+         * @see handleRedirectResult
          */
         async function startRedirectLogin() {
             if (!canUseRedirectHandler()) {
@@ -5538,7 +5566,36 @@
         }
         
         /**
-         * Sign in with Google
+         * Sign in with Google using popup authentication
+         * 
+         * AUTHENTICATION STRATEGY FOR GITHUB PAGES:
+         * =========================================
+         * 
+         * This function implements a popup-first approach with intelligent fallback
+         * handling that works correctly on both Firebase Hosting and GitHub Pages.
+         * 
+         * Flow:
+         * 1. Always attempt signInWithPopup() first (works on all domains)
+         * 2. If popup succeeds: Save user to Firestore and complete login
+         * 3. If popup fails due to blocking:
+         *    a. On Firebase domains: Show manual redirect button as alternative
+         *    b. On GitHub Pages: Show message to enable popups (no redirect option)
+         * 4. For other errors: Show appropriate error message
+         * 
+         * Why this approach:
+         * - Popups work on all domains (GitHub Pages, Firebase, localhost)
+         * - Redirect only works on Firebase Hosting (has /__/auth/handler)
+         * - Automatic redirect fallback would cause 404 on GitHub Pages
+         * - Manual redirect button only appears where it can actually work
+         * 
+         * Error codes handled:
+         * - auth/popup-blocked: Browser blocked the popup window
+         * - auth/popup-closed-by-user: User closed popup before completing
+         * - auth/cancelled-popup-request: Multiple popup requests, previous cancelled
+         * - auth/network-request-failed: Network connectivity issues
+         * 
+         * @see canUseRedirectHandler
+         * @see startRedirectLogin
          */
         async function signInWithGoogle() {
             try {
@@ -5601,6 +5658,22 @@
         
         /**
          * Handle redirect result from Google sign-in
+         * 
+         * This function is called on page load to check if we're returning from
+         * a redirect authentication flow. If a user successfully authenticated
+         * via redirect, this will complete the login process.
+         * 
+         * NOTE: This will only work on Firebase Hosting domains where the
+         * /__/auth/handler endpoint exists. On GitHub Pages, getRedirectResult()
+         * will either return null or an error.
+         * 
+         * Flow:
+         * 1. Check getRedirectResult() for pending authentication
+         * 2. If user object exists: Complete login and save to Firestore
+         * 3. If null: No redirect in progress (normal page load)
+         * 4. If error: Log for debugging, show notification for real errors
+         * 
+         * @see startRedirectLogin
          */
         async function handleRedirectResult() {
             try {
@@ -6409,6 +6482,36 @@
         }
     </script>
     <script type="module">
+  /*
+   * FIREBASE AUTHENTICATION ON GITHUB PAGES - IMPLEMENTATION NOTES
+   * ================================================================
+   * 
+   * This site is hosted on GitHub Pages (hidon1.github.io), which presents
+   * specific challenges for Firebase Authentication redirect flows.
+   * 
+   * THE PROBLEM:
+   * - Firebase Authentication's signInWithRedirect() requires a special handler
+   *   endpoint at /__/auth/handler to complete the OAuth flow
+   * - This endpoint only exists on Firebase Hosting domains (.web.app, .firebaseapp.com)
+   * - GitHub Pages does not provide this endpoint, resulting in 404 errors
+   * - Automatic fallback from popup to redirect was causing authentication failures
+   * 
+   * THE SOLUTION:
+   * 1. Popup-First Approach: Always attempt signInWithPopup() first
+   * 2. No Automatic Redirect: If popup fails, DO NOT automatically fall back to redirect
+   * 3. Domain Detection: Use canUseRedirectHandler() to check if running on Firebase domain
+   * 4. Manual Redirect Option: Show redirect button ONLY on Firebase domains
+   * 5. Clear User Guidance: Inform users to enable popups when on GitHub Pages
+   * 
+   * KEY FUNCTIONS:
+   * - canUseRedirectHandler(): Checks if /__/auth/handler is available
+   * - startRedirectLogin(): Manual redirect (only on Firebase domains)
+   * - signInWithGoogle(): Popup-first with smart fallback handling
+   * 
+   * This ensures authentication works reliably on both GitHub Pages (popup only)
+   * and Firebase Hosting (popup + redirect option).
+   */
+  
   // Import Firebase SDKs
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
