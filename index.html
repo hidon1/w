@@ -1820,8 +1820,7 @@
                     if (changeSitePasswordBtn) changeSitePasswordBtn.style.display = ENABLE_SITE_PASSWORD_PROMPT ? 'inline-block' : 'none';
                     if (logoutBtn) logoutBtn.style.display = 'inline-block';
                     
-                    // Show Firebase connected status
-                    updateFirebaseStatus(false);
+                    // Firebase connection status updates after the first Firestore read.
                     
                     // Load data from Firestore
                     try {
