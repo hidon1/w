@@ -5517,7 +5517,7 @@
          */
         async function startRedirectLogin() {
             if (!canUseRedirectHandler()) {
-                showNotification('הפניה לא זמינה מדומיין זה. אנא אפשר popups או פרוס ל-Firebase Hosting.', 'error');
+                showNotification('הפניה לא זמינה מדומיין זה. אנא אפשר חלונות קופצים בדפדפן.', 'error');
                 return;
             }
             
@@ -5527,8 +5527,6 @@
                 
                 const provider = new window.firebaseGoogleAuthProvider();
                 
-                // Clean and encode any URL parameters if needed
-                // Note: signInWithRedirect doesn't take custom parameters, but this is a safety measure
                 console.log('Starting redirect login flow...');
                 await window.firebaseSignInWithRedirect(auth, provider);
                 // Note: page will reload after redirect, so hideLoading won't execute
@@ -5575,10 +5573,10 @@
                             for (let i = 0; i < redirectBtns.length; i++) {
                                 redirectBtns[i].style.display = 'inline-block';
                             }
-                            showNotification('הדפדפן חסם חלון קופץ. לחץ "התחבר באמצעות הפניה" לנסות אחרת.', 'error');
+                            showNotification('הדפדפן חסם חלון קופץ. לחץ על הכפתור "התחבר באמצעות הפניה" למטה.', 'error');
                         } else {
                             // On GitHub Pages, redirect won't work - inform user
-                            showNotification('הדפדפן חסם חלון קופץ. הפניה אוטומטית מנועה משום שהאתר לא מרוח על Firebase Hosting. אנא אפשר popups בדפדפן.', 'error');
+                            showNotification('הדפדפן חסם חלון קופץ. אנא אפשר חלונות קופצים בהגדרות הדפדפן ונסה שנית.', 'error');
                         }
                     } else {
                         throw popupError;
