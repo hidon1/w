@@ -74,8 +74,8 @@
             const statusEl = document.getElementById('firebaseStatus');
             if (!statusEl) return;
 
-            const authInstance = typeof auth === 'undefined' ? null : auth;
-            const isAuthenticated = Boolean(authInstance?.currentUser);
+            const statusText = statusEl.querySelector('span');
+            const isAuthenticated = Boolean(auth?.currentUser);
             if (!connected && !isAuthenticated) {
                 statusEl.style.display = 'none';
                 return;
@@ -84,10 +84,10 @@
             statusEl.style.display = 'inline-flex';
             if (connected) {
                 statusEl.classList.remove('disconnected');
-                statusEl.querySelector('span').textContent = 'מחובר לענן';
+                if (statusText) statusText.textContent = 'מחובר לענן';
             } else {
                 statusEl.classList.add('disconnected');
-                statusEl.querySelector('span').textContent = 'מנותק מהענן';
+                if (statusText) statusText.textContent = 'מנותק מהענן';
             }
         }
         
