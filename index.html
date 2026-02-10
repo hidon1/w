@@ -5359,8 +5359,8 @@
                 await window.firestoreSetDoc(userPasswordDocRef, {
                     email: user.email,
                     hasPassword: true,
-                    createdAt: Date.now(),
-                    updatedAt: Date.now()
+                    createdAt: window.firestoreServerTimestamp(),
+                    updatedAt: window.firestoreServerTimestamp()
                 });
                 
                 alert('הסיסמה נשמרה בהצלחה! עכשיו תוכל להתחבר עם ' + user.email + ' והסיסמה שהגדרת ממכשירים אחרים.');
