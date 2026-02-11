@@ -1867,7 +1867,11 @@
             });
             
             // Handle Google sign-in redirect result on page load
-            handleRedirectResult();
+            // Only check for redirect results on Firebase Hosting domains
+            // On GitHub Pages, this would trigger a 404 for /__/auth/handler
+            if (canUseRedirectHandler()) {
+                handleRedirectResult();
+            }
         });
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
