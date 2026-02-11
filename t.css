@@ -3681,15 +3681,29 @@ body.dark-mode .login-modal-content {
     margin-bottom: 15px;
 }
 
+.login-modal-content .google-auth-buttons {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.login-modal-content .google-auth-buttons .google-btn {
+    width: 100%;
+    justify-content: center;
+}
+
 .login-modal-content .google-btn:hover {
     background: linear-gradient(135deg, #3367d6, #2e7d32);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(66, 133, 244, 0.4);
 }
 
-.login-modal-content .google-btn img {
+.login-modal-content .google-btn img,
+.login-modal-content .google-btn i {
     width: 20px;
     height: 20px;
+    font-size: 20px;
+    line-height: 1;
 }
 
 .login-separator {
