@@ -5013,7 +5013,7 @@ body.dark-mode .auth-status {
                 <div class="auth-status" id="authStatus">מצב מקומי בלבד</div>
                 <div class="connection-status disconnected" id="connectionStatus">
                     <i class="fas fa-circle"></i>
-                    <span>ללא חיבור לענן</span>
+                    <span>אין חיבור לענן</span>
                 </div>
             </div>
             <div class="divider"></div>
@@ -5585,7 +5585,6 @@ body.dark-mode .auth-status {
         // Image upload variables
         let selectedReminderImage = null;
         let selectedReminderImageFile = null;
-        const sharedAccessNotice = document.getElementById('sharedAccessNotice');
         let currentMetricTypeForModal = { sectionId: '', metricId: '' };
         let currentEditableDetailElement = null;
         let graphComparisonMode = null;
@@ -5658,20 +5657,6 @@ body.dark-mode .auth-status {
                 return false;
             }
             return true;
-        }
-        function updateSharedAccessNotice() {
-            if (!sharedAccessNotice) return;
-            document.body.classList.toggle('view-only', sharedAccessContext.active && !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance);
-            if (sharedAccessContext.active) {
-                sharedAccessNotice.style.display = 'block';
-                sharedAccessNotice.classList.toggle('view-only', !sharedAccessContext.allowEdit);
-                const scopeText = sharedAccessContext.allowedProjectId ? 'פרויקט ספציפי' : 'כל הפרויקטים';
-                const mode = sharedAccessContext.allowEdit ? 'עריכה' : 'צפייה בלבד';
-                const finance = sharedAccessContext.allowFinance ? 'כולל כספים' : 'ללא גישה לכספים';
-                sharedAccessNotice.textContent = `גישה משותפת (${scopeText}) - ${mode}, ${finance}`;
-            } else {
-                sharedAccessNotice.style.display = 'none';
-            }
         }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
@@ -6252,19 +6237,11 @@ body.dark-mode .auth-status {
                 }
             }
             
-            // Try to handle invite from URL, but don't let it block the UI initialization
-            try {
-                await handleInviteFromUrl();
-            } catch (e) {
-                console.error('Failed to handle invite from URL (null may not be loaded):', e);
-            }
-            
             // Cloud sync disabled
             loadDarkModeState();
             populateYearSelects();
             setDefaultYearFilter();
             renderAllMainContent();
-            updateSharedAccessNotice();
             updateInboxBadge();
             requestNotificationPermission();
             
@@ -8750,60 +8727,6 @@ body.dark-mode .auth-status {
             } else if (typeof updateProjectDisplay === 'function') {
                 updateProjectDisplay();
             }
-        }
-        function loadSharedStateByOwner(ownerUid) {
-            console.log('Shared access is not available in local mode');
-        }
-        function checkUserAccess() {
-            return;
-        }
-        
-        function handleInviteFromUrl() {
-            return;
-        }
-        
-        function setupInboxRealtimeSync(user) {
-            return;
-        }
-        
-        function setupRemindersRealtimeSync(user) {
-            return;
-        }
-        
-        function setupRealtimeSync(user) {
-            return;
-        }
-        
-        function showSyncNotification() {
-            // Create a temporary notification element
-            const notification = document.createElement('div');
-            notification.style.position = 'fixed';
-            notification.style.top = '80px';
-            notification.style.right = '20px';
-            notification.style.background = 'linear-gradient(135deg, #4CAF50, #66BB6A)';
-            notification.style.color = 'white';
-            notification.style.padding = '10px 20px';
-            notification.style.borderRadius = '8px';
-            notification.style.zIndex = '9999';
-            notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-            notification.style.fontSize = '14px';
-            notification.style.fontWeight = 'bold';
-            notification.textContent = '✓ הנתונים עודכנו';
-            notification.style.animation = 'slideInRight 0.3s ease-out';
-            notification.className = 'sync-notification';
-            
-            document.body.appendChild(notification);
-            
-            // Remove after 2 seconds
-            setTimeout(() => {
-                notification.style.animation = 'fadeOut 0.3s ease-out';
-                setTimeout(() => {
-                    // Check if element still exists before removing
-                    if (notification.parentNode) {
-                        document.body.removeChild(notification);
-                    }
-                }, 300);
-            }, 2000);
         }
         
         function showConfirmation(message, title = 'אישור') {
