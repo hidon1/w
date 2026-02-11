@@ -13,8 +13,8 @@
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/vfs_fonts.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
-/* קוד CSS המלא עם עדכונים להזזה במובייל */
-/* שינויים במובייל: .project-details-card עכשיו עם left: -200px; כדי שתציץ קצת */
+/* קוד CSS מעודכן למובייל */
+/* שינויים במובייל: .project-details-card עכשיו עם left: -280px; כדי שתציץ קצת */
 
 @media (max-width: 768px) {
     .hamburger-menu-btn {
@@ -351,11 +351,6 @@
     .stage-overview-empty-state i {
         margin-left: 8px;
     }
-        margin-bottom: 15px;
-        text-align: center;
-        color: var(--primary-color);
-    }
-    
     .step-cards-grid {
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 10px;
@@ -4916,7 +4911,7 @@ body.dark-mode .current-account-card {
     margin-top: 5px;
 }
 
-.connection-status.disconnected {
+.connection-status.local-only {
     background: rgba(244, 67, 54, 0.2);
     color: #f44336;
 }
@@ -5010,10 +5005,9 @@ body.dark-mode .auth-status {
         </ul>
         <div class="sidebar-footer">
             <div class="auth-section">
-                <div class="auth-status" id="authStatus">מצב מקומי בלבד</div>
-                <div class="connection-status disconnected" id="connectionStatus">
+                <div class="connection-status local-only" id="connectionStatus">
                     <i class="fas fa-circle"></i>
-                    <span>אין חיבור לענן</span>
+                    <span>עבודה מקומית בלבד</span>
                 </div>
             </div>
             <div class="divider"></div>
@@ -5969,7 +5963,7 @@ body.dark-mode .auth-status {
             console.log('Converting image to base64 for reminder:', reminderId);
             console.log('Image file:', selectedReminderImageFile.name, selectedReminderImageFile.type, selectedReminderImageFile.size);
             
-            // Convert image to base64 for local storage (no cloud upload)
+            // Convert image to base64 for local storage (no external upload)
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -6245,7 +6239,7 @@ body.dark-mode .auth-status {
             updateInboxBadge();
             requestNotificationPermission();
             
-            // Messaging removed - service worker registration removed
+            // Push messaging removed - service worker registration removed
             
             setInterval(checkReminders, 60000);
             checkReminders();
@@ -6285,10 +6279,6 @@ body.dark-mode .auth-status {
                 document.body.classList.add('loaded');
             }, 100);
             
-            const authStatus = document.getElementById('authStatus');
-            if (authStatus) {
-                authStatus.textContent = 'מצב מקומי בלבד';
-            }
         });
         function setDefaultYearFilter() {
             const currentYear = new Date().getFullYear().toString();
