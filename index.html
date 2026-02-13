@@ -5642,7 +5642,7 @@ body.dark-mode .auth-status {
             messagingSenderId: 'REPLACE_WITH_FIREBASE_SENDER_ID',
             appId: 'REPLACE_WITH_FIREBASE_APP_ID'
         };
-        // Prefer window global config names from Firebase setup snippets.
+        // Prefer window.firebaseConfig (firebase-config.js), then fallback names firebaseAuthConfig/firebaseAppConfig.
         const windowFirebaseConfig = window.firebaseConfig
             || window.firebaseAuthConfig
             || window.firebaseAppConfig;
