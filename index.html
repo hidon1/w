@@ -6170,7 +6170,6 @@ body.dark-mode .auth-status {
                 firebaseState.app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfigData);
                 firebaseState.auth = firebase.auth();
                 firebaseState.db = firebase.firestore();
-                firebaseState.user = firebaseState.auth.currentUser || null;
                 firebaseState.auth.onAuthStateChanged(handleAuthStateChanged);
                 try {
                     await firebaseState.auth.getRedirectResult();
@@ -6181,9 +6180,6 @@ body.dark-mode .auth-status {
                     }
                 }
                 updateAuthUi();
-                if (shouldShowLoginModal()) {
-                    showLoginModal();
-                }
             } catch (error) {
                 console.error('Failed to initialize Firebase:', error);
                 firebaseState.enabled = false;
