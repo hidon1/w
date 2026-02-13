@@ -5642,10 +5642,17 @@ body.dark-mode .auth-status {
             messagingSenderId: 'REPLACE_WITH_FIREBASE_SENDER_ID',
             appId: 'REPLACE_WITH_FIREBASE_APP_ID'
         };
+        const legacyFirebaseConfig = (() => {
+            try {
+                return firebaseConfig || null;
+            } catch (error) {
+                return null;
+            }
+        })();
         const firebaseConfigData = window.firebaseConfig
             || window.firebaseAuthConfig
             || window.firebaseAppConfig
-            || (typeof firebaseConfig !== 'undefined' ? firebaseConfig : null)
+            || legacyFirebaseConfig
             || fallbackFirebaseConfig;
         const CLOUD_SAVE_DEBOUNCE_MS = 1500; // Balance UI responsiveness with Firestore write frequency
         const firebaseState = {
