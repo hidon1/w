@@ -6266,7 +6266,7 @@ body.dark-mode .auth-status {
                     .collection('permissions')
                     .get();
                 if (snapshot.empty) {
-                    permissionsList.innerHTML = '<li class="no-users-message"><i class="fas fa-user-slash"></i> אין משתמשים מורשים.</li>';
+                    permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-user-slash"></i> אין משתמשים מורשים.</li>';
                     return;
                 }
                 snapshot.forEach(doc => {
@@ -6295,14 +6295,14 @@ body.dark-mode .auth-status {
                 });
             } catch (error) {
                 console.error('Failed to load permissions:', error);
-                permissionsList.innerHTML = '<li class="no-users-message"><i class="fas fa-exclamation-circle"></i> שגיאה בטעינת הרשאות.</li>';
+                permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-exclamation-circle"></i> שגיאה בטעינת הרשאות.</li>';
             }
         }
         function renderConnectedAccountsList() {
             if (!connectedAccountsList) return;
             connectedAccountsList.innerHTML = '';
             if (!firebaseState.user) {
-                connectedAccountsList.innerHTML = '<li class="no-users-message"><i class="fas fa-user-slash"></i> אין חשבונות מחוברים.</li>';
+                connectedAccountsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-user-slash"></i> אין חשבונות מחוברים.</li>';
                 return;
             }
             const ownerEmail = firebaseState.user.email || 'החשבון שלי';
