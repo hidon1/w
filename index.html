@@ -5642,13 +5642,13 @@ body.dark-mode .auth-status {
             messagingSenderId: 'REPLACE_WITH_FIREBASE_SENDER_ID',
             appId: 'REPLACE_WITH_FIREBASE_APP_ID'
         };
-        const scriptFirebaseConfig = typeof firebaseConfig !== 'undefined' ? firebaseConfig : null;
-        // Prefer window.firebaseConfig, but allow alternate global names from Firebase setup snippets.
+        const outerScopeFirebaseConfig = typeof firebaseConfig !== 'undefined' ? firebaseConfig : null;
+        // Prefer window global config names, then outer-scope firebaseConfig bindings from setup snippets.
         const windowFirebaseConfig = window.firebaseConfig
             || window.firebaseAuthConfig
             || window.firebaseAppConfig;
         const firebaseConfigData = windowFirebaseConfig
-            || scriptFirebaseConfig
+            || outerScopeFirebaseConfig
             || fallbackFirebaseConfig;
         const CLOUD_SAVE_DEBOUNCE_MS = 1500; // Balance UI responsiveness with Firestore write frequency
         const firebaseState = {
