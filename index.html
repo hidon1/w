@@ -15,6 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js" onerror="console.warn('firebase-config.js חסר, משתמשים בקונפיג ברירת מחדל');"></script>
     <style>
 /* קוד CSS מעודכן למובייל */
 /* שינויים במובייל: .project-details-card עכשיו עם left: -280px; כדי שתציץ קצת */
@@ -4923,6 +4924,27 @@ body.dark-mode .current-account-card {
     font-size: 8px;
 }
 
+.cloud-sync-indicator {
+    position: fixed;
+    top: 50%;
+    right: 12px;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: #4CAF50;
+    opacity: 0;
+    transform: translateY(-50%) scale(0.85);
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    z-index: 1200;
+}
+
+.cloud-sync-indicator.active {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+}
+
 /* Dark mode adjustments */
 body.dark-mode .app-notification {
     background: #2d2d2d;
@@ -4946,6 +4968,9 @@ body.dark-mode .auth-status {
             <div class="spinner-border"></div>
             <p id="loadingText">טוען...</p>
         </div>
+    </div>
+    <div id="cloudSyncIndicator" class="cloud-sync-indicator">
+        <span class="sr-only" id="cloudSyncIndicatorText" aria-live="polite" aria-atomic="true"></span>
     </div>
     
     <script>
@@ -5720,6 +5745,8 @@ body.dark-mode .auth-status {
         const switchBackBtn = document.getElementById('switchBackBtn');
         const authStatus = document.getElementById('authStatus');
         const connectionStatus = document.getElementById('connectionStatus');
+        const cloudSyncIndicator = document.getElementById('cloudSyncIndicator');
+        const cloudSyncIndicatorText = document.getElementById('cloudSyncIndicatorText');
         const googleLoginBtn = document.getElementById('googleLoginBtn');
         const emailLoginBtn = document.getElementById('emailLoginBtn');
         const registerBtn = document.getElementById('registerBtn');
@@ -5754,6 +5781,7 @@ body.dark-mode .auth-status {
         // Used to time the delayed visibility hide after slide-out animation completes
         const CARD_TRANSITION_DURATION = 300; // milliseconds
         let cardHideTimeout = null; // Track timeout to prevent race conditions
+        let cloudSyncIndicatorTimeout = null;
         // משתני הזזה לכרטיסיה
         let isDragging = false;
         let startX = 0;
@@ -5932,6 +5960,22 @@ body.dark-mode .auth-status {
             if (switchBackBtn) switchBackBtn.style.display = sharedAccessContext.active ? 'inline-flex' : 'none';
             updateSharedAccessNotice();
         }
+        function flashCloudSyncIndicator() {
+            if (!cloudSyncIndicator) return;
+            cloudSyncIndicator.classList.add('active');
+            if (cloudSyncIndicatorText) {
+                cloudSyncIndicatorText.textContent = 'הנתונים עודכנו';
+            }
+            if (cloudSyncIndicatorTimeout) {
+                clearTimeout(cloudSyncIndicatorTimeout);
+            }
+            cloudSyncIndicatorTimeout = setTimeout(() => {
+                cloudSyncIndicator.classList.remove('active');
+                if (cloudSyncIndicatorText) {
+                    cloudSyncIndicatorText.textContent = '';
+                }
+            }, 1000);
+        }
         function showLoginModal() {
             if (loginModal) {
                 loginModal.style.display = 'flex';
@@ -6000,6 +6044,7 @@ body.dark-mode .auth-status {
                     localStorage.setItem('currentProjectId', currentProjectId);
                 }
                 renderAllMainContent();
+                flashCloudSyncIndicator();
                 return true;
             } catch (error) {
                 console.error('Cloud sync failed:', error);
@@ -6023,6 +6068,7 @@ body.dark-mode .auth-status {
                         stagesConfig,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     }, { merge: true });
+                flashCloudSyncIndicator();
             } catch (error) {
                 console.error('Failed to save to cloud:', error);
                 showNotification('שגיאה בשמירה לענן.', 'error');
