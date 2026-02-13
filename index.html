@@ -15,7 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
+    <script src="firebase-config.js" onerror="console.warn('firebase-config.js חסר, משתמשים בקונפיג ברירת מחדל');"></script>
     <style>
 /* קוד CSS מעודכן למובייל */
 /* שינויים במובייל: .project-details-card עכשיו עם left: -280px; כדי שתציץ קצת */
@@ -4969,7 +4969,9 @@ body.dark-mode .auth-status {
             <p id="loadingText">טוען...</p>
         </div>
     </div>
-    <div id="cloudSyncIndicator" class="cloud-sync-indicator" role="status" aria-live="polite" aria-label="הנתונים עודכנו"></div>
+    <div id="cloudSyncIndicator" class="cloud-sync-indicator">
+        <span class="sr-only" id="cloudSyncIndicatorText" aria-live="polite" aria-atomic="true"></span>
+    </div>
     
     <script>
         // UI Helper Functions
@@ -5744,6 +5746,7 @@ body.dark-mode .auth-status {
         const authStatus = document.getElementById('authStatus');
         const connectionStatus = document.getElementById('connectionStatus');
         const cloudSyncIndicator = document.getElementById('cloudSyncIndicator');
+        const cloudSyncIndicatorText = document.getElementById('cloudSyncIndicatorText');
         const googleLoginBtn = document.getElementById('googleLoginBtn');
         const emailLoginBtn = document.getElementById('emailLoginBtn');
         const registerBtn = document.getElementById('registerBtn');
@@ -5960,11 +5963,17 @@ body.dark-mode .auth-status {
         function flashCloudSyncIndicator() {
             if (!cloudSyncIndicator) return;
             cloudSyncIndicator.classList.add('active');
+            if (cloudSyncIndicatorText) {
+                cloudSyncIndicatorText.textContent = 'הנתונים עודכנו';
+            }
             if (cloudSyncIndicatorTimeout) {
                 clearTimeout(cloudSyncIndicatorTimeout);
             }
             cloudSyncIndicatorTimeout = setTimeout(() => {
                 cloudSyncIndicator.classList.remove('active');
+                if (cloudSyncIndicatorText) {
+                    cloudSyncIndicatorText.textContent = '';
+                }
             }, 1000);
         }
         function showLoginModal() {
