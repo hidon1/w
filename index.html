@@ -5617,6 +5617,7 @@ body.dark-mode .auth-status {
             messagingSenderId: 'REPLACE_WITH_FIREBASE_SENDER_ID',
             appId: 'REPLACE_WITH_FIREBASE_APP_ID'
         };
+        const CLOUD_SAVE_DEBOUNCE_MS = 1500; // Balance UI responsiveness with Firestore write frequency
         const firebaseState = {
             enabled: false,
             app: null,
@@ -5759,7 +5760,7 @@ body.dark-mode .auth-status {
         let currentX = 0;
         let cardOpen = false; // מצב הכרטיסיה: פתוח או סגור
         let editingFinanceEntryId = null;
-        let sharedAccessContext = { active: false, inviteId: null, ownerUid: null, ownerEmail: null, allowEdit: false, allowFinance: false, allowedProjectId: null };
+        let sharedAccessContext = { active: false, ownerUid: null, ownerEmail: null, allowEdit: false, allowFinance: false, allowedProjectId: null };
         if (newProjectNameInput) {
             newProjectNameInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -6035,7 +6036,7 @@ body.dark-mode .auth-status {
             firebaseState.pendingSave = setTimeout(() => {
                 firebaseState.pendingSave = null;
                 saveProjectsToCloud();
-            }, 1500);
+            }, CLOUD_SAVE_DEBOUNCE_MS);
         }
         function applySharedAccess(permissionData, ownerUid, ownerEmail) {
             sharedAccessContext.active = true;
@@ -6119,7 +6120,7 @@ body.dark-mode .auth-status {
                 try {
                     await firebaseState.auth.getRedirectResult();
                 } catch (error) {
-                    if (error && error.code !== 'auth/no-auth-event') {
+                    if (error?.code && error.code !== 'auth/no-auth-event') {
                         console.error('Redirect sign-in failed:', error);
                         showNotification('שגיאה בהתחברות עם Google.', 'error');
                     }
@@ -6143,7 +6144,7 @@ body.dark-mode .auth-status {
                     await firebaseState.auth.signInWithPopup(provider);
                 }
             } catch (error) {
-                if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+                if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/cancelled-popup-request') {
                     await firebaseState.auth.signInWithRedirect(provider);
                 } else {
                     console.error('Google sign-in failed:', error);
@@ -6256,7 +6257,7 @@ body.dark-mode .auth-status {
             if (!firebaseState.db || !firebaseState.user) return;
             permissionsList.innerHTML = '';
             if (sharedAccessContext.active) {
-                permissionsList.innerHTML = '<li class="no-users-message"><i class="fas fa-info-circle"></i> רק בעלי החשבון יכולים לנהל הרשאות.</li>';
+                permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> רק בעלי החשבון יכולים לנהל הרשאות.</li>';
                 return;
             }
             try {
