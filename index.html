@@ -6046,7 +6046,9 @@ body.dark-mode .auth-status {
             sharedAccessContext.allowFinance = !!permissionData.allowFinance;
             sharedAccessContext.allowedProjectId = permissionData.allowedProjectId || null;
             firebaseState.ownerUid = ownerUid;
-            firebaseState.ownerEmail = ownerEmail ?? firebaseState.ownerEmail;
+            if (ownerEmail !== null && ownerEmail !== undefined) {
+                firebaseState.ownerEmail = ownerEmail;
+            }
             updateAuthUi();
         }
         function clearSharedAccess() {
@@ -6119,7 +6121,7 @@ body.dark-mode .auth-status {
                 try {
                     await firebaseState.auth.getRedirectResult();
                 } catch (error) {
-                    if (error?.code && error.code !== 'auth/no-auth-event') {
+                    if (error?.code && error?.code !== 'auth/no-auth-event') {
                         console.error('Redirect sign-in failed:', error);
                         showNotification('שגיאה בהתחברות עם Google.', 'error');
                     }
