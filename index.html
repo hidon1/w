@@ -6046,7 +6046,7 @@ body.dark-mode .auth-status {
             sharedAccessContext.allowFinance = !!permissionData.allowFinance;
             sharedAccessContext.allowedProjectId = permissionData.allowedProjectId || null;
             firebaseState.ownerUid = ownerUid;
-            firebaseState.ownerEmail = ownerEmail || firebaseState.ownerEmail;
+            firebaseState.ownerEmail = ownerEmail ?? firebaseState.ownerEmail;
             updateAuthUi();
         }
         function clearSharedAccess() {
@@ -6095,7 +6095,6 @@ body.dark-mode .auth-status {
             const restored = await restoreSharedAccess();
             if (!restored) {
                 clearSharedAccess();
-                firebaseState.ownerUid = user.uid;
                 await loadProjectsFromCloud(firebaseState.ownerUid);
             }
             hideLoginModal();
