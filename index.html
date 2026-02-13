@@ -5634,7 +5634,7 @@ body.dark-mode .auth-status {
         };
         // Expose stagesConfig globally for the stage-nav-fix module
         window.stagesConfig = stagesConfig;
-        const firebaseConfig = window.firebaseConfig || {
+        const fallbackFirebaseConfig = {
             apiKey: 'REPLACE_WITH_FIREBASE_API_KEY',
             authDomain: 'wine.firebaseapp.com',
             projectId: 'wine',
@@ -5642,6 +5642,11 @@ body.dark-mode .auth-status {
             messagingSenderId: 'REPLACE_WITH_FIREBASE_SENDER_ID',
             appId: 'REPLACE_WITH_FIREBASE_APP_ID'
         };
+        const firebaseConfigData = window.firebaseConfig
+            || window.firebaseAuthConfig
+            || window.firebaseAppConfig
+            || (typeof firebaseConfig !== 'undefined' ? firebaseConfig : null)
+            || fallbackFirebaseConfig;
         const CLOUD_SAVE_DEBOUNCE_MS = 1500; // Balance UI responsiveness with Firestore write frequency
         const firebaseState = {
             enabled: false,
@@ -5904,9 +5909,9 @@ body.dark-mode .auth-status {
             return encodeURIComponent(normalizeEmail(email));
         }
         function isFirebaseConfigValid() {
-            return firebaseConfig
-                && firebaseConfig.apiKey
-                && !firebaseConfig.apiKey.includes('REPLACE_WITH_FIREBASE');
+            return firebaseConfigData
+                && firebaseConfigData.apiKey
+                && !firebaseConfigData.apiKey.includes('REPLACE_WITH_FIREBASE');
         }
         function isWebView() {
             const userAgent = navigator.userAgent || '';
@@ -5987,7 +5992,8 @@ body.dark-mode .auth-status {
             }
         }
         function shouldShowLoginModal() {
-            return firebaseState.enabled && !firebaseState.user && !localStorage.getItem('skipLogin');
+            const currentUser = firebaseState.user || firebaseState.auth?.currentUser;
+            return firebaseState.enabled && !currentUser && !localStorage.getItem('skipLogin');
         }
         async function ensureAccountDocument(user) {
             if (!firebaseState.db || !user) return;
@@ -6160,7 +6166,7 @@ body.dark-mode .auth-status {
             }
             try {
                 firebaseState.enabled = true;
-                firebaseState.app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+                firebaseState.app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfigData);
                 firebaseState.auth = firebase.auth();
                 firebaseState.db = firebase.firestore();
                 firebaseState.auth.onAuthStateChanged(handleAuthStateChanged);
@@ -6173,6 +6179,9 @@ body.dark-mode .auth-status {
                     }
                 }
                 updateAuthUi();
+                if (shouldShowLoginModal()) {
+                    showLoginModal();
+                }
             } catch (error) {
                 console.error('Failed to initialize Firebase:', error);
                 firebaseState.enabled = false;
