@@ -5642,18 +5642,12 @@ body.dark-mode .auth-status {
             messagingSenderId: 'REPLACE_WITH_FIREBASE_SENDER_ID',
             appId: 'REPLACE_WITH_FIREBASE_APP_ID'
         };
-        const bareFirebaseConfig = (() => {
-            try {
-                return firebaseConfig || null;
-            } catch (error) {
-                return null;
-            }
-        })();
+        const globalFirebaseConfig = typeof firebaseConfig !== 'undefined' ? firebaseConfig : null;
         const windowFirebaseConfig = window.firebaseConfig
             || window.firebaseAuthConfig
             || window.firebaseAppConfig;
         const firebaseConfigData = windowFirebaseConfig
-            || bareFirebaseConfig
+            || globalFirebaseConfig
             || fallbackFirebaseConfig;
         const CLOUD_SAVE_DEBOUNCE_MS = 1500; // Balance UI responsiveness with Firestore write frequency
         const firebaseState = {
@@ -6000,8 +5994,7 @@ body.dark-mode .auth-status {
             }
         }
         function shouldShowLoginModal() {
-            const currentUser = firebaseState.user || firebaseState.auth?.currentUser;
-            return firebaseState.enabled && !currentUser && !localStorage.getItem('skipLogin');
+            return firebaseState.enabled && !firebaseState.user && !localStorage.getItem('skipLogin');
         }
         async function ensureAccountDocument(user) {
             if (!firebaseState.db || !user) return;
@@ -6177,6 +6170,7 @@ body.dark-mode .auth-status {
                 firebaseState.app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfigData);
                 firebaseState.auth = firebase.auth();
                 firebaseState.db = firebase.firestore();
+                firebaseState.user = firebaseState.auth.currentUser || null;
                 firebaseState.auth.onAuthStateChanged(handleAuthStateChanged);
                 try {
                     await firebaseState.auth.getRedirectResult();
