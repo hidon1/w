@@ -8806,7 +8806,7 @@ body.dark-mode .auth-status {
                         let displayValue = '--';
                         if (entries && entries.length > 0) {
                             // Show the FIRST value instead of the last one
-                            displayValue = metricConfig.type === 'number'
+                            displayValue = metricConfig.type === 'number' && typeof entries[0].value === 'number'
                                 ? entries[0].value.toFixed(metricConfig.precision)
                                 : entries[0].value;
                         }
