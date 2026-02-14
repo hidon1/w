@@ -5657,6 +5657,8 @@ body.dark-mode .auth-status {
             ownerUid: null,
             ownerEmail: null,
             pendingSave: null,
+            pendingRemindersSave: null,
+            pendingInboxSave: null,
             syncing: false
         };
         let projects = loadProjects();
@@ -6094,6 +6096,9 @@ body.dark-mode .auth-status {
             if (!firebaseState.db || !firebaseState.ownerUid || !firebaseState.enabled) return;
             try {
                 // Save reminders without large base64 images to Firestore
+                // Note: Base64 images are stored in IndexedDB for offline access.
+                // Only HTTP URLs are saved to Firestore to avoid document size limits.
+                // This is intentional to prevent Firestore quota issues.
                 const remindersCopy = reminders.map(r => ({
                     ...r,
                     // Store only URLs, not base64 data
@@ -6222,6 +6227,27 @@ body.dark-mode .auth-status {
             } catch (error) {
                 console.error('Failed to load preferences from cloud:', error);
             }
+        }
+        // Debounced save functions for reminders and inbox
+        function queueRemindersSave() {
+            if (!firebaseState.enabled || !firebaseState.ownerUid) return;
+            if (firebaseState.pendingRemindersSave) {
+                clearTimeout(firebaseState.pendingRemindersSave);
+            }
+            firebaseState.pendingRemindersSave = setTimeout(() => {
+                firebaseState.pendingRemindersSave = null;
+                saveRemindersToCloud();
+            }, CLOUD_SAVE_DEBOUNCE_MS);
+        }
+        function queueInboxSave() {
+            if (!firebaseState.enabled || !firebaseState.ownerUid) return;
+            if (firebaseState.pendingInboxSave) {
+                clearTimeout(firebaseState.pendingInboxSave);
+            }
+            firebaseState.pendingInboxSave = setTimeout(() => {
+                firebaseState.pendingInboxSave = null;
+                saveInboxToCloud();
+            }, CLOUD_SAVE_DEBOUNCE_MS);
         }
         function applySharedAccess(permissionData, ownerUid, ownerEmail) {
             sharedAccessContext.active = true;
@@ -6821,14 +6847,14 @@ body.dark-mode .auth-status {
             if (remindersUpdated) {
                 localStorage.setItem('reminders', JSON.stringify(reminders));
                 renderRemindersList();
-                // Sync reminders to cloud
-                await saveRemindersToCloud();
+                // Sync reminders to cloud (debounced to avoid excessive writes)
+                queueRemindersSave();
             }
             
             if (inboxUpdated) {
                 localStorage.setItem('inbox', JSON.stringify(inbox));
-                // Sync inbox to cloud
-                await saveInboxToCloud();
+                // Sync inbox to cloud (debounced to avoid excessive writes)
+                queueInboxSave();
             }
         }
         // Image upload functions for reminders
