@@ -10176,12 +10176,22 @@ onAuthStateChanged(auth, async (user) => {
         // Save user data to Firestore
         try {
             const userRef = doc(db, 'users', user.uid);
-            await setDoc(userRef, {
+            
+            // Check if this is a new user
+            const userDoc = await getDoc(userRef);
+            const userData = {
                 displayName: user.displayName,
                 email: user.email,
                 photoURL: user.photoURL,
                 lastLogin: new Date().toISOString()
-            }, { merge: true });
+            };
+            
+            // Add createdAt only for new users
+            if (!userDoc.exists()) {
+                userData.createdAt = new Date().toISOString();
+            }
+            
+            await setDoc(userRef, userData, { merge: true });
             
             console.log('נתוני משתמש נשמרו ב-Firestore');
         } catch (error) {
@@ -10220,14 +10230,7 @@ window.signInWithGoogle = async function() {
         console.log('התחברות הצליחה:', user.displayName);
         showNotification('התחברת בהצלחה!', 'success');
         
-        // Save user to Firestore
-        const userRef = doc(db, 'users', user.uid);
-        await setDoc(userRef, {
-            displayName: user.displayName,
-            email: user.email,
-            photoURL: user.photoURL,
-            createdAt: new Date().toISOString()
-        }, { merge: true });
+        // User data will be saved by onAuthStateChanged listener
         
     } catch (error) {
         console.error('שגיאה בהתחברות:', error);
