@@ -6089,6 +6089,140 @@ body.dark-mode .auth-status {
                 saveProjectsToCloud();
             }, CLOUD_SAVE_DEBOUNCE_MS);
         }
+        // Firestore sync functions for reminders and inbox
+        async function saveRemindersToCloud() {
+            if (!firebaseState.db || !firebaseState.ownerUid || !firebaseState.enabled) return;
+            try {
+                // Save reminders without large base64 images to Firestore
+                const remindersCopy = reminders.map(r => ({
+                    ...r,
+                    // Store only URLs, not base64 data
+                    imageUrl: r.imageUrl && r.imageUrl.startsWith('http') ? r.imageUrl : null
+                }));
+                await firebaseState.db.collection('accounts')
+                    .doc(firebaseState.ownerUid)
+                    .collection('data')
+                    .doc('reminders')
+                    .set({
+                        reminders: remindersCopy,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                console.log('Reminders synced to cloud');
+            } catch (error) {
+                console.error('Failed to save reminders to cloud:', error);
+            }
+        }
+        async function loadRemindersFromCloud() {
+            if (!firebaseState.db || !firebaseState.ownerUid) return;
+            try {
+                const dataDoc = await firebaseState.db.collection('accounts')
+                    .doc(firebaseState.ownerUid)
+                    .collection('data')
+                    .doc('reminders')
+                    .get();
+                if (dataDoc.exists) {
+                    const data = dataDoc.data();
+                    if (data.reminders) {
+                        reminders = data.reminders;
+                        // Save to IndexedDB for offline access
+                        for (const reminder of reminders) {
+                            await saveReminderToIndexedDB(reminder);
+                        }
+                        // Update localStorage backup
+                        try {
+                            localStorage.setItem('reminders', JSON.stringify(reminders));
+                        } catch (e) {
+                            console.warn('localStorage save failed for reminders:', e);
+                        }
+                        renderRemindersList();
+                        console.log('Reminders loaded from cloud');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load reminders from cloud:', error);
+            }
+        }
+        async function saveInboxToCloud() {
+            if (!firebaseState.db || !firebaseState.ownerUid || !firebaseState.enabled) return;
+            try {
+                await firebaseState.db.collection('accounts')
+                    .doc(firebaseState.ownerUid)
+                    .collection('data')
+                    .doc('inbox')
+                    .set({
+                        inbox: inbox,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                console.log('Inbox synced to cloud');
+            } catch (error) {
+                console.error('Failed to save inbox to cloud:', error);
+            }
+        }
+        async function loadInboxFromCloud() {
+            if (!firebaseState.db || !firebaseState.ownerUid) return;
+            try {
+                const dataDoc = await firebaseState.db.collection('accounts')
+                    .doc(firebaseState.ownerUid)
+                    .collection('data')
+                    .doc('inbox')
+                    .get();
+                if (dataDoc.exists) {
+                    const data = dataDoc.data();
+                    if (data.inbox) {
+                        inbox = data.inbox;
+                        localStorage.setItem('inbox', JSON.stringify(inbox));
+                        updateInboxBadge();
+                        console.log('Inbox loaded from cloud');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load inbox from cloud:', error);
+            }
+        }
+        async function savePreferencesToCloud() {
+            if (!firebaseState.db || !firebaseState.ownerUid || !firebaseState.enabled) return;
+            try {
+                const preferences = {
+                    darkMode: localStorage.getItem('darkMode') || 'false',
+                    currentProjectId: currentProjectId,
+                    currentStageId: currentStageId
+                };
+                await firebaseState.db.collection('accounts')
+                    .doc(firebaseState.ownerUid)
+                    .collection('data')
+                    .doc('preferences')
+                    .set({
+                        preferences,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                console.log('Preferences synced to cloud');
+            } catch (error) {
+                console.error('Failed to save preferences to cloud:', error);
+            }
+        }
+        async function loadPreferencesFromCloud() {
+            if (!firebaseState.db || !firebaseState.ownerUid) return;
+            try {
+                const dataDoc = await firebaseState.db.collection('accounts')
+                    .doc(firebaseState.ownerUid)
+                    .collection('data')
+                    .doc('preferences')
+                    .get();
+                if (dataDoc.exists) {
+                    const data = dataDoc.data();
+                    if (data.preferences) {
+                        const prefs = data.preferences;
+                        if (prefs.darkMode) {
+                            localStorage.setItem('darkMode', prefs.darkMode);
+                            loadDarkModeState();
+                        }
+                        console.log('Preferences loaded from cloud');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load preferences from cloud:', error);
+            }
+        }
         function applySharedAccess(permissionData, ownerUid, ownerEmail) {
             sharedAccessContext.active = true;
             sharedAccessContext.ownerUid = ownerUid;
@@ -6149,6 +6283,10 @@ body.dark-mode .auth-status {
             if (!restored) {
                 clearSharedAccess();
                 await loadProjectsFromCloud(firebaseState.ownerUid);
+                // Load other data from cloud
+                await loadRemindersFromCloud();
+                await loadInboxFromCloud();
+                await loadPreferencesFromCloud();
             }
             hideLoginModal();
             localStorage.removeItem('skipLogin');
@@ -6683,10 +6821,14 @@ body.dark-mode .auth-status {
             if (remindersUpdated) {
                 localStorage.setItem('reminders', JSON.stringify(reminders));
                 renderRemindersList();
+                // Sync reminders to cloud
+                await saveRemindersToCloud();
             }
             
             if (inboxUpdated) {
                 localStorage.setItem('inbox', JSON.stringify(inbox));
+                // Sync inbox to cloud
+                await saveInboxToCloud();
             }
         }
         // Image upload functions for reminders
@@ -6879,6 +7021,9 @@ body.dark-mode .auth-status {
                         console.warn('localStorage save failed (using IndexedDB instead):', storageErr);
                     }
                     
+                    // Sync to Firestore
+                    await saveRemindersToCloud();
+                    
                     reminderTextInput.value = '';
                     reminderDateTimeInput.value = '';
                     reminderPopupInput.checked = false;
@@ -6948,6 +7093,9 @@ body.dark-mode .auth-status {
             } catch (storageErr) {
                 console.warn('localStorage update failed:', storageErr);
             }
+            
+            // Sync to Firestore
+            await saveRemindersToCloud();
             
             renderRemindersList();
         }
@@ -7031,6 +7179,8 @@ body.dark-mode .auth-status {
         async function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
             localStorage.setItem('inbox', JSON.stringify(inbox));
+            // Sync to Firestore
+            await saveInboxToCloud();
             renderInboxList();
             updateInboxBadge();
         }
@@ -7134,6 +7284,8 @@ body.dark-mode .auth-status {
                 document.body.classList.remove('dark-mode');
                 localStorage.setItem('darkMode', 'false');
             }
+            // Sync preferences to cloud
+            savePreferencesToCloud();
         });
         projectYearFilter.addEventListener('change', filterProjectsByYear);
         hamburgerBtn.addEventListener('click', toggleSidebar);
