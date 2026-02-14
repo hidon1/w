@@ -10271,9 +10271,20 @@ function updateUIForLoggedOutUser() {
 
 // Show notification helper
 function showNotification(message, type) {
-    // Use existing notification system if available
-    console.log(`[${type.toUpperCase()}] ${message}`);
-    alert(message); // Fallback - replace with your notification system
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `app-notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <span>${message}</span>
+    `;
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 </script>
 </body>
