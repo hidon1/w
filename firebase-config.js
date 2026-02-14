@@ -2,7 +2,16 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import {
+  getFirestore,
+  doc,
+  collection,
+  setDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -23,4 +32,20 @@ const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
 // Export for use in other files
-export { app, analytics, auth, db, googleProvider, signInWithPopup, signOut, onAuthStateChanged };
+export {
+  app,
+  analytics,
+  auth,
+  db,
+  googleProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  doc,
+  collection,
+  setDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+};

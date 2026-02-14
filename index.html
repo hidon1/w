@@ -10166,7 +10166,7 @@ body.dark-mode .auth-status {
     </script>
     
     <script type="module">
-import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, db, doc, setDoc, getDoc } from './firebase-config.js';
+import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, db, doc, collection, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp } from './firebase-config.js';
 
 // Check auth state on page load
 onAuthStateChanged(auth, async (user) => {
