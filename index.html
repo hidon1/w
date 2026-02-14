@@ -15,7 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js" onerror="console.warn('firebase-config.js חסר, משתמשים בקונפיג ברירת מחדל');"></script>
+    <script type="module" src="firebase-config.js"></script>
     <style>
 /* קוד CSS מעודכן למובייל */
 /* שינויים במובייל: .project-details-card עכשיו עם left: -280px; כדי שתציץ קצת */
@@ -5070,7 +5070,7 @@ body.dark-mode .auth-status {
             <p class="login-description-mobile">התחברו באמצעות Google או חשבון מייל כדי לסנכרן נתונים.</p>
             <p class="login-description-desktop">התחברו באמצעות Google או מייל כדי לשמור נתונים בענן ולשתף גישה.</p>
             <div class="google-auth-buttons">
-                <button class="google-btn" id="googleLoginBtn" type="button">
+                <button class="google-btn" id="googleLoginBtn" type="button" onclick="signInWithGoogle()">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
                     המשך עם Google
                 </button>
@@ -10164,5 +10164,131 @@ body.dark-mode .auth-status {
           initStageNavFix();
         }
     </script>
+    
+    <script type="module">
+import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, db, doc, setDoc, getDoc } from './firebase-config.js';
+
+// Check auth state on page load
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        console.log('משתמש מחובר:', user.displayName);
+        
+        // Save user data to Firestore
+        try {
+            const userRef = doc(db, 'users', user.uid);
+            
+            // Check if this is a new user
+            const userDoc = await getDoc(userRef);
+            const userData = {
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                lastLogin: new Date().toISOString()
+            };
+            
+            // Add createdAt only for new users
+            if (!userDoc.exists()) {
+                userData.createdAt = new Date().toISOString();
+            }
+            
+            await setDoc(userRef, userData, { merge: true });
+            
+            console.log('נתוני משתמש נשמרו ב-Firestore');
+        } catch (error) {
+            console.error('שגיאה בשמירת נתוני משתמש:', error);
+        }
+        
+        // Hide login modal if open
+        const loginModal = document.getElementById('loginModal');
+        if (loginModal) {
+            loginModal.style.display = 'none';
+        }
+        
+        // Update UI to show user is logged in
+        updateUIForLoggedInUser(user);
+    } else {
+        console.log('משתמש לא מחובר');
+        
+        // Show login modal on first visit
+        const loginModal = document.getElementById('loginModal');
+        if (loginModal && !sessionStorage.getItem('loginModalShown')) {
+            loginModal.style.display = 'flex';
+            sessionStorage.setItem('loginModalShown', 'true');
+        }
+        
+        // Update UI to show user is logged out
+        updateUIForLoggedOutUser();
+    }
+});
+
+// Google Sign-In function
+window.signInWithGoogle = async function() {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        
+        console.log('התחברות הצליחה:', user.displayName);
+        showNotification('התחברת בהצלחה!', 'success');
+        
+        // User data will be saved by onAuthStateChanged listener
+        
+    } catch (error) {
+        console.error('שגיאה בהתחברות:', error);
+        let errorMessage = 'ההתחברות נכשלה.';
+        
+        if (error.code === 'auth/unauthorized-domain') {
+            errorMessage = 'הדומיין לא מורשה. יש להוסיף אותו ב-Firebase Console.';
+        } else if (error.code === 'auth/popup-blocked') {
+            errorMessage = 'החלון נחסם. אנא אפשר חלונות קופצים.';
+        }
+        
+        showNotification(errorMessage, 'error');
+    }
+};
+
+// Sign Out function
+window.signOutUser = async function() {
+    try {
+        await signOut(auth);
+        console.log('התנתקת בהצלחה');
+        showNotification('התנתקת בהצלחה', 'success');
+    } catch (error) {
+        console.error('שגיאה בהתנתקות:', error);
+        showNotification('שגיאה בהתנתקות', 'error');
+    }
+};
+
+// Update UI for logged in user
+function updateUIForLoggedInUser(user) {
+    // Add your UI update logic here
+    // For example: show user name, hide login button, show logout button
+    console.log('עדכון ממשק למשתמש מחובר:', user.displayName);
+}
+
+// Update UI for logged out user
+function updateUIForLoggedOutUser() {
+    // Add your UI update logic here
+    // For example: hide user name, show login button, hide logout button
+    console.log('עדכון ממשק למשתמש מנותק');
+}
+
+// Show notification helper
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `app-notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <span>${message}</span>
+    `;
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+</script>
 </body>
 </html>
