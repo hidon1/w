@@ -5936,195 +5936,32 @@ body.dark-mode .auth-status {
                 permissionProjectSelect.value = existingValue;
             }
         }
+        // Access/permission management - not supported in local-only mode
         async function refreshPermissionsList() {
             if (!permissionsList) return;
-            if (!firebaseState.db || !firebaseState.user) return;
-            permissionsList.innerHTML = '';
-            if (sharedAccessContext.active) {
-                permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> רק בעלי החשבון יכולים לנהל הרשאות.</li>';
-                return;
-            }
-            try {
-                const snapshot = await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.user.uid)
-                    .collection('permissions')
-                    .get();
-                if (snapshot.empty) {
-                    permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-user-slash"></i> אין משתמשים מורשים.</li>';
-                    return;
-                }
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const listItem = document.createElement('li');
-                    listItem.className = 'user-access-item';
-                    const permissionLevel = data.allowEdit ? 'עריכה' : 'צפייה';
-                    const projectLabel = data.allowedProjectId && data.allowedProjectId !== 'all'
-                        ? projects[data.allowedProjectId]?.name || data.allowedProjectId
-                        : 'כל הפרויקטים';
-                    listItem.innerHTML = `
-                        <div class="user-info">
-                            <div class="user-email"><i class="fas fa-envelope"></i>${data.email}</div>
-                            <div class="user-permissions">
-                                <span class="permission-badge ${data.allowEdit ? 'edit' : 'view'}">
-                                    <i class="fas fa-${data.allowEdit ? 'pen' : 'eye'}"></i>${permissionLevel}
-                                </span>
-                                <span class="permission-badge project"><i class="fas fa-folder-open"></i>${projectLabel}</span>
-                                <span class="permission-badge ${data.allowFinance ? 'finance-yes' : 'finance-no'}">
-                                    <i class="fas fa-shekel-sign"></i>${data.allowFinance ? 'כספים' : 'ללא כספים'}
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                    permissionsList.appendChild(listItem);
-                });
-            } catch (error) {
-                console.error('Failed to load permissions:', error);
-                permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-exclamation-circle"></i> שגיאה בטעינת הרשאות.</li>';
-            }
+            permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> שיתוף לא זמין במצב מקומי.</li>';
         }
         function renderConnectedAccountsList() {
             if (!connectedAccountsList) return;
-            connectedAccountsList.innerHTML = '';
-            if (!firebaseState.user) {
-                connectedAccountsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-user-slash"></i> אין חשבונות מחוברים.</li>';
-                return;
-            }
-            const ownerEmail = firebaseState.user.email || 'החשבון שלי';
-            const ownerItem = document.createElement('li');
-            ownerItem.className = 'connected-account-item';
-            ownerItem.innerHTML = `
-                <div class="account-info">
-                    <div class="account-email"><i class="fas fa-user"></i>${ownerEmail}</div>
-                    <div class="account-permissions">
-                        <span class="permission-badge edit"><i class="fas fa-crown"></i>חשבון ראשי</span>
-                    </div>
-                </div>
-            `;
-            connectedAccountsList.appendChild(ownerItem);
-            if (sharedAccessContext.active) {
-                const sharedItem = document.createElement('li');
-                sharedItem.className = 'connected-account-item';
-                const projectLabel = sharedAccessContext.allowedProjectId && sharedAccessContext.allowedProjectId !== 'all'
-                    ? projects[sharedAccessContext.allowedProjectId]?.name || sharedAccessContext.allowedProjectId
-                    : 'כל הפרויקטים';
-                sharedItem.innerHTML = `
-                    <div class="account-info">
-                        <div class="account-email"><i class="fas fa-link"></i>${sharedAccessContext.ownerEmail || 'חשבון משותף'}</div>
-                        <div class="account-permissions">
-                            <span class="permission-badge ${sharedAccessContext.allowEdit ? 'edit' : 'view'}">
-                                <i class="fas fa-${sharedAccessContext.allowEdit ? 'pen' : 'eye'}"></i>${sharedAccessContext.allowEdit ? 'עריכה' : 'צפייה'}
-                            </span>
-                            <span class="permission-badge project"><i class="fas fa-folder-open"></i>${projectLabel}</span>
-                            <span class="permission-badge ${sharedAccessContext.allowFinance ? 'finance-yes' : 'finance-no'}">
-                                <i class="fas fa-shekel-sign"></i>${sharedAccessContext.allowFinance ? 'כספים' : 'ללא כספים'}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="account-actions">
-                        <button type="button" class="btn-secondary" onclick="switchBackToOwner()">
-                            <i class="fas fa-undo"></i> חזור
-                        </button>
-                    </div>
-                `;
-                connectedAccountsList.appendChild(sharedItem);
-            }
+            connectedAccountsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> חשבונות מחוברים לא זמינים במצב מקומי.</li>';
         }
         function refreshAccessLists() {
             renderConnectedAccountsList();
             refreshPermissionsList();
             if (grantAccessBtn) {
-                grantAccessBtn.disabled = sharedAccessContext.active;
+                grantAccessBtn.disabled = true;
             }
         }
         async function grantAccessToUser() {
-            if (!firebaseState.db || !firebaseState.user || sharedAccessContext.active) return;
-            const targetEmail = normalizeEmail(permissionUserEmailInput?.value);
-            if (!targetEmail) {
-                showNotification('אנא הזן אימייל משתמש.', 'error');
-                return;
-            }
-            const allowEdit = document.querySelector('input[name="permissionLevel"]:checked')?.value === 'edit';
-            const allowFinance = !!permissionFinanceCheckbox?.checked;
-            const allowedProjectId = permissionProjectSelect?.value || 'all';
-            showLoading('שומר הרשאה...');
-            try {
-                await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.user.uid)
-                    .collection('permissions')
-                    .doc(getPermissionDocId(targetEmail))
-                    .set({
-                        email: targetEmail,
-                        allowEdit,
-                        allowFinance,
-                        allowedProjectId,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                showNotification('ההרשאה נשמרה בהצלחה.');
-                if (permissionUserEmailInput) permissionUserEmailInput.value = '';
-                refreshPermissionsList();
-            } catch (error) {
-                console.error('Failed to grant access:', error);
-                showNotification('שגיאה בשמירת הרשאה.', 'error');
-            } finally {
-                hideLoading();
-            }
+            console.warn('Access granting not supported in local-only mode');
+            showNotification('שיתוף לא זמין במצב מקומי.', 'error');
         }
         async function connectToAccount() {
-            if (!firebaseState.db || !firebaseState.user) return;
-            const targetEmail = normalizeEmail(connectAccountEmailInput?.value);
-            if (!targetEmail) {
-                showNotification('אנא הזן אימייל חשבון.', 'error');
-                return;
-            }
-            const currentUserEmail = normalizeEmail(firebaseState.user.email);
-            if (!currentUserEmail) {
-                showNotification('לא ניתן לאמת את כתובת האימייל שלך.', 'error');
-                return;
-            }
-            showLoading('בודק הרשאות...');
-            try {
-                const snapshot = await firebaseState.db.collection('accounts')
-                    .where('ownerEmail', '==', targetEmail)
-                    .limit(1)
-                    .get();
-                if (snapshot.empty) {
-                    showNotification('לא נמצא חשבון תואם.', 'error');
-                    return;
-                }
-                const ownerDoc = snapshot.docs[0];
-                const permissionDoc = await firebaseState.db.collection('accounts')
-                    .doc(ownerDoc.id)
-                    .collection('permissions')
-                    .doc(getPermissionDocId(currentUserEmail))
-                    .get();
-                if (!permissionDoc.exists) {
-                    showNotification('אין הרשאה לחשבון זה.', 'error');
-                    return;
-                }
-                const permissionData = permissionDoc.data();
-                applySharedAccess(permissionData, ownerDoc.id, targetEmail);
-                localStorage.setItem('sharedAccessOwnerUid', ownerDoc.id);
-                localStorage.setItem('sharedAccessOwnerEmail', targetEmail);
-                localStorage.setItem('sharedAccessPermissions', JSON.stringify(permissionData));
-                await loadProjectsFromCloud(ownerDoc.id);
-                showNotification('התחברת בהצלחה לחשבון המבוקש.');
-                if (connectAccountEmailInput) connectAccountEmailInput.value = '';
-                refreshAccessLists();
-            } catch (error) {
-                console.error('Failed to connect account:', error);
-                showNotification('שגיאה בהתחברות לחשבון.', 'error');
-            } finally {
-                hideLoading();
-            }
+            console.warn('Account connection not supported in local-only mode');
+            showNotification('חיבור לחשבון אחר לא זמין במצב מקומי.', 'error');
         }
         async function switchBackToOwner() {
-            if (!firebaseState.user) return;
-            clearSharedAccess();
-            firebaseState.ownerUid = firebaseState.user.uid;
-            firebaseState.ownerEmail = normalizeEmail(firebaseState.user.email);
-            await loadProjectsFromCloud(firebaseState.ownerUid);
-            updateAuthUi();
-            refreshAccessLists();
+            console.warn('Account switching not supported in local-only mode');
         }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
