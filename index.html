@@ -9652,9 +9652,13 @@ body.dark-mode .data-updated-badge {
                 return 'שגיאה בהתחברות עם Google. נסה שוב.';
             }
 
+            if (error.code === 'auth/unauthorized-domain') {
+                const currentHost = window.location.hostname || 'localhost';
+                return `הדומיין ${currentHost} לא מאושר ב-Firebase Authentication. הוסף אותו ל-Authorized domains ונסה שוב.`;
+            }
+
             if (error.code === 'auth/operation-not-supported-in-this-environment' ||
-                error.code === 'auth/web-storage-unsupported' ||
-                error.code === 'auth/unauthorized-domain') {
+                error.code === 'auth/web-storage-unsupported') {
                 return 'התחברות Google אינה נתמכת בתוך WebView זה. פתח את המערכת בדפדפן רגיל (Chrome/Safari) ונסה שוב.';
             }
 
@@ -9987,6 +9991,14 @@ body.dark-mode .data-updated-badge {
             .then(async (result) => {
                 if (!result || !result.user) return;
                 await ensureAccountExists(result.user);
+
+                // For first Google sign-in via redirect, upload local data if cloud is empty
+                const projectsDocRef = doc(db, 'accounts', result.user.uid, 'data', 'projects');
+                const projectsSnap = await getDoc(projectsDocRef);
+                if (!projectsSnap.exists()) {
+                    await syncDataToFirestore(result.user);
+                }
+
                 closeAuthModal();
                 showNotification('התחברת בהצלחה!', 'success');
             })
@@ -9999,6 +10011,14 @@ body.dark-mode .data-updated-badge {
         async function signInWithGoogle() {
             try {
                 showLoading('מתחבר עם Google...');
+
+                if (window.location.protocol === 'file:') {
+                    hideLoading();
+                    showAuthError('Google Sign-In לא נתמך בהרצה מקובץ מקומי. פתח את המערכת דרך דומיין/localhost מאושר ב-Firebase.');
+                    return;
+                }
+
+                googleProvider.setCustomParameters({ prompt: 'select_account' });
 
                 // Popups are blocked in many mobile WebViews, so prefer redirect there.
                 const isWebView = isEmbeddedWebView();
