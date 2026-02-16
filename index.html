@@ -5771,45 +5771,9 @@ body.dark-mode .auth-status {
                 }
             });
         }
-        if (loginBtn) {
-            loginBtn.addEventListener('click', showLoginModal);
-        }
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', signOutUser);
-        }
-        if (switchBackBtn) {
-            switchBackBtn.addEventListener('click', switchBackToOwner);
-        }
-        if (googleLoginBtn) {
-            googleLoginBtn.addEventListener('click', signInWithGoogle);
-        }
-        if (emailLoginBtn) {
-            emailLoginBtn.addEventListener('click', signInWithEmail);
-        }
-        if (registerBtn) {
-            registerBtn.addEventListener('click', registerWithEmail);
-        }
-        if (emailAuthForm) {
-            emailAuthForm.addEventListener('submit', (event) => {
-                event.preventDefault();
-            });
-        }
-        if (skipLoginBtn) {
-            skipLoginBtn.addEventListener('click', () => {
-                localStorage.setItem('skipLogin', 'true');
-                hideLoginModal();
-            });
-        }
-        if (closeLoginBtn) {
-            closeLoginBtn.addEventListener('click', hideLoginModal);
-        }
-        if (loginModal) {
-            loginModal.addEventListener('click', (event) => {
-                if (event.target === loginModal) {
-                    hideLoginModal();
-                }
-            });
-        }
+        // Auth-related event listeners removed (local-only mode)
+        // No login/logout/switch buttons or modal in local-only mode
+        
         if (accessTabs && accessTabs.length) {
             accessTabs.forEach(tab => {
                 tab.addEventListener('click', () => {
