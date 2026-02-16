@@ -4962,6 +4962,13 @@ body.dark-mode .auth-status {
     text-align: center;
 }
 
+@media (max-width: 640px) {
+    .login-modal-content {
+        max-width: min(92vw, 450px);
+        padding: 24px 20px;
+    }
+}
+
 .login-modal-content h2 {
     color: var(--primary-color);
     margin-bottom: 25px;
@@ -5055,7 +5062,10 @@ body.dark-mode .divider-or::after {
     gap: 15px;
 }
 
-.login-modal-content input {
+.login-modal-content .auth-input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 50px;
     padding: 15px;
     border: 2px solid #ddd;
     border-radius: 8px;
@@ -5065,24 +5075,26 @@ body.dark-mode .divider-or::after {
     color: var(--text-color);
 }
 
-.login-modal-content input:focus {
+.login-modal-content .auth-input:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.1);
 }
 
-body.dark-mode .login-modal-content input {
+body.dark-mode .login-modal-content .auth-input {
     background: #2a2a2a;
     border-color: #444;
     color: #fff;
 }
 
-body.dark-mode .login-modal-content input:focus {
+body.dark-mode .login-modal-content .auth-input:focus {
     border-color: var(--dark-primary-color);
     box-shadow: 0 0 0 3px rgba(199, 144, 187, 0.2);
 }
 
-.login-modal-content button[type="submit"] {
+.login-modal-content .auth-submit-btn {
+    width: 100%;
+    min-height: 50px;
     padding: 15px;
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     color: white;
@@ -5094,7 +5106,7 @@ body.dark-mode .login-modal-content input:focus {
     transition: all 0.3s ease;
 }
 
-.login-modal-content button[type="submit"]:hover {
+.login-modal-content .auth-submit-btn:hover {
     background: linear-gradient(135deg, var(--secondary-color), #8B0000);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(128, 0, 32, 0.3);
@@ -5151,91 +5163,12 @@ body.dark-mode .auth-error {
     color: #ff6b6b;
 }
 
-/* Authentication Banner Styles */
-.auth-banner {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    padding: 20px;
-    z-index: 950;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    animation: slideDownBanner 0.4s ease-out;
-}
-
-@keyframes slideDownBanner {
-    from {
-        transform: translateY(-100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-.auth-banner-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-
-.auth-banner-content i {
-    font-size: calc(var(--font-size-base) * 2);
-}
-
-.auth-banner-content p {
-    flex: 1;
-    margin: 0;
-    font-size: calc(var(--font-size-base) * 1.05);
-    font-weight: 500;
-}
-
-.auth-banner-content button {
-    padding: 10px 25px;
-    border: 2px solid white;
-    border-radius: 8px;
-    font-size: calc(var(--font-size-base) * 1);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: white;
-    color: var(--primary-color);
-}
-
-.auth-banner-content button:hover {
-    background: transparent;
-    color: white;
-    transform: translateY(-2px);
-}
-
-.auth-banner-content .dismiss-btn {
-    background: transparent;
-    border-color: rgba(255,255,255,0.5);
-    color: white;
-}
-
-.auth-banner-content .dismiss-btn:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: white;
+.connection-status.disconnected {
+    background: rgba(255, 152, 0, 0.2);
+    color: #ff9800;
 }
 
 @media (max-width: 768px) {
-    .auth-banner-content {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .auth-banner-content button {
-        width: 100%;
-    }
-    
     .login-modal-content {
         width: 95%;
         padding: 25px;
@@ -5311,9 +5244,9 @@ body.dark-mode .auth-error {
             
             <!-- Email/Password Login Form -->
             <form id="loginForm" style="display: block;">
-                <input type="email" id="loginEmail" placeholder="אימייל" required>
-                <input type="password" id="loginPassword" placeholder="סיסמה" required>
-                <button type="submit">התחבר</button>
+                <input type="email" id="loginEmail" class="auth-input" placeholder="אימייל" required>
+                <input type="password" id="loginPassword" class="auth-input" placeholder="סיסמה" required>
+                <button type="submit" class="auth-submit-btn">התחבר</button>
                 <p class="toggle-form-text">
                     אין לך חשבון? 
                     <button type="button" class="toggle-form-btn" onclick="toggleAuthForm()">הירשם כאן</button>
@@ -5322,10 +5255,10 @@ body.dark-mode .auth-error {
             
             <!-- Email/Password Registration Form -->
             <form id="registerForm" style="display: none;">
-                <input type="email" id="registerEmail" placeholder="אימייל" required>
-                <input type="password" id="registerPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6">
-                <input type="password" id="registerPasswordConfirm" placeholder="אימות סיסמה" required minlength="6">
-                <button type="submit">הירשם</button>
+                <input type="email" id="registerEmail" class="auth-input" placeholder="אימייל" required>
+                <input type="password" id="registerPassword" class="auth-input" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6">
+                <input type="password" id="registerPasswordConfirm" class="auth-input" placeholder="אימות סיסמה" required minlength="6">
+                <button type="submit" class="auth-submit-btn">הירשם</button>
                 <p class="toggle-form-text">
                     כבר יש לך חשבון? 
                     <button type="button" class="toggle-form-btn" onclick="toggleAuthForm()">התחבר כאן</button>
@@ -5333,16 +5266,6 @@ body.dark-mode .auth-error {
             </form>
             
             <div id="authError" class="auth-error" style="display: none;"></div>
-        </div>
-    </div>
-
-    <!-- Authentication Banner (for non-logged-in users) -->
-    <div id="authBanner" class="auth-banner" style="display: none;">
-        <div class="auth-banner-content">
-            <i class="fas fa-user-circle"></i>
-            <p>התחבר כדי לשמור את הנתונים שלך בענן ולגשת אליהם מכל מכשיר</p>
-            <button onclick="openAuthModal()">התחבר / הירשם</button>
-            <button onclick="dismissAuthBanner()" class="dismiss-btn">אולי מאוחר יותר</button>
         </div>
     </div>
 
@@ -5373,9 +5296,9 @@ body.dark-mode .auth-error {
         <div class="sidebar-footer">
             <div class="auth-section">
                 <div class="auth-status" id="authStatus">לא מחובר</div>
-                <div class="connection-status local-only" id="connectionStatus">
+                <div class="connection-status disconnected" id="connectionStatus">
                     <i class="fas fa-circle"></i>
-                    <span>עבודה מקומית בלבד</span>
+                    <span>ממתין להתחברות</span>
                 </div>
                 <button id="loginBtn">התחבר / הירשם</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">התנתק</button>
@@ -6176,17 +6099,16 @@ body.dark-mode .auth-error {
             document.body.classList.remove('view-only');
         }
         function updateAuthUi() {
-            // Local-only mode - no auth UI updates needed
+            // Default signed-out state until Firebase auth state is resolved
             if (authStatus) {
-                authStatus.textContent = 'עבודה מקומית בלבד';
+                authStatus.textContent = 'לא מחובר';
             }
             if (connectionStatus) {
                 const statusText = connectionStatus.querySelector('span');
-                connectionStatus.classList.add('local-only');
-                if (statusText) statusText.textContent = 'עבודה מקומית בלבד';
+                connectionStatus.className = 'connection-status disconnected';
+                if (statusText) statusText.textContent = 'ממתין להתחברות';
             }
-            // Hide login/logout buttons since there's no authentication
-            if (loginBtn) loginBtn.style.display = 'none';
+            if (loginBtn) loginBtn.style.display = 'block';
             if (logoutBtn) logoutBtn.style.display = 'none';
             if (switchBackBtn) switchBackBtn.style.display = 'none';
             updateSharedAccessNotice();
@@ -6872,8 +6794,7 @@ body.dark-mode .auth-error {
         // Initialize application on page load
         window.addEventListener('load', async () => {
             mergeStoredStagesConfig();
-            // Local-only mode - no Firebase initialization needed
-            updateAuthUi();  // Set UI to show local-only mode
+            updateAuthUi();
             loadDarkModeState();
             populateYearSelects();
             setDefaultYearFilter();
@@ -9715,30 +9636,26 @@ body.dark-mode .auth-error {
                     connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>מחובר לענן</span>';
                 }
                 
-                // Hide auth banner
-                const authBanner = document.getElementById('authBanner');
-                if (authBanner) authBanner.style.display = 'none';
             } else {
                 // User is signed out
                 if (authStatus) authStatus.textContent = 'לא מחובר';
                 if (loginBtn) loginBtn.style.display = 'block';
                 if (logoutBtn) logoutBtn.style.display = 'none';
                 if (connectionStatus) {
-                    connectionStatus.className = 'connection-status local-only';
-                    connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>עבודה מקומית בלבד</span>';
+                    connectionStatus.className = 'connection-status disconnected';
+                    connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>לא מחובר</span>';
+                }
+
+                if (authInitialized) {
+                    openAuthModal();
                 }
             }
         }
 
-        // Show auth banner for non-authenticated users
+        // Force auth modal for non-authenticated users
         function showAuthBannerIfNeeded() {
-            const dismissed = localStorage.getItem('authBannerDismissed');
-            const authBanner = document.getElementById('authBanner');
-            
-            if (!currentUser && !dismissed && authBanner) {
-                setTimeout(() => {
-                    authBanner.style.display = 'block';
-                }, 2000); // Show after 2 seconds
+            if (!currentUser) {
+                openAuthModal();
             }
         }
 
@@ -10062,14 +9979,6 @@ body.dark-mode .auth-error {
         }
 
         // Banner functions
-        window.dismissAuthBanner = function() {
-            const banner = document.getElementById('authBanner');
-            if (banner) {
-                banner.style.display = 'none';
-            }
-            localStorage.setItem('authBannerDismissed', 'true');
-        };
-
         // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
             // Login button
@@ -10154,13 +10063,13 @@ body.dark-mode .auth-error {
             }
         };
 
-        // Show banner after page loads if not authenticated
+        // Always show auth modal after page loads if not authenticated
         window.addEventListener('load', () => {
             setTimeout(() => {
                 if (!currentUser) {
                     showAuthBannerIfNeeded();
                 }
-            }, 3000);
+            }, 700);
         });
     </script>
 
