@@ -4955,6 +4955,293 @@ body.dark-mode .auth-status {
     background: rgba(255, 255, 255, 0.05);
 }
 
+/* Authentication Modal Styles */
+.login-modal-content {
+    max-width: 450px;
+    padding: 40px;
+    text-align: center;
+}
+
+.login-modal-content h2 {
+    color: var(--primary-color);
+    margin-bottom: 25px;
+    font-family: 'Playfair Display', serif;
+    font-size: calc(var(--font-size-base) * 1.8);
+}
+
+.google-signin-btn {
+    width: 100%;
+    padding: 15px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: calc(var(--font-size-base) * 1.1);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+    color: #333;
+}
+
+.google-signin-btn:hover {
+    background: #f8f8f8;
+    border-color: #999;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.google-signin-btn i {
+    font-size: calc(var(--font-size-base) * 1.3);
+    color: #DB4437;
+}
+
+body.dark-mode .google-signin-btn {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #fff;
+}
+
+body.dark-mode .google-signin-btn:hover {
+    background: #333;
+    border-color: #666;
+}
+
+.divider-or {
+    margin: 25px 0;
+    text-align: center;
+    position: relative;
+}
+
+.divider-or::before,
+.divider-or::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #ddd;
+}
+
+.divider-or::before {
+    right: 0;
+}
+
+.divider-or::after {
+    left: 0;
+}
+
+.divider-or span {
+    background: var(--card-background);
+    padding: 0 15px;
+    color: #999;
+    font-size: calc(var(--font-size-base) * 0.9);
+}
+
+body.dark-mode .divider-or span {
+    background: var(--dark-card-background);
+}
+
+body.dark-mode .divider-or::before,
+body.dark-mode .divider-or::after {
+    background: #444;
+}
+
+.login-modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.login-modal-content input {
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: calc(var(--font-size-base) * 1);
+    transition: all 0.3s ease;
+    background: var(--card-background);
+    color: var(--text-color);
+}
+
+.login-modal-content input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.1);
+}
+
+body.dark-mode .login-modal-content input {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #fff;
+}
+
+body.dark-mode .login-modal-content input:focus {
+    border-color: var(--dark-primary-color);
+    box-shadow: 0 0 0 3px rgba(199, 144, 187, 0.2);
+}
+
+.login-modal-content button[type="submit"] {
+    padding: 15px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: calc(var(--font-size-base) * 1.1);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.login-modal-content button[type="submit"]:hover {
+    background: linear-gradient(135deg, var(--secondary-color), #8B0000);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(128, 0, 32, 0.3);
+}
+
+.toggle-form-text {
+    text-align: center;
+    margin-top: 15px;
+    font-size: calc(var(--font-size-base) * 0.95);
+    color: var(--light-text-color);
+}
+
+body.dark-mode .toggle-form-text {
+    color: var(--dark-text-color);
+}
+
+.toggle-form-btn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: calc(var(--font-size-base) * 0.95);
+    text-decoration: underline;
+    font-weight: 600;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+
+.toggle-form-btn:hover {
+    color: var(--secondary-color);
+}
+
+body.dark-mode .toggle-form-btn {
+    color: var(--dark-accent-color);
+}
+
+body.dark-mode .toggle-form-btn:hover {
+    color: var(--dark-primary-color);
+}
+
+.auth-error {
+    margin-top: 15px;
+    padding: 12px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 8px;
+    color: #c33;
+    font-size: calc(var(--font-size-base) * 0.95);
+}
+
+body.dark-mode .auth-error {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: rgba(220, 53, 69, 0.4);
+    color: #ff6b6b;
+}
+
+/* Authentication Banner Styles */
+.auth-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 20px;
+    z-index: 950;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    animation: slideDownBanner 0.4s ease-out;
+}
+
+@keyframes slideDownBanner {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.auth-banner-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.auth-banner-content i {
+    font-size: calc(var(--font-size-base) * 2);
+}
+
+.auth-banner-content p {
+    flex: 1;
+    margin: 0;
+    font-size: calc(var(--font-size-base) * 1.05);
+    font-weight: 500;
+}
+
+.auth-banner-content button {
+    padding: 10px 25px;
+    border: 2px solid white;
+    border-radius: 8px;
+    font-size: calc(var(--font-size-base) * 1);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    color: var(--primary-color);
+}
+
+.auth-banner-content button:hover {
+    background: transparent;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.auth-banner-content .dismiss-btn {
+    background: transparent;
+    border-color: rgba(255,255,255,0.5);
+    color: white;
+}
+
+.auth-banner-content .dismiss-btn:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: white;
+}
+
+@media (max-width: 768px) {
+    .auth-banner-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .auth-banner-content button {
+        width: 100%;
+    }
+    
+    .login-modal-content {
+        width: 95%;
+        padding: 25px;
+    }
+}
+
     </style>
 </head>
 <body class="preload">
@@ -5005,6 +5292,60 @@ body.dark-mode .auth-status {
         }
         
     </script>
+
+    <!-- Login/Registration Modal -->
+    <div id="authModal" class="modal" style="display: none;">
+        <div class="modal-content login-modal-content">
+            <span class="close-button" onclick="closeAuthModal()">&times;</span>
+            <h2 id="authModalTitle">התחבר למערכת</h2>
+            
+            <!-- Google Sign-In Button -->
+            <button id="googleSignInBtn" class="google-signin-btn">
+                <i class="fab fa-google"></i>
+                התחבר עם Google
+            </button>
+            
+            <div class="divider-or">
+                <span>או</span>
+            </div>
+            
+            <!-- Email/Password Login Form -->
+            <form id="loginForm" style="display: block;">
+                <input type="email" id="loginEmail" placeholder="אימייל" required>
+                <input type="password" id="loginPassword" placeholder="סיסמה" required>
+                <button type="submit">התחבר</button>
+                <p class="toggle-form-text">
+                    אין לך חשבון? 
+                    <button type="button" class="toggle-form-btn" onclick="toggleAuthForm()">הירשם כאן</button>
+                </p>
+            </form>
+            
+            <!-- Email/Password Registration Form -->
+            <form id="registerForm" style="display: none;">
+                <input type="email" id="registerEmail" placeholder="אימייל" required>
+                <input type="password" id="registerPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6">
+                <input type="password" id="registerPasswordConfirm" placeholder="אימות סיסמה" required minlength="6">
+                <button type="submit">הירשם</button>
+                <p class="toggle-form-text">
+                    כבר יש לך חשבון? 
+                    <button type="button" class="toggle-form-btn" onclick="toggleAuthForm()">התחבר כאן</button>
+                </p>
+            </form>
+            
+            <div id="authError" class="auth-error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Authentication Banner (for non-logged-in users) -->
+    <div id="authBanner" class="auth-banner" style="display: none;">
+        <div class="auth-banner-content">
+            <i class="fas fa-user-circle"></i>
+            <p>התחבר כדי לשמור את הנתונים שלך בענן ולגשת אליהם מכל מכשיר</p>
+            <button onclick="openAuthModal()">התחבר / הירשם</button>
+            <button onclick="dismissAuthBanner()" class="dismiss-btn">אולי מאוחר יותר</button>
+        </div>
+    </div>
+
     <div class="hamburger-menu-btn" id="hamburgerBtn">
         <span></span>
         <span></span>
@@ -9304,6 +9645,525 @@ body.dark-mode .auth-status {
             setCardFabVisibility();
         }
     </script>
+
+    <!-- Firebase SDK and Authentication -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { 
+            getAuth, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            signInWithRedirect,
+            getRedirectResult,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut as firebaseSignOut,
+            onAuthStateChanged as firebaseOnAuthStateChanged
+        } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc, 
+            updateDoc,
+            serverTimestamp
+        } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyABKn0GfHYi_1UG_0sfSn68CNNz4Q9nS7g",
+            authDomain: "hidon1-e4c91.firebaseapp.com",
+            databaseURL: "https://hidon1-e4c91-default-rtdb.firebaseio.com",
+            projectId: "hidon1-e4c91",
+            storageBucket: "hidon1-e4c91.firebasestorage.app",
+            messagingSenderId: "411517496015",
+            appId: "1:411517496015:web:2d9c176783d062110465ba",
+            measurementId: "G-FWTSZNY72T"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        // Global variables for authentication state
+        let currentUser = null;
+        let authInitialized = false;
+
+        // Make auth functions globally available
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window.currentFirebaseUser = null;
+
+        // Update UI based on auth state
+        function updateAuthUI(user) {
+            const authStatus = document.getElementById('authStatus');
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const connectionStatus = document.getElementById('connectionStatus');
+            
+            if (user) {
+                // User is signed in
+                const email = user.email || user.displayName || 'משתמש';
+                if (authStatus) authStatus.textContent = email;
+                if (loginBtn) loginBtn.style.display = 'none';
+                if (logoutBtn) logoutBtn.style.display = 'block';
+                if (connectionStatus) {
+                    connectionStatus.className = 'connection-status connected';
+                    connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>מחובר לענן</span>';
+                }
+                
+                // Hide auth banner
+                const authBanner = document.getElementById('authBanner');
+                if (authBanner) authBanner.style.display = 'none';
+            } else {
+                // User is signed out
+                if (authStatus) authStatus.textContent = 'לא מחובר';
+                if (loginBtn) loginBtn.style.display = 'block';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+                if (connectionStatus) {
+                    connectionStatus.className = 'connection-status local-only';
+                    connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>עבודה מקומית בלבד</span>';
+                }
+            }
+        }
+
+        // Show auth banner for non-authenticated users
+        function showAuthBannerIfNeeded() {
+            const dismissed = localStorage.getItem('authBannerDismissed');
+            const authBanner = document.getElementById('authBanner');
+            
+            if (!currentUser && !dismissed && authBanner) {
+                setTimeout(() => {
+                    authBanner.style.display = 'block';
+                }, 2000); // Show after 2 seconds
+            }
+        }
+
+        // Sync data to Firestore
+        async function syncDataToFirestore(user) {
+            if (!user) return;
+            
+            try {
+                showLoading('מסנכרן נתונים...');
+                
+                // Get local data
+                const projects = localStorage.getItem('projects');
+                const reminders = localStorage.getItem('reminders');
+                const inbox = localStorage.getItem('inbox');
+                const preferences = localStorage.getItem('preferences');
+                const stagesConfig = localStorage.getItem('stagesConfig');
+                
+                // Sync projects
+                if (projects) {
+                    const projectsDocRef = doc(db, 'accounts', user.uid, 'data', 'projects');
+                    await setDoc(projectsDocRef, {
+                        projects: JSON.parse(projects),
+                        stagesConfig: stagesConfig ? JSON.parse(stagesConfig) : null,
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                }
+                
+                // Sync reminders
+                if (reminders) {
+                    const remindersDocRef = doc(db, 'accounts', user.uid, 'data', 'reminders');
+                    await setDoc(remindersDocRef, {
+                        reminders: JSON.parse(reminders),
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                }
+                
+                // Sync inbox
+                if (inbox) {
+                    const inboxDocRef = doc(db, 'accounts', user.uid, 'data', 'inbox');
+                    await setDoc(inboxDocRef, {
+                        inbox: JSON.parse(inbox),
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                }
+                
+                // Sync preferences
+                if (preferences) {
+                    const preferencesDocRef = doc(db, 'accounts', user.uid, 'data', 'preferences');
+                    await setDoc(preferencesDocRef, {
+                        preferences: JSON.parse(preferences),
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                }
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error syncing data to Firestore:', error);
+                hideLoading();
+            }
+        }
+
+        // Load data from Firestore
+        async function loadDataFromFirestore(user) {
+            if (!user) return;
+            
+            try {
+                showLoading('טוען נתונים מהענן...');
+                
+                // Load projects
+                const projectsDocRef = doc(db, 'accounts', user.uid, 'data', 'projects');
+                const projectsSnap = await getDoc(projectsDocRef);
+                if (projectsSnap.exists()) {
+                    const data = projectsSnap.data();
+                    if (data.projects) {
+                        localStorage.setItem('projects', JSON.stringify(data.projects));
+                        window.projects = data.projects;
+                    }
+                    if (data.stagesConfig) {
+                        localStorage.setItem('stagesConfig', JSON.stringify(data.stagesConfig));
+                    }
+                }
+                
+                // Load reminders
+                const remindersDocRef = doc(db, 'accounts', user.uid, 'data', 'reminders');
+                const remindersSnap = await getDoc(remindersDocRef);
+                if (remindersSnap.exists()) {
+                    const data = remindersSnap.data();
+                    if (data.reminders) {
+                        localStorage.setItem('reminders', JSON.stringify(data.reminders));
+                        if (window.reminders) {
+                            window.reminders = data.reminders;
+                        }
+                    }
+                }
+                
+                // Load inbox
+                const inboxDocRef = doc(db, 'accounts', user.uid, 'data', 'inbox');
+                const inboxSnap = await getDoc(inboxDocRef);
+                if (inboxSnap.exists()) {
+                    const data = inboxSnap.data();
+                    if (data.inbox) {
+                        localStorage.setItem('inbox', JSON.stringify(data.inbox));
+                        if (window.inbox) {
+                            window.inbox = data.inbox;
+                        }
+                    }
+                }
+                
+                // Load preferences
+                const preferencesDocRef = doc(db, 'accounts', user.uid, 'data', 'preferences');
+                const preferencesSnap = await getDoc(preferencesDocRef);
+                if (preferencesSnap.exists()) {
+                    const data = preferencesSnap.data();
+                    if (data.preferences) {
+                        localStorage.setItem('preferences', JSON.stringify(data.preferences));
+                    }
+                }
+                
+                // Refresh UI
+                if (typeof renderAllMainContent === 'function') {
+                    renderAllMainContent();
+                }
+                if (typeof updateInboxBadge === 'function') {
+                    updateInboxBadge();
+                }
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading data from Firestore:', error);
+                hideLoading();
+            }
+        }
+
+        // Auth state change handler
+        firebaseOnAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            window.currentFirebaseUser = user;
+            
+            updateAuthUI(user);
+            
+            if (user) {
+                // User is signed in - load data from cloud
+                await loadDataFromFirestore(user);
+                
+                // Create user document if it doesn't exist
+                const userDocRef = doc(db, 'accounts', user.uid);
+                const userSnap = await getDoc(userDocRef);
+                if (!userSnap.exists()) {
+                    await setDoc(userDocRef, {
+                        email: user.email,
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp()
+                    });
+                }
+            } else {
+                // User is signed out - show banner
+                if (authInitialized) {
+                    showAuthBannerIfNeeded();
+                }
+            }
+            
+            authInitialized = true;
+        });
+
+        // Check for redirect result
+        getRedirectResult(auth).catch((error) => {
+            console.error('Redirect error:', error);
+            showAuthError(error.message);
+        });
+
+        // Google Sign-In
+        async function signInWithGoogle() {
+            try {
+                showLoading('מתחבר עם Google...');
+                const result = await signInWithPopup(auth, googleProvider);
+                closeAuthModal();
+                await syncDataToFirestore(result.user);
+                showNotification('התחברת בהצלחה!', 'success');
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                if (error.code === 'auth/popup-blocked') {
+                    // Fallback to redirect
+                    try {
+                        await signInWithRedirect(auth, googleProvider);
+                    } catch (redirectError) {
+                        console.error('Redirect error:', redirectError);
+                        showAuthError('שגיאה בהתחברות. נסה שוב.');
+                    }
+                } else if (error.code !== 'auth/popup-closed-by-user') {
+                    console.error('Google sign-in error:', error);
+                    showAuthError('שגיאה בהתחברות עם Google: ' + error.message);
+                }
+            }
+        }
+
+        // Email/Password Login
+        async function signInWithEmail(email, password) {
+            try {
+                showLoading('מתחבר...');
+                const result = await signInWithEmailAndPassword(auth, email, password);
+                closeAuthModal();
+                await loadDataFromFirestore(result.user);
+                showNotification('התחברת בהצלחה!', 'success');
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                console.error('Email sign-in error:', error);
+                let errorMessage = 'שגיאה בהתחברות';
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = 'משתמש לא נמצא';
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage = 'סיסמה שגויה';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'כתובת אימייל לא תקינה';
+                }
+                showAuthError(errorMessage);
+            }
+        }
+
+        // Email/Password Registration
+        async function registerWithEmail(email, password) {
+            try {
+                showLoading('יוצר חשבון...');
+                const result = await createUserWithEmailAndPassword(auth, email, password);
+                
+                // Create user document
+                const userDocRef = doc(db, 'accounts', result.user.uid);
+                await setDoc(userDocRef, {
+                    email: result.user.email,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
+                
+                closeAuthModal();
+                await syncDataToFirestore(result.user);
+                showNotification('נרשמת בהצלחה!', 'success');
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                console.error('Registration error:', error);
+                let errorMessage = 'שגיאה ברישום';
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'כתובת האימייל כבר בשימוש';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'כתובת אימייל לא תקינה';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = 'הסיסמה חלשה מדי (לפחות 6 תווים)';
+                }
+                showAuthError(errorMessage);
+            }
+        }
+
+        // Sign Out
+        async function signOut() {
+            try {
+                await firebaseSignOut(auth);
+                showNotification('התנתקת בהצלחה', 'success');
+            } catch (error) {
+                console.error('Sign-out error:', error);
+                showNotification('שגיאה בהתנתקות', 'error');
+            }
+        }
+
+        // Modal functions
+        window.openAuthModal = function() {
+            const modal = document.getElementById('authModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // Show login form by default
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('registerForm').style.display = 'none';
+                document.getElementById('authModalTitle').textContent = 'התחבר למערכת';
+            }
+        };
+
+        window.closeAuthModal = function() {
+            const modal = document.getElementById('authModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            // Clear error
+            const errorDiv = document.getElementById('authError');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+            }
+        };
+
+        window.toggleAuthForm = function() {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const modalTitle = document.getElementById('authModalTitle');
+            const errorDiv = document.getElementById('authError');
+            
+            if (loginForm.style.display === 'none') {
+                // Switch to login
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                modalTitle.textContent = 'התחבר למערכת';
+            } else {
+                // Switch to register
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                modalTitle.textContent = 'הירשם למערכת';
+            }
+            
+            // Clear error
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+            }
+        };
+
+        function showAuthError(message) {
+            const errorDiv = document.getElementById('authError');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        // Banner functions
+        window.dismissAuthBanner = function() {
+            const banner = document.getElementById('authBanner');
+            if (banner) {
+                banner.style.display = 'none';
+            }
+            localStorage.setItem('authBannerDismissed', 'true');
+        };
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Login button
+            const loginBtn = document.getElementById('loginBtn');
+            if (loginBtn) {
+                loginBtn.addEventListener('click', openAuthModal);
+            }
+            
+            // Logout button
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', signOut);
+            }
+            
+            // Google sign-in button
+            const googleSignInBtn = document.getElementById('googleSignInBtn');
+            if (googleSignInBtn) {
+                googleSignInBtn.addEventListener('click', signInWithGoogle);
+            }
+            
+            // Login form
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('loginEmail').value;
+                    const password = document.getElementById('loginPassword').value;
+                    signInWithEmail(email, password);
+                });
+            }
+            
+            // Registration form
+            const registerForm = document.getElementById('registerForm');
+            if (registerForm) {
+                registerForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('registerEmail').value;
+                    const password = document.getElementById('registerPassword').value;
+                    const confirmPassword = document.getElementById('registerPasswordConfirm').value;
+                    
+                    if (password !== confirmPassword) {
+                        showAuthError('הסיסמאות אינן תואמות');
+                        return;
+                    }
+                    
+                    registerWithEmail(email, password);
+                });
+            }
+            
+            // Close modal on outside click
+            const authModal = document.getElementById('authModal');
+            if (authModal) {
+                authModal.addEventListener('click', (e) => {
+                    if (e.target === authModal) {
+                        closeAuthModal();
+                    }
+                });
+            }
+        });
+
+        // Override save functions to sync with Firebase
+        const originalSaveProjects = window.saveProjects;
+        window.saveProjects = function(projects) {
+            // Save to localStorage first
+            if (originalSaveProjects) {
+                originalSaveProjects(projects);
+            } else {
+                localStorage.setItem('projects', JSON.stringify(projects));
+            }
+            
+            // Sync to Firestore if authenticated
+            if (currentUser) {
+                const projectsDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+                const stagesConfigStr = localStorage.getItem('stagesConfig');
+                setDoc(projectsDocRef, {
+                    projects: projects,
+                    stagesConfig: stagesConfigStr ? JSON.parse(stagesConfigStr) : null,
+                    updatedAt: serverTimestamp()
+                }, { merge: true }).catch(error => {
+                    console.error('Error syncing projects to Firestore:', error);
+                });
+            }
+        };
+
+        // Show banner after page loads if not authenticated
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (!currentUser) {
+                    showAuthBannerIfNeeded();
+                }
+            }, 3000);
+        });
+    </script>
+
     <script>
         // Stage Navigation Fix - Deterministic renderer (always shows 6 categories)
         // Uses global stagesConfig from main script to avoid duplication
