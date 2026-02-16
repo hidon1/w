@@ -9639,6 +9639,32 @@ body.dark-mode .data-updated-badge {
         const db = getFirestore(app);
         const googleProvider = new GoogleAuthProvider();
 
+        function isEmbeddedWebView() {
+            const ua = navigator.userAgent || '';
+            const hasGenericWebViewToken = /\bwv\b|WebView|(iPhone|iPod|iPad)(?!.*Safari)/i.test(ua);
+            const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(ua);
+            const isLineInApp = /Line\//i.test(ua);
+            return hasGenericWebViewToken || isFacebookInApp || isLineInApp;
+        }
+
+        function mapGoogleAuthError(error) {
+            if (!error || !error.code) {
+                return 'שגיאה בהתחברות עם Google. נסה שוב.';
+            }
+
+            if (error.code === 'auth/operation-not-supported-in-this-environment' ||
+                error.code === 'auth/web-storage-unsupported' ||
+                error.code === 'auth/unauthorized-domain') {
+                return 'התחברות Google אינה נתמכת בתוך WebView זה. פתח את המערכת בדפדפן רגיל (Chrome/Safari) ונסה שוב.';
+            }
+
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-oauth-client-id') {
+                return 'הגדרת Google Sign-In אינה תקינה (OAuth). בדוק Firebase Authorized Domains ו-Web client ID.';
+            }
+
+            return `שגיאה בהתחברות עם Google: ${error.message}`;
+        }
+
         // Global variables for authentication state
         let currentUser = null;
         let authInitialized = false;
@@ -9957,16 +9983,34 @@ body.dark-mode .data-updated-badge {
         });
 
         // Check for redirect result
-        getRedirectResult(auth).catch((error) => {
-            console.error('Redirect error:', error);
-            showAuthError(error.message);
-        });
+        getRedirectResult(auth)
+            .then(async (result) => {
+                if (!result || !result.user) return;
+                await ensureAccountExists(result.user);
+                closeAuthModal();
+                showNotification('התחברת בהצלחה!', 'success');
+            })
+            .catch((error) => {
+                console.error('Redirect error:', error);
+                showAuthError(mapGoogleAuthError(error));
+            });
 
         // Google Sign-In
         async function signInWithGoogle() {
             try {
                 showLoading('מתחבר עם Google...');
-                const result = await signInWithPopup(auth, googleProvider);
+
+                // Popups are blocked in many mobile WebViews, so prefer redirect there.
+                const isWebView = isEmbeddedWebView();
+                const result = isWebView
+                    ? null
+                    : await signInWithPopup(auth, googleProvider);
+
+                if (isWebView) {
+                    await signInWithRedirect(auth, googleProvider);
+                    return;
+                }
+
                 await ensureAccountExists(result.user);
                 closeAuthModal();
                 await syncDataToFirestore(result.user);
@@ -9984,7 +10028,7 @@ body.dark-mode .data-updated-badge {
                     }
                 } else if (error.code !== 'auth/popup-closed-by-user') {
                     console.error('Google sign-in error:', error);
-                    showAuthError('שגיאה בהתחברות עם Google: ' + error.message);
+                    showAuthError(mapGoogleAuthError(error));
                 }
             }
         }
