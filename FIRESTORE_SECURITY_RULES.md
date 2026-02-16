@@ -1,6 +1,14 @@
-# Firestore Security Rules for Wine Monitoring System
+# Firestore Security Rules for Wine Monitoring System (ARCHIVED)
 
-## Overview
+> **⚠️ NOTICE: This documentation is ARCHIVED**  
+> Firebase/Firestore has been removed from this project as of February 16, 2026.  
+> The application now operates in local-only mode using browser localStorage.  
+> These security rules are no longer applicable.  
+> See `REMOVED_FIREBASE.md` for details about the removal.
+
+---
+
+## Overview (Historical Documentation)
 These security rules ensure that users can only access their own data and that all access requires authentication.
 
 ## Database Structure

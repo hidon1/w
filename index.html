@@ -12,10 +12,6 @@
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/pdfmake.min.js"></script>
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/vfs_fonts.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-    <script type="module" src="firebase-config.js"></script>
     <style>
 /* קוד CSS מעודכן למובייל */
 /* שינויים במובייל: .project-details-card עכשיו עם left: -280px; כדי שתציץ קצת */
@@ -5063,30 +5059,6 @@ body.dark-mode .auth-status {
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div id="sharedAccessNotice" class="shared-access-notice" style="display:none;"></div>
-    <div id="loginModal" class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
-        <div class="login-modal-content">
-            <button class="close-login-btn" id="closeLoginBtn" aria-label="סגירה">&times;</button>
-            <h2 id="loginModalTitle">כניסה למערכת</h2>
-            <p class="login-description-mobile">התחברו באמצעות Google או חשבון מייל כדי לסנכרן נתונים.</p>
-            <p class="login-description-desktop">התחברו באמצעות Google או מייל כדי לשמור נתונים בענן ולשתף גישה.</p>
-            <div class="google-auth-buttons">
-                <button class="google-btn" id="googleLoginBtn" type="button" onclick="signInWithGoogle()">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
-                    המשך עם Google
-                </button>
-            </div>
-            <div class="login-separator"><span>או</span></div>
-            <form class="email-form" id="emailAuthForm">
-                <input type="email" id="emailInput" placeholder="כתובת אימייל" autocomplete="email" required>
-                <input type="password" id="passwordInput" placeholder="סיסמה" autocomplete="current-password" required>
-                <div class="buttons">
-                    <button type="button" class="register-btn" id="registerBtn">הרשמה</button>
-                    <button type="button" class="login-btn" id="emailLoginBtn">התחברות</button>
-                </div>
-            </form>
-            <button class="skip-btn" id="skipLoginBtn" type="button">המשך ללא התחברות</button>
-        </div>
-    </div>
     <!-- Reminder Popup Notification -->
     <div id="reminderPopupNotification" class="reminder-popup-notification" style="display:none;">
         <div class="reminder-popup-content">
@@ -5634,34 +5606,8 @@ body.dark-mode .auth-status {
         };
         // Expose stagesConfig globally for the stage-nav-fix module
         window.stagesConfig = stagesConfig;
-        const fallbackFirebaseConfig = {
-          apiKey: "AIzaSyD_tulsSjZTB0F0ya34N2XUD67a77BTWpw",
-  authDomain: "wine-f57cb.firebaseapp.com",
-  projectId: "wine-f57cb",
-  storageBucket: "wine-f57cb.firebasestorage.app",
-  messagingSenderId: "172638778743",
-  appId: "1:172638778743:web:85045c1b2eeefeb2c11d72",
-  measurementId: "G-6D6L2W94D6"
-        };
-        // Prefer window.firebaseConfig (firebase-config.js), then fallback names firebaseAuthConfig/firebaseAppConfig.
-        const windowFirebaseConfig = window.firebaseConfig
-            || window.firebaseAuthConfig
-            || window.firebaseAppConfig;
-        const firebaseConfigData = windowFirebaseConfig || fallbackFirebaseConfig;
-        const CLOUD_SAVE_DEBOUNCE_MS = 1500; // Balance UI responsiveness with Firestore write frequency
-        const firebaseState = {
-            enabled: false,
-            app: null,
-            auth: null,
-            db: null,
-            user: null,
-            ownerUid: null,
-            ownerEmail: null,
-            pendingSave: null,
-            pendingRemindersSave: null,
-            pendingInboxSave: null,
-            syncing: false
-        };
+        
+        // Local-only mode - no Firebase/cloud syncing
         let projects = loadProjects();
         let currentProjectId = localStorage.getItem('currentProjectId') || Object.keys(projects)[0];
         let currentStageId = localStorage.getItem('currentStageId') || 'stage1';
@@ -5825,45 +5771,9 @@ body.dark-mode .auth-status {
                 }
             });
         }
-        if (loginBtn) {
-            loginBtn.addEventListener('click', showLoginModal);
-        }
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', signOutUser);
-        }
-        if (switchBackBtn) {
-            switchBackBtn.addEventListener('click', switchBackToOwner);
-        }
-        if (googleLoginBtn) {
-            googleLoginBtn.addEventListener('click', signInWithGoogle);
-        }
-        if (emailLoginBtn) {
-            emailLoginBtn.addEventListener('click', signInWithEmail);
-        }
-        if (registerBtn) {
-            registerBtn.addEventListener('click', registerWithEmail);
-        }
-        if (emailAuthForm) {
-            emailAuthForm.addEventListener('submit', (event) => {
-                event.preventDefault();
-            });
-        }
-        if (skipLoginBtn) {
-            skipLoginBtn.addEventListener('click', () => {
-                localStorage.setItem('skipLogin', 'true');
-                hideLoginModal();
-            });
-        }
-        if (closeLoginBtn) {
-            closeLoginBtn.addEventListener('click', hideLoginModal);
-        }
-        if (loginModal) {
-            loginModal.addEventListener('click', (event) => {
-                if (event.target === loginModal) {
-                    hideLoginModal();
-                }
-            });
-        }
+        // Auth-related event listeners removed (local-only mode)
+        // No login/logout/switch buttons or modal in local-only mode
+        
         if (accessTabs && accessTabs.length) {
             accessTabs.forEach(tab => {
                 tab.addEventListener('click', () => {
@@ -5911,104 +5821,38 @@ body.dark-mode .auth-status {
         function getPermissionDocId(email) {
             return encodeURIComponent(normalizeEmail(email));
         }
-        function isFirebaseConfigValid() {
-            return firebaseConfigData
-                && firebaseConfigData.apiKey
-                && !firebaseConfigData.apiKey.includes('REPLACE_WITH_FIREBASE');
-        }
         function isWebView() {
             const userAgent = navigator.userAgent || '';
             const isIOSWebView = /(iPhone|iPad|iPod)/.test(userAgent) && !/Safari/.test(userAgent);
             return /wv/.test(userAgent) || /WebView/.test(userAgent) || isIOSWebView;
         }
         function updateSharedAccessNotice() {
+            // Shared access not supported in local-only mode
             if (!sharedAccessNotice) return;
-            if (!sharedAccessContext.active) {
-                sharedAccessNotice.style.display = 'none';
-                sharedAccessNotice.classList.remove('view-only');
-                sharedAccessNotice.textContent = '';
-                document.body.classList.remove('view-only');
-                return;
-            }
-            const permissionLabel = sharedAccessContext.allowEdit ? 'עריכה' : 'צפייה בלבד';
-            const financeLabel = sharedAccessContext.allowFinance ? 'כולל כספים' : 'ללא כספים';
-            sharedAccessNotice.textContent = `מחובר לחשבון של ${sharedAccessContext.ownerEmail || 'משתמש'} • ${permissionLabel} • ${financeLabel}`;
-            sharedAccessNotice.style.display = 'block';
-            sharedAccessNotice.classList.toggle('view-only', !sharedAccessContext.allowEdit);
-            document.body.classList.toggle('view-only', !sharedAccessContext.allowEdit);
+            sharedAccessNotice.style.display = 'none';
+            sharedAccessNotice.classList.remove('view-only');
+            sharedAccessNotice.textContent = '';
+            document.body.classList.remove('view-only');
         }
         function updateAuthUi() {
+            // Local-only mode - no auth UI updates needed
             if (authStatus) {
-                if (!firebaseState.enabled) {
-                    authStatus.textContent = 'חיבור Firebase לא מוגדר';
-                } else if (firebaseState.user) {
-                    const baseLabel = sharedAccessContext.active && sharedAccessContext.ownerEmail
-                        ? `מחובר לחשבון של ${sharedAccessContext.ownerEmail}`
-                        : `מחובר כ-${firebaseState.user.email || 'משתמש'}`;
-                    authStatus.textContent = baseLabel;
-                } else {
-                    authStatus.textContent = 'לא מחובר';
-                }
+                authStatus.textContent = 'עבודה מקומית בלבד';
             }
             if (connectionStatus) {
                 const statusText = connectionStatus.querySelector('span');
-                if (!firebaseState.enabled) {
-                    connectionStatus.classList.add('local-only');
-                    if (statusText) statusText.textContent = 'חיבור Firebase לא מוגדר';
-                } else if (firebaseState.user) {
-                    connectionStatus.classList.remove('local-only');
-                    if (statusText) statusText.textContent = 'מחובר לענן';
-                } else {
-                    connectionStatus.classList.add('local-only');
-                    if (statusText) statusText.textContent = 'עבודה מקומית בלבד';
-                }
+                connectionStatus.classList.add('local-only');
+                if (statusText) statusText.textContent = 'עבודה מקומית בלבד';
             }
-            if (loginBtn) loginBtn.style.display = firebaseState.enabled && !firebaseState.user ? 'inline-flex' : 'none';
-            if (logoutBtn) logoutBtn.style.display = firebaseState.user ? 'inline-flex' : 'none';
-            if (switchBackBtn) switchBackBtn.style.display = sharedAccessContext.active ? 'inline-flex' : 'none';
+            // Hide login/logout buttons since there's no authentication
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (logoutBtn) logoutBtn.style.display = 'none';
+            if (switchBackBtn) switchBackBtn.style.display = 'none';
             updateSharedAccessNotice();
         }
         function flashCloudSyncIndicator() {
-            if (!cloudSyncIndicator) return;
-            cloudSyncIndicator.classList.add('active');
-            if (cloudSyncIndicatorText) {
-                cloudSyncIndicatorText.textContent = 'הנתונים עודכנו';
-            }
-            if (cloudSyncIndicatorTimeout) {
-                clearTimeout(cloudSyncIndicatorTimeout);
-            }
-            cloudSyncIndicatorTimeout = setTimeout(() => {
-                cloudSyncIndicator.classList.remove('active');
-                if (cloudSyncIndicatorText) {
-                    cloudSyncIndicatorText.textContent = '';
-                }
-            }, 1000);
-        }
-        function showLoginModal() {
-            if (loginModal) {
-                loginModal.style.display = 'flex';
-            }
-        }
-        function hideLoginModal() {
-            if (loginModal) {
-                loginModal.style.display = 'none';
-            }
-        }
-        function shouldShowLoginModal() {
-            return firebaseState.enabled && !firebaseState.user && !localStorage.getItem('skipLogin');
-        }
-        async function ensureAccountDocument(user) {
-            if (!firebaseState.db || !user) return;
-            const ownerEmail = normalizeEmail(user.email || user.providerData?.[0]?.email);
-            try {
-                await firebaseState.db.collection('accounts').doc(user.uid).set({
-                    ownerUid: user.uid,
-                    ownerEmail,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-            } catch (error) {
-                console.error('Failed to ensure account document:', error);
-            }
+            // No cloud sync in local-only mode
+            return;
         }
         function mergeStoredStagesConfig() {
             const savedStagesConfig = localStorage.getItem('stagesConfig');
@@ -6024,405 +5868,41 @@ body.dark-mode .auth-status {
                 console.error('Failed to load stagesConfig from localStorage', e);
             }
         }
-        async function loadProjectsFromCloud(ownerUid) {
-            if (!firebaseState.db || !ownerUid) return false;
-            firebaseState.syncing = true;
-            showLoading('מסנכרן נתונים מהענן...');
-            try {
-                const dataDoc = await firebaseState.db.collection('accounts')
-                    .doc(ownerUid)
-                    .collection('data')
-                    .doc('projects')
-                    .get();
-                if (!dataDoc.exists) {
-                    await saveProjectsToCloud();
-                    return true;
-                }
-                const data = dataDoc.data();
-                if (data.projects) {
-                    localStorage.setItem('projects', JSON.stringify(data.projects));
-                }
-                if (data.stagesConfig) {
-                    localStorage.setItem('stagesConfig', JSON.stringify(data.stagesConfig));
-                    mergeStoredStagesConfig();
-                }
-                projects = loadProjects();
-                if (!projects[currentProjectId]) {
-                    currentProjectId = Object.keys(projects)[0];
-                    localStorage.setItem('currentProjectId', currentProjectId);
-                }
-                renderAllMainContent();
-                flashCloudSyncIndicator();
-                return true;
-            } catch (error) {
-                console.error('Cloud sync failed:', error);
-                showNotification('שגיאה בסנכרון הנתונים מהענן.', 'error');
-                return false;
-            } finally {
-                firebaseState.syncing = false;
-                hideLoading();
-            }
-        }
-        async function saveProjectsToCloud() {
-            if (!firebaseState.db || !firebaseState.ownerUid || !firebaseState.enabled) return;
-            if (sharedAccessContext.active && !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance) return;
-            try {
-                await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.ownerUid)
-                    .collection('data')
-                    .doc('projects')
-                    .set({
-                        projects,
-                        stagesConfig,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                flashCloudSyncIndicator();
-            } catch (error) {
-                console.error('Failed to save to cloud:', error);
-                showNotification('שגיאה בשמירה לענן.', 'error');
-            }
-        }
-        function queueCloudSave() {
-            if (!firebaseState.enabled || !firebaseState.ownerUid || firebaseState.syncing) return;
-            if (firebaseState.pendingSave) {
-                clearTimeout(firebaseState.pendingSave);
-            }
-            firebaseState.pendingSave = setTimeout(() => {
-                firebaseState.pendingSave = null;
-                saveProjectsToCloud();
-            }, CLOUD_SAVE_DEBOUNCE_MS);
-        }
-        // Firestore sync functions for reminders and inbox
-        async function saveRemindersToCloud() {
-            if (!firebaseState.db || !firebaseState.ownerUid || !firebaseState.enabled) return;
-            try {
-                // Save reminders without large base64 images to Firestore
-                // Note: Base64 images are stored in IndexedDB for offline access.
-                // Only HTTP URLs are saved to Firestore to avoid document size limits.
-                // This is intentional to prevent Firestore quota issues.
-                const remindersCopy = reminders.map(r => ({
-                    ...r,
-                    // Store only URLs, not base64 data
-                    imageUrl: r.imageUrl && r.imageUrl.startsWith('http') ? r.imageUrl : null
-                }));
-                await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.ownerUid)
-                    .collection('data')
-                    .doc('reminders')
-                    .set({
-                        reminders: remindersCopy,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                console.log('Reminders synced to cloud');
-            } catch (error) {
-                console.error('Failed to save reminders to cloud:', error);
-            }
-        }
-        async function loadRemindersFromCloud() {
-            if (!firebaseState.db || !firebaseState.ownerUid) return;
-            try {
-                const dataDoc = await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.ownerUid)
-                    .collection('data')
-                    .doc('reminders')
-                    .get();
-                if (dataDoc.exists) {
-                    const data = dataDoc.data();
-                    if (data.reminders) {
-                        reminders = data.reminders;
-                        // Save to IndexedDB for offline access
-                        for (const reminder of reminders) {
-                            await saveReminderToIndexedDB(reminder);
-                        }
-                        // Update localStorage backup
-                        try {
-                            localStorage.setItem('reminders', JSON.stringify(reminders));
-                        } catch (e) {
-                            console.warn('localStorage save failed for reminders:', e);
-                        }
-                        renderRemindersList();
-                        console.log('Reminders loaded from cloud');
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load reminders from cloud:', error);
-            }
-        }
-        async function saveInboxToCloud() {
-            if (!firebaseState.db || !firebaseState.ownerUid || !firebaseState.enabled) return;
-            try {
-                await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.ownerUid)
-                    .collection('data')
-                    .doc('inbox')
-                    .set({
-                        inbox: inbox,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                console.log('Inbox synced to cloud');
-            } catch (error) {
-                console.error('Failed to save inbox to cloud:', error);
-            }
-        }
-        async function loadInboxFromCloud() {
-            if (!firebaseState.db || !firebaseState.ownerUid) return;
-            try {
-                const dataDoc = await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.ownerUid)
-                    .collection('data')
-                    .doc('inbox')
-                    .get();
-                if (dataDoc.exists) {
-                    const data = dataDoc.data();
-                    if (data.inbox) {
-                        inbox = data.inbox;
-                        localStorage.setItem('inbox', JSON.stringify(inbox));
-                        updateInboxBadge();
-                        console.log('Inbox loaded from cloud');
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load inbox from cloud:', error);
-            }
-        }
-        async function savePreferencesToCloud() {
-            if (!firebaseState.db || !firebaseState.ownerUid || !firebaseState.enabled) return;
-            try {
-                const preferences = {
-                    darkMode: localStorage.getItem('darkMode') || 'false',
-                    currentProjectId: currentProjectId,
-                    currentStageId: currentStageId
-                };
-                await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.ownerUid)
-                    .collection('data')
-                    .doc('preferences')
-                    .set({
-                        preferences,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                console.log('Preferences synced to cloud');
-            } catch (error) {
-                console.error('Failed to save preferences to cloud:', error);
-            }
-        }
-        async function loadPreferencesFromCloud() {
-            if (!firebaseState.db || !firebaseState.ownerUid) return;
-            try {
-                const dataDoc = await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.ownerUid)
-                    .collection('data')
-                    .doc('preferences')
-                    .get();
-                if (dataDoc.exists) {
-                    const data = dataDoc.data();
-                    if (data.preferences) {
-                        const prefs = data.preferences;
-                        if (prefs.darkMode) {
-                            localStorage.setItem('darkMode', prefs.darkMode);
-                            loadDarkModeState();
-                        }
-                        console.log('Preferences loaded from cloud');
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load preferences from cloud:', error);
-            }
-        }
-        // Debounced save functions for reminders and inbox
+        
+        // Local-only storage - no cloud functions needed
+        // Data is saved directly to localStorage by the application code
+        
+        // Debounced save functions for reminders and inbox (local storage only)
         function queueRemindersSave() {
-            if (!firebaseState.enabled || !firebaseState.ownerUid) return;
-            if (firebaseState.pendingRemindersSave) {
-                clearTimeout(firebaseState.pendingRemindersSave);
+            // Save reminders to localStorage
+            try {
+                localStorage.setItem('reminders', JSON.stringify(reminders));
+            } catch (e) {
+                console.warn('localStorage save failed for reminders:', e);
             }
-            firebaseState.pendingRemindersSave = setTimeout(() => {
-                firebaseState.pendingRemindersSave = null;
-                saveRemindersToCloud();
-            }, CLOUD_SAVE_DEBOUNCE_MS);
         }
         function queueInboxSave() {
-            if (!firebaseState.enabled || !firebaseState.ownerUid) return;
-            if (firebaseState.pendingInboxSave) {
-                clearTimeout(firebaseState.pendingInboxSave);
+            // Save inbox to localStorage
+            try {
+                localStorage.setItem('inbox', JSON.stringify(inbox));
+            } catch (e) {
+                console.warn('localStorage save failed for inbox:', e);
             }
-            firebaseState.pendingInboxSave = setTimeout(() => {
-                firebaseState.pendingInboxSave = null;
-                saveInboxToCloud();
-            }, CLOUD_SAVE_DEBOUNCE_MS);
         }
         function applySharedAccess(permissionData, ownerUid, ownerEmail) {
-            sharedAccessContext.active = true;
-            sharedAccessContext.ownerUid = ownerUid;
-            sharedAccessContext.ownerEmail = ownerEmail || null;
-            sharedAccessContext.allowEdit = !!permissionData.allowEdit;
-            sharedAccessContext.allowFinance = !!permissionData.allowFinance;
-            sharedAccessContext.allowedProjectId = permissionData.allowedProjectId || null;
-            firebaseState.ownerUid = ownerUid;
-            if (ownerEmail !== null && ownerEmail !== undefined) {
-                firebaseState.ownerEmail = ownerEmail;
-            }
-            updateAuthUi();
+            // Shared access not supported in local-only mode
+            console.warn('Shared access not supported in local-only mode');
         }
         function clearSharedAccess() {
-            sharedAccessContext.active = false;
-            sharedAccessContext.ownerUid = null;
-            sharedAccessContext.ownerEmail = null;
-            sharedAccessContext.allowEdit = false;
-            sharedAccessContext.allowFinance = false;
-            sharedAccessContext.allowedProjectId = null;
+            // Shared access not supported in local-only mode
             localStorage.removeItem('sharedAccessOwnerUid');
             localStorage.removeItem('sharedAccessOwnerEmail');
             localStorage.removeItem('sharedAccessPermissions');
         }
-        async function restoreSharedAccess() {
-            if (!firebaseState.user) return false;
-            const ownerUid = localStorage.getItem('sharedAccessOwnerUid');
-            const ownerEmail = localStorage.getItem('sharedAccessOwnerEmail');
-            const permissionsRaw = localStorage.getItem('sharedAccessPermissions');
-            if (!ownerUid || !permissionsRaw) return false;
-            try {
-                const permissions = JSON.parse(permissionsRaw);
-                applySharedAccess(permissions, ownerUid, ownerEmail);
-                await loadProjectsFromCloud(ownerUid);
-                return true;
-            } catch (error) {
-                console.error('Failed to restore shared access:', error);
-                clearSharedAccess();
-                return false;
-            }
-        }
-        async function handleAuthStateChanged(user) {
-            firebaseState.user = user;
-            if (!user) {
-                firebaseState.ownerUid = null;
-                firebaseState.ownerEmail = null;
-                clearSharedAccess();
-                updateAuthUi();
-                if (shouldShowLoginModal()) {
-                    showLoginModal();
-                }
-                return;
-            }
-            firebaseState.ownerUid = user.uid;
-            firebaseState.ownerEmail = normalizeEmail(user.email || user.providerData?.[0]?.email);
-            await ensureAccountDocument(user);
-            const restored = await restoreSharedAccess();
-            if (!restored) {
-                clearSharedAccess();
-                await loadProjectsFromCloud(firebaseState.ownerUid);
-                // Load other data from cloud
-                await loadRemindersFromCloud();
-                await loadInboxFromCloud();
-                await loadPreferencesFromCloud();
-            }
-            hideLoginModal();
-            localStorage.removeItem('skipLogin');
-            updateAuthUi();
-            if (connectUserEmailInput) {
-                connectUserEmailInput.value = firebaseState.user.email || '';
-            }
-        }
-        async function initFirebase() {
-            if (!window.firebase || !isFirebaseConfigValid()) {
-                firebaseState.enabled = false;
-                updateAuthUi();
-                return;
-            }
-            try {
-                firebaseState.enabled = true;
-                firebaseState.app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfigData);
-                firebaseState.auth = firebase.auth();
-                firebaseState.db = firebase.firestore();
-                firebaseState.auth.onAuthStateChanged(handleAuthStateChanged);
-                try {
-                    await firebaseState.auth.getRedirectResult();
-                } catch (error) {
-                    if (error?.code && error?.code !== 'auth/no-auth-event') {
-                        console.error('Redirect sign-in failed:', error);
-                        showNotification('שגיאה בהתחברות עם Google.', 'error');
-                    }
-                }
-                updateAuthUi();
-            } catch (error) {
-                console.error('Failed to initialize Firebase:', error);
-                firebaseState.enabled = false;
-                updateAuthUi();
-            }
-        }
-        async function signInWithGoogle() {
-            if (!firebaseState.auth) return;
-            const provider = new firebase.auth.GoogleAuthProvider();
-            provider.setCustomParameters({ prompt: 'select_account' });
-            showLoading('מתחבר עם Google...');
-            try {
-                if (isWebView()) {
-                    await firebaseState.auth.signInWithRedirect(provider);
-                } else {
-                    await firebaseState.auth.signInWithPopup(provider);
-                }
-            } catch (error) {
-                if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/cancelled-popup-request') {
-                    await firebaseState.auth.signInWithRedirect(provider);
-                } else {
-                    console.error('Google sign-in failed:', error);
-                    showNotification('התחברות עם Google נכשלה.', 'error');
-                }
-            } finally {
-                hideLoading();
-            }
-        }
-        async function signInWithEmail() {
-            if (!firebaseState.auth || !emailInput || !passwordInput) return;
-            const email = normalizeEmail(emailInput.value);
-            const password = passwordInput.value;
-            if (!email || !password) {
-                showNotification('אנא מלא אימייל וסיסמה.', 'error');
-                return;
-            }
-            showLoading('מתחבר...');
-            try {
-                await firebaseState.auth.signInWithEmailAndPassword(email, password);
-            } catch (error) {
-                console.error('Email sign-in failed:', error);
-                showNotification('התחברות עם אימייל נכשלה.', 'error');
-            } finally {
-                hideLoading();
-            }
-        }
-        async function registerWithEmail() {
-            if (!firebaseState.auth || !emailInput || !passwordInput) return;
-            const email = normalizeEmail(emailInput.value);
-            const password = passwordInput.value;
-            if (!email || !password) {
-                showNotification('אנא מלא אימייל וסיסמה.', 'error');
-                return;
-            }
-            showLoading('יוצר חשבון...');
-            try {
-                await firebaseState.auth.createUserWithEmailAndPassword(email, password);
-            } catch (error) {
-                console.error('Email registration failed:', error);
-                showNotification('יצירת חשבון נכשלה.', 'error');
-            } finally {
-                hideLoading();
-            }
-        }
-        async function signOutUser() {
-            if (!firebaseState.auth) return;
-            showLoading('מתנתק...');
-            try {
-                await firebaseState.auth.signOut();
-                clearSharedAccess();
-                firebaseState.ownerUid = null;
-                firebaseState.ownerEmail = null;
-                updateAuthUi();
-            } catch (error) {
-                console.error('Sign-out failed:', error);
-                showNotification('שגיאה בהתנתקות.', 'error');
-            } finally {
-                hideLoading();
-            }
-        }
+        
+        // Local-only mode - no authentication
+        // No Firebase initialization or auth functions needed
+        
         function setActiveAccessTab(tabName) {
             accessTabs.forEach(tab => {
                 tab.classList.toggle('active', tab.dataset.tab === tabName);
@@ -6433,22 +5913,9 @@ body.dark-mode .auth-status {
             if (permissionsTab) permissionsTab.classList.toggle('active', tabName === 'permissions');
         }
         function openAccessModal(tabName = 'connect') {
-            if (!firebaseState.enabled || !firebaseState.user) {
-                showLoginModal();
-                return;
-            }
-            if (!accessModal) return;
-            closeSidebar();
-            document.querySelector('.container').style.display = 'none';
-            document.querySelector('.top-section-wrapper').style.display = 'none';
-            fixedDashboardSection.style.display = 'none';
-            accessModal.style.display = 'flex';
-            setActiveAccessTab(tabName);
-            if (connectUserEmailInput) {
-                connectUserEmailInput.value = firebaseState.user.email || '';
-            }
-            populatePermissionProjectOptions();
-            refreshAccessLists();
+            // Access/sharing not available in local-only mode
+            console.warn('Access modal not available in local-only mode');
+            return;
         }
         function closeAccessModal() {
             if (!accessModal) return;
@@ -6469,195 +5936,32 @@ body.dark-mode .auth-status {
                 permissionProjectSelect.value = existingValue;
             }
         }
+        // Access/permission management - not supported in local-only mode
         async function refreshPermissionsList() {
             if (!permissionsList) return;
-            if (!firebaseState.db || !firebaseState.user) return;
-            permissionsList.innerHTML = '';
-            if (sharedAccessContext.active) {
-                permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> רק בעלי החשבון יכולים לנהל הרשאות.</li>';
-                return;
-            }
-            try {
-                const snapshot = await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.user.uid)
-                    .collection('permissions')
-                    .get();
-                if (snapshot.empty) {
-                    permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-user-slash"></i> אין משתמשים מורשים.</li>';
-                    return;
-                }
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const listItem = document.createElement('li');
-                    listItem.className = 'user-access-item';
-                    const permissionLevel = data.allowEdit ? 'עריכה' : 'צפייה';
-                    const projectLabel = data.allowedProjectId && data.allowedProjectId !== 'all'
-                        ? projects[data.allowedProjectId]?.name || data.allowedProjectId
-                        : 'כל הפרויקטים';
-                    listItem.innerHTML = `
-                        <div class="user-info">
-                            <div class="user-email"><i class="fas fa-envelope"></i>${data.email}</div>
-                            <div class="user-permissions">
-                                <span class="permission-badge ${data.allowEdit ? 'edit' : 'view'}">
-                                    <i class="fas fa-${data.allowEdit ? 'pen' : 'eye'}"></i>${permissionLevel}
-                                </span>
-                                <span class="permission-badge project"><i class="fas fa-folder-open"></i>${projectLabel}</span>
-                                <span class="permission-badge ${data.allowFinance ? 'finance-yes' : 'finance-no'}">
-                                    <i class="fas fa-shekel-sign"></i>${data.allowFinance ? 'כספים' : 'ללא כספים'}
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                    permissionsList.appendChild(listItem);
-                });
-            } catch (error) {
-                console.error('Failed to load permissions:', error);
-                permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-exclamation-circle"></i> שגיאה בטעינת הרשאות.</li>';
-            }
+            permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> שיתוף לא זמין במצב מקומי.</li>';
         }
         function renderConnectedAccountsList() {
             if (!connectedAccountsList) return;
-            connectedAccountsList.innerHTML = '';
-            if (!firebaseState.user) {
-                connectedAccountsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-user-slash"></i> אין חשבונות מחוברים.</li>';
-                return;
-            }
-            const ownerEmail = firebaseState.user.email || 'החשבון שלי';
-            const ownerItem = document.createElement('li');
-            ownerItem.className = 'connected-account-item';
-            ownerItem.innerHTML = `
-                <div class="account-info">
-                    <div class="account-email"><i class="fas fa-user"></i>${ownerEmail}</div>
-                    <div class="account-permissions">
-                        <span class="permission-badge edit"><i class="fas fa-crown"></i>חשבון ראשי</span>
-                    </div>
-                </div>
-            `;
-            connectedAccountsList.appendChild(ownerItem);
-            if (sharedAccessContext.active) {
-                const sharedItem = document.createElement('li');
-                sharedItem.className = 'connected-account-item';
-                const projectLabel = sharedAccessContext.allowedProjectId && sharedAccessContext.allowedProjectId !== 'all'
-                    ? projects[sharedAccessContext.allowedProjectId]?.name || sharedAccessContext.allowedProjectId
-                    : 'כל הפרויקטים';
-                sharedItem.innerHTML = `
-                    <div class="account-info">
-                        <div class="account-email"><i class="fas fa-link"></i>${sharedAccessContext.ownerEmail || 'חשבון משותף'}</div>
-                        <div class="account-permissions">
-                            <span class="permission-badge ${sharedAccessContext.allowEdit ? 'edit' : 'view'}">
-                                <i class="fas fa-${sharedAccessContext.allowEdit ? 'pen' : 'eye'}"></i>${sharedAccessContext.allowEdit ? 'עריכה' : 'צפייה'}
-                            </span>
-                            <span class="permission-badge project"><i class="fas fa-folder-open"></i>${projectLabel}</span>
-                            <span class="permission-badge ${sharedAccessContext.allowFinance ? 'finance-yes' : 'finance-no'}">
-                                <i class="fas fa-shekel-sign"></i>${sharedAccessContext.allowFinance ? 'כספים' : 'ללא כספים'}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="account-actions">
-                        <button type="button" class="btn-secondary" onclick="switchBackToOwner()">
-                            <i class="fas fa-undo"></i> חזור
-                        </button>
-                    </div>
-                `;
-                connectedAccountsList.appendChild(sharedItem);
-            }
+            connectedAccountsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> חשבונות מחוברים לא זמינים במצב מקומי.</li>';
         }
         function refreshAccessLists() {
             renderConnectedAccountsList();
             refreshPermissionsList();
             if (grantAccessBtn) {
-                grantAccessBtn.disabled = sharedAccessContext.active;
+                grantAccessBtn.disabled = true;
             }
         }
         async function grantAccessToUser() {
-            if (!firebaseState.db || !firebaseState.user || sharedAccessContext.active) return;
-            const targetEmail = normalizeEmail(permissionUserEmailInput?.value);
-            if (!targetEmail) {
-                showNotification('אנא הזן אימייל משתמש.', 'error');
-                return;
-            }
-            const allowEdit = document.querySelector('input[name="permissionLevel"]:checked')?.value === 'edit';
-            const allowFinance = !!permissionFinanceCheckbox?.checked;
-            const allowedProjectId = permissionProjectSelect?.value || 'all';
-            showLoading('שומר הרשאה...');
-            try {
-                await firebaseState.db.collection('accounts')
-                    .doc(firebaseState.user.uid)
-                    .collection('permissions')
-                    .doc(getPermissionDocId(targetEmail))
-                    .set({
-                        email: targetEmail,
-                        allowEdit,
-                        allowFinance,
-                        allowedProjectId,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                showNotification('ההרשאה נשמרה בהצלחה.');
-                if (permissionUserEmailInput) permissionUserEmailInput.value = '';
-                refreshPermissionsList();
-            } catch (error) {
-                console.error('Failed to grant access:', error);
-                showNotification('שגיאה בשמירת הרשאה.', 'error');
-            } finally {
-                hideLoading();
-            }
+            console.warn('Access granting not supported in local-only mode');
+            showNotification('שיתוף לא זמין במצב מקומי.', 'error');
         }
         async function connectToAccount() {
-            if (!firebaseState.db || !firebaseState.user) return;
-            const targetEmail = normalizeEmail(connectAccountEmailInput?.value);
-            if (!targetEmail) {
-                showNotification('אנא הזן אימייל חשבון.', 'error');
-                return;
-            }
-            const currentUserEmail = normalizeEmail(firebaseState.user.email);
-            if (!currentUserEmail) {
-                showNotification('לא ניתן לאמת את כתובת האימייל שלך.', 'error');
-                return;
-            }
-            showLoading('בודק הרשאות...');
-            try {
-                const snapshot = await firebaseState.db.collection('accounts')
-                    .where('ownerEmail', '==', targetEmail)
-                    .limit(1)
-                    .get();
-                if (snapshot.empty) {
-                    showNotification('לא נמצא חשבון תואם.', 'error');
-                    return;
-                }
-                const ownerDoc = snapshot.docs[0];
-                const permissionDoc = await firebaseState.db.collection('accounts')
-                    .doc(ownerDoc.id)
-                    .collection('permissions')
-                    .doc(getPermissionDocId(currentUserEmail))
-                    .get();
-                if (!permissionDoc.exists) {
-                    showNotification('אין הרשאה לחשבון זה.', 'error');
-                    return;
-                }
-                const permissionData = permissionDoc.data();
-                applySharedAccess(permissionData, ownerDoc.id, targetEmail);
-                localStorage.setItem('sharedAccessOwnerUid', ownerDoc.id);
-                localStorage.setItem('sharedAccessOwnerEmail', targetEmail);
-                localStorage.setItem('sharedAccessPermissions', JSON.stringify(permissionData));
-                await loadProjectsFromCloud(ownerDoc.id);
-                showNotification('התחברת בהצלחה לחשבון המבוקש.');
-                if (connectAccountEmailInput) connectAccountEmailInput.value = '';
-                refreshAccessLists();
-            } catch (error) {
-                console.error('Failed to connect account:', error);
-                showNotification('שגיאה בהתחברות לחשבון.', 'error');
-            } finally {
-                hideLoading();
-            }
+            console.warn('Account connection not supported in local-only mode');
+            showNotification('חיבור לחשבון אחר לא זמין במצב מקומי.', 'error');
         }
         async function switchBackToOwner() {
-            if (!firebaseState.user) return;
-            clearSharedAccess();
-            firebaseState.ownerUid = firebaseState.user.uid;
-            firebaseState.ownerEmail = normalizeEmail(firebaseState.user.email);
-            await loadProjectsFromCloud(firebaseState.ownerUid);
-            updateAuthUi();
-            refreshAccessLists();
+            console.warn('Account switching not supported in local-only mode');
         }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
@@ -7048,9 +6352,6 @@ body.dark-mode .auth-status {
                         console.warn('localStorage save failed (using IndexedDB instead):', storageErr);
                     }
                     
-                    // Sync to Firestore
-                    await saveRemindersToCloud();
-                    
                     reminderTextInput.value = '';
                     reminderDateTimeInput.value = '';
                     reminderPopupInput.checked = false;
@@ -7120,9 +6421,6 @@ body.dark-mode .auth-status {
             } catch (storageErr) {
                 console.warn('localStorage update failed:', storageErr);
             }
-            
-            // Sync to Firestore
-            await saveRemindersToCloud();
             
             renderRemindersList();
         }
@@ -7206,8 +6504,6 @@ body.dark-mode .auth-status {
         async function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
             localStorage.setItem('inbox', JSON.stringify(inbox));
-            // Sync to Firestore
-            await saveInboxToCloud();
             renderInboxList();
             updateInboxBadge();
         }
@@ -7235,7 +6531,8 @@ body.dark-mode .auth-status {
         // Initialize application on page load
         window.addEventListener('load', async () => {
             mergeStoredStagesConfig();
-            await initFirebase();
+            // Local-only mode - no Firebase initialization needed
+            updateAuthUi();  // Set UI to show local-only mode
             loadDarkModeState();
             populateYearSelects();
             setDefaultYearFilter();
@@ -7311,8 +6608,6 @@ body.dark-mode .auth-status {
                 document.body.classList.remove('dark-mode');
                 localStorage.setItem('darkMode', 'false');
             }
-            // Sync preferences to cloud
-            savePreferencesToCloud();
         });
         projectYearFilter.addEventListener('change', filterProjectsByYear);
         hamburgerBtn.addEventListener('click', toggleSidebar);
@@ -7440,14 +6735,9 @@ body.dark-mode .auth-status {
         }
         
         function saveAllProjects() {
-            if (sharedAccessContext.active && !sharedAccessContext.allowEdit && !sharedAccessContext.allowFinance) {
-                console.warn('View-only mode - changes not saved');
-                return;
-            }
             try {
                 localStorage.setItem('projects', JSON.stringify(projects));
                 localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig)); // Save stagesConfig too
-                queueCloudSave();
             } catch (storageErr) {
                 handleLocalStorageError(storageErr);
             }
@@ -10165,131 +9455,5 @@ body.dark-mode .auth-status {
           initStageNavFix();
         }
     </script>
-    
-    <script type="module">
-import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, db, doc, collection, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp } from './firebase-config.js';
-
-// Check auth state on page load
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        console.log('משתמש מחובר:', user.displayName);
-        
-        // Save user data to Firestore
-        try {
-            const userRef = doc(db, 'users', user.uid);
-            
-            // Check if this is a new user
-            const userDoc = await getDoc(userRef);
-            const userData = {
-                displayName: user.displayName,
-                email: user.email,
-                photoURL: user.photoURL,
-                lastLogin: new Date().toISOString()
-            };
-            
-            // Add createdAt only for new users
-            if (!userDoc.exists()) {
-                userData.createdAt = new Date().toISOString();
-            }
-            
-            await setDoc(userRef, userData, { merge: true });
-            
-            console.log('נתוני משתמש נשמרו ב-Firestore');
-        } catch (error) {
-            console.error('שגיאה בשמירת נתוני משתמש:', error);
-        }
-        
-        // Hide login modal if open
-        const loginModal = document.getElementById('loginModal');
-        if (loginModal) {
-            loginModal.style.display = 'none';
-        }
-        
-        // Update UI to show user is logged in
-        updateUIForLoggedInUser(user);
-    } else {
-        console.log('משתמש לא מחובר');
-        
-        // Show login modal on first visit
-        const loginModal = document.getElementById('loginModal');
-        if (loginModal && !sessionStorage.getItem('loginModalShown')) {
-            loginModal.style.display = 'flex';
-            sessionStorage.setItem('loginModalShown', 'true');
-        }
-        
-        // Update UI to show user is logged out
-        updateUIForLoggedOutUser();
-    }
-});
-
-// Google Sign-In function
-window.signInWithGoogle = async function() {
-    try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
-        
-        console.log('התחברות הצליחה:', user.displayName);
-        showNotification('התחברת בהצלחה!', 'success');
-        
-        // User data will be saved by onAuthStateChanged listener
-        
-    } catch (error) {
-        console.error('שגיאה בהתחברות:', error);
-        let errorMessage = 'ההתחברות נכשלה.';
-        
-        if (error.code === 'auth/unauthorized-domain') {
-            errorMessage = 'הדומיין לא מורשה. יש להוסיף אותו ב-Firebase Console.';
-        } else if (error.code === 'auth/popup-blocked') {
-            errorMessage = 'החלון נחסם. אנא אפשר חלונות קופצים.';
-        }
-        
-        showNotification(errorMessage, 'error');
-    }
-};
-
-// Sign Out function
-window.signOutUser = async function() {
-    try {
-        await signOut(auth);
-        console.log('התנתקת בהצלחה');
-        showNotification('התנתקת בהצלחה', 'success');
-    } catch (error) {
-        console.error('שגיאה בהתנתקות:', error);
-        showNotification('שגיאה בהתנתקות', 'error');
-    }
-};
-
-// Update UI for logged in user
-function updateUIForLoggedInUser(user) {
-    // Add your UI update logic here
-    // For example: show user name, hide login button, show logout button
-    console.log('עדכון ממשק למשתמש מחובר:', user.displayName);
-}
-
-// Update UI for logged out user
-function updateUIForLoggedOutUser() {
-    // Add your UI update logic here
-    // For example: hide user name, show login button, hide logout button
-    console.log('עדכון ממשק למשתמש מנותק');
-}
-
-// Show notification helper
-function showNotification(message, type) {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `app-notification ${type}`;
-    notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-        <span>${message}</span>
-    `;
-    document.body.appendChild(notification);
-    
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-        notification.classList.add('fade-out');
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-</script>
 </body>
 </html>

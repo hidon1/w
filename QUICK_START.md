@@ -1,146 +1,141 @@
-# Quick Start Guide - Firebase Deployment
+# Quick Start Guide - Local-Only Mode
 
-## 🚀 Quick Deployment Steps
+## 🚀 Getting Started
 
-### Step 1: Access Firebase Console
-1. Go to https://console.firebase.google.com/
-2. Select project: **hidon1-e4c91**
+This wine monitoring system now operates in **local-only mode**. All data is stored locally in your browser - no cloud services, no authentication, no setup required!
 
-### Step 2: Apply Firestore Security Rules (CRITICAL!)
+## ✅ Quick Start
 
-1. Click on **Firestore Database** in the left sidebar
-2. Click on the **Rules** tab
-3. Replace the existing rules with the following:
+### Step 1: Open the Application
+1. Open `index.html` in your web browser
+2. Or serve it with a local web server:
+   ```bash
+   # Python
+   python3 -m http.server 8000
+   
+   # Node.js
+   npx http-server
+   ```
+3. Navigate to `http://localhost:8000`
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Helper function to check if user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Helper function to check if user owns the document
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-    
-    // Users can read and write only their own account data
-    match /accounts/{userId} {
-      allow read, write: if isOwner(userId);
-      
-      // Users can read and write their own data subcollection
-      match /data/{document=**} {
-        allow read, write: if isOwner(userId);
-      }
-      
-      // Users can manage permissions they grant to others
-      match /permissions/{email} {
-        allow read, write: if isOwner(userId);
-      }
-    }
-    
-    // Deny all other access by default
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-```
+### Step 2: Start Using
+1. The application loads immediately - no login required
+2. Start creating projects and tracking your wine production
+3. All data is automatically saved to browser localStorage
 
-4. Click **Publish**
-5. Confirm the changes
+## 💾 Data Storage
 
-### Step 3: Enable Authentication Providers
+### Where is your data stored?
+- **Location**: Browser's localStorage (in your browser on this device)
+- **Persistence**: Data persists between sessions (until you clear browser data)
+- **Accessibility**: Single device, single browser only
 
-1. Click on **Authentication** in the left sidebar
-2. Click on **Sign-in method** tab
-3. Enable **Google** provider:
-   - Click on Google
-   - Toggle "Enable"
-   - Enter project support email
-   - Save
-4. Enable **Email/Password** provider:
-   - Click on Email/Password
-   - Toggle "Enable"
-   - Save
+### What data is stored locally?
+- Projects and all wine production data
+- Reminders and notifications
+- Inbox items
+- User preferences (dark mode, etc.)
+- Custom stages configuration
 
-### Step 4: Configure Authorized Domains
+## 🎯 Core Features
 
-1. In **Authentication** → **Settings** → **Authorized domains**
-2. Make sure your domain is listed:
-   - localhost (for development)
-   - Your production domain (e.g., yourapp.com)
-3. Add any additional domains as needed
+### Available Features:
+✅ Wine production project management  
+✅ Stage-by-stage tracking (harvest, crushing, fermentation, aging, bottling)  
+✅ Custom metrics and measurements  
+✅ Reminders with notifications  
+✅ Financial tracking  
+✅ Project comparison and analytics  
+✅ Data export (PDF/Excel)  
+✅ Dark mode  
+✅ Hebrew interface (RTL support)  
 
-### Step 5: Set Up Billing Alerts (Optional but Recommended)
+### NOT Available (Removed):
+❌ Cloud synchronization  
+❌ Multi-device access  
+❌ User authentication  
+❌ Project sharing between users  
+❌ Cross-device data sync  
 
-1. Click on **⚙️ Settings** (gear icon)
-2. Go to **Usage and billing** → **Details & settings**
-3. Set up budget alerts to avoid unexpected charges
+## ⚠️ Important Notes
 
-## ✅ Verification
+### Data Backup
+Since data is stored only in your browser:
+1. **Regular backups recommended**: Use the export feature to save your data
+2. **Clearing browser data will delete projects**: Be careful with browser cleaning tools
+3. **Incognito/Private mode**: Data won't persist after closing the browser
 
-After completing the above steps, verify:
+### Browser Compatibility
+- Works in all modern browsers (Chrome, Firefox, Safari, Edge)
+- Requires JavaScript enabled
+- Requires localStorage support (available in all modern browsers)
 
-1. **Test Authentication**:
-   - Open your app
-   - Login modal should appear
-   - Try Google Sign-In
-   - Verify data saves to Firestore
+### Multiple Devices
+- To use on multiple devices, you'll need to manually export/import data
+- Each device maintains its own independent data
 
-2. **Check Firestore**:
-   - Go to Firestore Database → Data
-   - You should see `accounts` collection
-   - Inside should be user documents with data
+## 📊 Monitoring Your Data
 
-3. **Test Security**:
-   - In Firestore Rules tab, click "Rules Playground"
-   - Test various scenarios to ensure rules work
+### Check Data Storage:
+1. Open browser Developer Tools (F12)
+2. Go to Application/Storage tab
+3. Click on "Local Storage"
+4. Look for keys: `projects`, `reminders`, `inbox`, `preferences`
 
-## 📊 Monitoring
-
-Monitor your Firebase usage:
-
-1. **Authentication**: Check active users
-2. **Firestore**: Monitor read/write operations
-3. **Costs**: Review billing dashboard regularly
+### Storage Limits:
+- localStorage typically has 5-10MB limit per domain
+- Images stored in IndexedDB (larger limit)
+- For very large projects, consider periodic cleanup
 
 ## 🆘 Troubleshooting
 
-### Login Modal Not Showing
+### Application doesn't load
+- Check JavaScript is enabled in your browser
 - Check browser console for errors
-- Verify Firebase SDKs are loading
-- Check firebase-config.js is accessible
+- Try clearing browser cache and reload
 
-### Google Sign-In Not Working
-- Verify Google provider is enabled
-- Check domain is authorized
-- Look for popup blocker issues
-
-### Data Not Syncing
-- Check Firestore rules are applied
-- Verify user is authenticated
+### Data not saving
 - Check browser console for errors
+- Verify localStorage is not disabled
+- Check you're not in incognito/private browsing mode
+- Verify storage quota hasn't been exceeded
+
+### Lost data
+- If you cleared browser data, data is permanently lost
+- Check if you have an exported backup
+- Data cannot be recovered without a backup
+
+## 🔄 Migrating from Firebase Version
+
+If you were using the previous Firebase version:
+
+1. **Export your cloud data** (if still accessible via Firebase Console)
+2. **This version starts fresh** - no automatic migration
+3. **Manual data entry** or import required
+4. **Consider exporting regularly** for backup
 
 ## 📚 Additional Resources
 
-- **Security Rules Docs**: See FIRESTORE_SECURITY_RULES.md
-- **Integration Guide**: See FIREBASE_INTEGRATION.md
-- **Implementation Details**: See IMPLEMENTATION_SUMMARY.md
-- **Verification**: See VERIFICATION_SUMMARY.md
-
-## ⚡ Important Notes
-
-1. **Security Rules are CRITICAL** - Without them, your data is unprotected
-2. **Test thoroughly** before deploying to production
-3. **Monitor costs** - Firestore charges per read/write operation
-4. **Backup data** - Keep localStorage as fallback
+- **Removal Details**: See `REMOVED_FIREBASE.md` for what was removed
+- **Storage Implementation**: See `storage-local.js` for storage API
+- **Old Firebase Docs** (archived): 
+  - `FIREBASE_INTEGRATION.md` - No longer applicable
+  - `FIRESTORE_SECURITY_RULES.md` - No longer applicable
 
 ## 🎉 You're Ready!
 
-Once you complete these steps, your Firebase Authentication and Firestore integration is fully operational!
+That's it! No configuration, no setup, no deployment needed. Just open the app and start tracking your wine production.
 
-For detailed information, refer to the comprehensive documentation files in the repository.
+The application will show "עבודה מקומית בלבד" (Local work only) in the status area to indicate local-only mode.
+
+## 💡 Tips
+
+1. **Regular Exports**: Export your data regularly as backup
+2. **Browser Bookmarks**: Bookmark the local page for easy access
+3. **Don't Clear Browser Data**: Your projects are stored there
+4. **One Browser**: Stick to one browser to avoid data fragmentation
+
+---
+
+**Version**: Local-Only Mode v1.0  
+**Date**: February 16, 2026

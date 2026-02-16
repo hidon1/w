@@ -1,6 +1,14 @@
-# Firebase Authentication and Firestore Integration
+# Firebase Authentication and Firestore Integration (ARCHIVED)
 
-## Overview
+> **⚠️ NOTICE: This documentation is ARCHIVED**  
+> Firebase integration has been removed from this project as of February 16, 2026.  
+> The application now operates in local-only mode using browser localStorage.  
+> See `REMOVED_FIREBASE.md` for details about the removal.  
+> See `QUICK_START.md` for current setup instructions.
+
+---
+
+## Overview (Historical Documentation)
 
 This application now includes full Firebase Authentication and Firestore Database integration. Users can sign in with Google or email/password, and their data is automatically synchronized to the cloud.
 
