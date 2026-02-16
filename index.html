@@ -5168,6 +5168,34 @@ body.dark-mode .auth-error {
     color: #ff9800;
 }
 
+
+.data-updated-badge {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    background: rgba(76, 175, 80, 0.95);
+    color: #fff;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1300;
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.data-updated-badge.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+body.dark-mode .data-updated-badge {
+    background: rgba(120, 170, 120, 0.95);
+    color: #111;
+}
+
 @media (max-width: 768px) {
     .login-modal-content {
         width: 95%;
@@ -5323,6 +5351,7 @@ body.dark-mode .auth-error {
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div id="sharedAccessNotice" class="shared-access-notice" style="display:none;"></div>
+    <div id="dataUpdatedBadge" class="data-updated-badge">הנתונים עודכנו</div>
     <!-- Reminder Popup Notification -->
     <div id="reminderPopupNotification" class="reminder-popup-notification" style="display:none;">
         <div class="reminder-popup-content">
@@ -9587,6 +9616,7 @@ body.dark-mode .auth-error {
             doc, 
             setDoc, 
             getDoc, 
+            onSnapshot,
             updateDoc,
             serverTimestamp
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
@@ -9612,11 +9642,115 @@ body.dark-mode .auth-error {
         // Global variables for authentication state
         let currentUser = null;
         let authInitialized = false;
+        let realtimeUnsubscribers = [];
+        let dataUpdatedBadgeTimeout = null;
 
         // Make auth functions globally available
         window.firebaseAuth = auth;
         window.firebaseDb = db;
         window.currentFirebaseUser = null;
+
+        function showDataUpdatedBadge() {
+            const badge = document.getElementById('dataUpdatedBadge');
+            if (!badge) return;
+
+            badge.classList.add('visible');
+
+            if (dataUpdatedBadgeTimeout) {
+                clearTimeout(dataUpdatedBadgeTimeout);
+            }
+
+            dataUpdatedBadgeTimeout = setTimeout(() => {
+                badge.classList.remove('visible');
+                dataUpdatedBadgeTimeout = null;
+            }, 2000);
+        }
+
+        function stopRealtimeSync() {
+            if (!realtimeUnsubscribers.length) return;
+            realtimeUnsubscribers.forEach((unsubscribe) => {
+                try {
+                    unsubscribe();
+                } catch (error) {
+                    console.warn('Failed to unsubscribe realtime listener:', error);
+                }
+            });
+            realtimeUnsubscribers = [];
+        }
+
+        function refreshUiAfterRealtimeUpdate() {
+            if (typeof renderAllMainContent === 'function') {
+                renderAllMainContent();
+            }
+            if (typeof updateInboxBadge === 'function') {
+                updateInboxBadge();
+            }
+        }
+
+        function startRealtimeSync(user) {
+            if (!user) return;
+            stopRealtimeSync();
+
+            const attachListener = (docName, payloadKey, applyData) => {
+                const docRef = doc(db, 'accounts', user.uid, 'data', docName);
+                let initialized = false;
+                const unsubscribe = onSnapshot(docRef, (snapshot) => {
+                    if (!snapshot.exists()) {
+                        initialized = true;
+                        return;
+                    }
+
+                    const data = snapshot.data();
+                    if (!data || typeof data[payloadKey] === 'undefined') {
+                        initialized = true;
+                        return;
+                    }
+
+                    const incomingSerialized = JSON.stringify(data[payloadKey]);
+                    const existingSerialized = localStorage.getItem(payloadKey);
+                    const hasChanged = incomingSerialized !== existingSerialized;
+
+                    if (hasChanged) {
+                        localStorage.setItem(payloadKey, incomingSerialized);
+                        applyData(data[payloadKey], data);
+                        refreshUiAfterRealtimeUpdate();
+                        if (initialized) {
+                            showDataUpdatedBadge();
+                        }
+                    }
+
+                    initialized = true;
+                }, (error) => {
+                    console.error(`Realtime sync error (${docName}):`, error);
+                });
+                realtimeUnsubscribers.push(unsubscribe);
+            };
+
+            attachListener('projects', 'projects', (projectsData, rawData) => {
+                window.projects = projectsData;
+                if (rawData && rawData.stagesConfig) {
+                    const serializedStages = JSON.stringify(rawData.stagesConfig);
+                    if (serializedStages !== localStorage.getItem('stagesConfig')) {
+                        localStorage.setItem('stagesConfig', serializedStages);
+                    }
+                    if (typeof window.stagesConfig !== 'undefined') {
+                        window.stagesConfig = rawData.stagesConfig;
+                    }
+                }
+            });
+
+            attachListener('reminders', 'reminders', (remindersData) => {
+                if (Array.isArray(remindersData)) {
+                    reminders = remindersData;
+                }
+            });
+
+            attachListener('inbox', 'inbox', (inboxData) => {
+                if (Array.isArray(inboxData)) {
+                    inbox = inboxData;
+                }
+            });
+        }
 
         // Update UI based on auth state
         function updateAuthUI(user) {
@@ -9799,6 +9933,7 @@ body.dark-mode .auth-error {
             if (user) {
                 // User is signed in - load data from cloud
                 await loadDataFromFirestore(user);
+                startRealtimeSync(user);
                 
                 // Create user document if it doesn't exist
                 const userDocRef = doc(db, 'accounts', user.uid);
@@ -9811,6 +9946,7 @@ body.dark-mode .auth-error {
                     });
                 }
             } else {
+                stopRealtimeSync();
                 // User is signed out - show banner
                 if (authInitialized) {
                     showAuthBannerIfNeeded();
@@ -10039,28 +10175,68 @@ body.dark-mode .auth-error {
             }
         });
 
-        // Override save functions to sync with Firebase
-        const originalSaveProjects = window.saveProjects;
-        window.saveProjects = function(projects) {
-            // Save to localStorage first
-            if (originalSaveProjects) {
-                originalSaveProjects(projects);
-            } else {
-                localStorage.setItem('projects', JSON.stringify(projects));
+        // Override save functions to sync with Firebase in real-time
+        const originalSaveAllProjects = window.saveAllProjects;
+        window.saveAllProjects = function() {
+            if (originalSaveAllProjects) {
+                originalSaveAllProjects();
             }
-            
-            // Sync to Firestore if authenticated
-            if (currentUser) {
-                const projectsDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
-                const stagesConfigStr = localStorage.getItem('stagesConfig');
-                setDoc(projectsDocRef, {
-                    projects: projects,
-                    stagesConfig: stagesConfigStr ? JSON.parse(stagesConfigStr) : null,
-                    updatedAt: serverTimestamp()
-                }, { merge: true }).catch(error => {
-                    console.error('Error syncing projects to Firestore:', error);
-                });
+
+            if (!currentUser) return;
+
+            const projectsDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+            const projectsStr = localStorage.getItem('projects');
+            const stagesConfigStr = localStorage.getItem('stagesConfig');
+
+            if (!projectsStr) return;
+
+            setDoc(projectsDocRef, {
+                projects: JSON.parse(projectsStr),
+                stagesConfig: stagesConfigStr ? JSON.parse(stagesConfigStr) : null,
+                updatedAt: serverTimestamp()
+            }, { merge: true }).catch(error => {
+                console.error('Error syncing projects to Firestore:', error);
+            });
+        };
+
+        const originalQueueRemindersSave = window.queueRemindersSave;
+        window.queueRemindersSave = function() {
+            if (originalQueueRemindersSave) {
+                originalQueueRemindersSave();
             }
+
+            if (!currentUser) return;
+
+            const remindersStr = localStorage.getItem('reminders');
+            if (!remindersStr) return;
+
+            const remindersDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
+            setDoc(remindersDocRef, {
+                reminders: JSON.parse(remindersStr),
+                updatedAt: serverTimestamp()
+            }, { merge: true }).catch(error => {
+                console.error('Error syncing reminders to Firestore:', error);
+            });
+        };
+
+        const originalQueueInboxSave = window.queueInboxSave;
+        window.queueInboxSave = function() {
+            if (originalQueueInboxSave) {
+                originalQueueInboxSave();
+            }
+
+            if (!currentUser) return;
+
+            const inboxStr = localStorage.getItem('inbox');
+            if (!inboxStr) return;
+
+            const inboxDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
+            setDoc(inboxDocRef, {
+                inbox: JSON.parse(inboxStr),
+                updatedAt: serverTimestamp()
+            }, { merge: true }).catch(error => {
+                console.error('Error syncing inbox to Firestore:', error);
+            });
         };
 
         // Always show auth modal after page loads if not authenticated
