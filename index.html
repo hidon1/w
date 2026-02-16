@@ -9967,6 +9967,7 @@ body.dark-mode .data-updated-badge {
             try {
                 showLoading('מתחבר עם Google...');
                 const result = await signInWithPopup(auth, googleProvider);
+                await ensureAccountExists(result.user);
                 closeAuthModal();
                 await syncDataToFirestore(result.user);
                 showNotification('התחברת בהצלחה!', 'success');
@@ -9993,8 +9994,20 @@ body.dark-mode .data-updated-badge {
             try {
                 showLoading('מתחבר...');
                 const result = await signInWithEmailAndPassword(auth, email, password);
+
+                // Ensure account document exists for users that were created outside this app
+                await ensureAccountExists(result.user);
+
+                // If cloud data does not exist yet, upload current local data after login
+                const projectsDocRef = doc(db, 'accounts', result.user.uid, 'data', 'projects');
+                const projectsSnap = await getDoc(projectsDocRef);
+                if (!projectsSnap.exists()) {
+                    await syncDataToFirestore(result.user);
+                } else {
+                    await loadDataFromFirestore(result.user);
+                }
+
                 closeAuthModal();
-                await loadDataFromFirestore(result.user);
                 showNotification('התחברת בהצלחה!', 'success');
                 hideLoading();
             } catch (error) {
@@ -10042,6 +10055,20 @@ body.dark-mode .data-updated-badge {
                     errorMessage = 'הסיסמה חלשה מדי (לפחות 6 תווים)';
                 }
                 showAuthError(errorMessage);
+            }
+        }
+
+        async function ensureAccountExists(user) {
+            if (!user) return;
+
+            const userDocRef = doc(db, 'accounts', user.uid);
+            const userSnap = await getDoc(userDocRef);
+            if (!userSnap.exists()) {
+                await setDoc(userDocRef, {
+                    email: user.email || '',
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
             }
         }
 
