@@ -31,7 +31,7 @@
     }
     
     .sidebar-toggle-handle {
-        display: flex; /* Show on mobile */
+        display: none !important;
     }
     
     .sidebar.open {
@@ -169,7 +169,32 @@
         gap: 4px;
     }
     
-    .dashboard-section h2 {
+    .dashboard-collapse-btn {
+    position: absolute;
+    top: 6px;
+    left: 10px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.dashboard-collapse-btn i {
+    transition: transform 0.3s ease;
+}
+
+.dashboard-section.collapsed-mobile .dashboard-collapse-btn i {
+    transform: rotate(180deg);
+}
+
+.dashboard-section h2 {
         grid-column: 1 !important;
         grid-row: 2 !important;
         font-size: calc(var(--font-size-base) * 0.95);
@@ -198,6 +223,15 @@
     .dashboard-grid {
         grid-column: 1 !important;
         grid-row: 3 !important;
+    }
+
+    .dashboard-collapse-btn {
+        display: flex;
+    }
+
+    .dashboard-section.collapsed-mobile {
+        transform: translateY(calc(100% - 22px));
+        padding-top: 2px;
     }
     
     .add-data-cube span {
@@ -817,6 +851,32 @@ body.dark-mode .stage-nav-button:hover {
 
 .wine-icon-container img:hover {
     transform: scale(1.1) rotate(5deg);
+}
+
+
+.dashboard-collapse-btn {
+    position: absolute;
+    top: 6px;
+    left: 10px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.dashboard-collapse-btn i {
+    transition: transform 0.3s ease;
+}
+
+.dashboard-section.collapsed-mobile .dashboard-collapse-btn i {
+    transform: rotate(180deg);
 }
 
 .dashboard-section {
@@ -4121,6 +4181,15 @@ body.dark-mode .add-metric-modal-content input {
 .access-modal-content {
     max-width: 700px;
     padding: 30px;
+    max-height: 85vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.access-tab-content {
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .access-modal-content h3 {
@@ -4410,7 +4479,7 @@ body.dark-mode .active-users-section {
 }
 
 .users-list-container {
-    max-height: 400px;
+    max-height: 260px;
     overflow-y: auto;
 }
 
@@ -4570,7 +4639,7 @@ body.dark-mode .permission-badge.finance-no {
 
 /* Connected Accounts Styles */
 .connected-accounts-container {
-    max-height: 400px;
+    max-height: 260px;
     overflow-y: auto;
 }
 
@@ -4659,6 +4728,26 @@ body.dark-mode .connected-account-item {
 body.dark-mode .current-account-card {
     background: linear-gradient(135deg, #1a1a2e, #0a0a1e);
     border-color: var(--primary-color);
+}
+
+#globalFinanceProjectsDetails,
+#yearlyFinanceProjectsDetails,
+#currentProjectFinanceReportTableBody {
+    max-height: 45vh;
+    overflow-y: auto;
+}
+
+.current-project-finance-report-table {
+    display: block;
+    overflow: auto;
+    max-height: 45vh;
+}
+
+.current-project-finance-report-table thead,
+.current-project-finance-report-table tbody {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
 }
 
 /* Confirmation Modal Styles */
@@ -5423,6 +5512,9 @@ body.dark-mode .auth-error {
         </div>
     </div>
     <div class="dashboard-section" id="fixedDashboardSection">
+        <button class="dashboard-collapse-btn" id="dashboardCollapseBtn" onclick="toggleMobileDashboardCollapse()" aria-label="הסתר/הצג דשבורד תחתון">
+            <i class="fas fa-chevron-down"></i>
+        </button>
         <h2 id="fixedDashboardStageName"></h2>
         <div class="dashboard-grid" id="fixedDashboardGrid"></div>
         <div class="add-data-cube" onclick="openAddMetricModal()">
@@ -5534,6 +5626,9 @@ body.dark-mode .auth-error {
                     <button class="btn-primary" id="connectAccountBtn"><i class="fas fa-plug"></i> בדוק והתחבר</button>
                 </div>
                 <hr class="section-divider">
+                <div class="access-section">
+                    <button type="button" class="btn-secondary" onclick="switchBackToOwner()"><i class="fas fa-rotate-left"></i> חזור לחשבון שלי</button>
+                </div>
                 <div class="access-section">
                     <h4><i class="fas fa-user-friends"></i> חשבונות מחוברים</h4>
                     <div class="connected-accounts-container">
@@ -5932,6 +6027,7 @@ body.dark-mode .auth-error {
         const currentStageContent = document.getElementById('currentStageContent');
         const currentStageInputSection = document.getElementById('currentStageInputSection');
         const fixedDashboardSection = document.getElementById('fixedDashboardSection');
+        const dashboardCollapseBtn = document.getElementById('dashboardCollapseBtn');
         const fixedDashboardStageName = document.getElementById('fixedDashboardStageName');
         const fixedDashboardGrid = document.getElementById('fixedDashboardGrid');
         const historyModal = document.getElementById('historyModal');
@@ -6265,6 +6361,7 @@ body.dark-mode .auth-error {
                 return;
             }
             if (!accessModal) return;
+            closeSidebar();
             setActiveAccessTab(tabName);
             if (connectUserEmailInput) connectUserEmailInput.value = user.email || '';
             populatePermissionProjectOptions();
@@ -6360,7 +6457,16 @@ body.dark-mode .auth-error {
                 connectedAccountsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> אין חשבונות זמינים לחיבור.</li>';
                 return;
             }
-            connectedAccountsList.innerHTML = items.map(item => `<li class="user-access-item"><div><strong>${item.ownerEmail || ''}</strong><div class="account-permissions"><span class="permission-badge ${item.allowEdit ? 'edit':'view'}">${item.allowEdit ? 'עריכה' : 'צפייה'}</span></div></div></li>`).join('');
+            connectedAccountsList.innerHTML = items.map(item => {
+                const ownerEmail = item.ownerEmail || '';
+                return `<li class="user-access-item"><div><strong>${ownerEmail}</strong><div class="account-permissions"><span class="permission-badge ${item.allowEdit ? 'edit':'view'}">${item.allowEdit ? 'עריכה' : 'צפייה'}</span></div></div><div class="user-actions"><button type="button" class="btn-edit connect-account-btn" data-owner-email="${ownerEmail}"><i class="fas fa-right-to-bracket"></i></button></div></li>`;
+            }).join('');
+            connectedAccountsList.querySelectorAll('.connect-account-btn').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const email = btn.dataset.ownerEmail || '';
+                    await connectToAccountByEmail(email);
+                });
+            });
         }
         async function refreshAccessLists() {
             await Promise.all([renderConnectedAccountsList(), refreshPermissionsList()]);
@@ -6449,6 +6555,11 @@ body.dark-mode .auth-error {
                 showNotification('החיבור לחשבון נכשל.', 'error');
             }
         }
+        async function connectToAccountByEmail(ownerEmail) {
+            if (connectAccountEmailInput) connectAccountEmailInput.value = ownerEmail || '';
+            await connectToAccount();
+        }
+
         async function switchBackToOwner() {
             const api = window.firebaseAccess;
             if (!api?.reloadOwnAccountData) {
@@ -7052,6 +7163,7 @@ body.dark-mode .auth-error {
             
             // Initialize card position to prevent flickering
             initializeProjectDetailsCard();
+            handleDashboardCollapseVisibility();
             
             // Remove preload class to enable animations smoothly after initialization
             setTimeout(() => {
@@ -7092,6 +7204,16 @@ body.dark-mode .auth-error {
         hamburgerBtn.addEventListener('click', toggleSidebar);
         sidebarOverlay.addEventListener('click', closeSidebar);
         window.addEventListener('resize', handleCardFabResize);
+        window.addEventListener('resize', handleDashboardCollapseVisibility);
+        function handleDashboardCollapseVisibility() {
+            if (!dashboardCollapseBtn || !fixedDashboardSection) return;
+            const isMobile = window.innerWidth <= 768;
+            dashboardCollapseBtn.style.display = isMobile ? 'flex' : 'none';
+            if (!isMobile) {
+                fixedDashboardSection.classList.remove('collapsed-mobile');
+            }
+        }
+
         function toggleSidebar() {
             hamburgerBtn.classList.toggle('open');
             sidebar.classList.toggle('open');
@@ -7112,6 +7234,12 @@ body.dark-mode .auth-error {
             sidebar.classList.remove('open');
             sidebarOverlay.style.display = 'none';
         }
+
+        function toggleMobileDashboardCollapse() {
+            if (!fixedDashboardSection) return;
+            fixedDashboardSection.classList.toggle('collapsed-mobile');
+        }
+
         function showMainContent() {
             historyModal.style.display = 'none';
             projectManagementModal.style.display = 'none';
@@ -7749,7 +7877,6 @@ body.dark-mode .auth-error {
             }
             
             if (value === '' || value === null || value === undefined) {
-                alert('אנא הזן ערך.');
                 return;
             }
             
