@@ -6024,6 +6024,35 @@ body.dark-mode .data-updated-badge {
         let comparisonProjectId = null;
         let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
         let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+
+        function syncRuntimeDataFromStorage() {
+            try {
+                projects = JSON.parse(localStorage.getItem('projects')) || projects || {};
+            } catch (error) {
+                console.warn('Failed to parse projects from localStorage:', error);
+            }
+
+            try {
+                reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+            } catch (error) {
+                console.warn('Failed to parse reminders from localStorage:', error);
+                reminders = [];
+            }
+
+            try {
+                inbox = JSON.parse(localStorage.getItem('inbox')) || [];
+            } catch (error) {
+                console.warn('Failed to parse inbox from localStorage:', error);
+                inbox = [];
+            }
+
+            window.projects = projects;
+            window.reminders = reminders;
+            window.inbox = inbox;
+        }
+
+        window.syncRuntimeDataFromStorage = syncRuntimeDataFromStorage;
+        syncRuntimeDataFromStorage();
         // Card transition duration - set via JS at line 4984: projectDetailsCard.style.transition = 'left 0.3s ease'
         // Used to time the delayed visibility hide after slide-out animation completes
         const CARD_TRANSITION_DURATION = 300; // milliseconds
@@ -9663,10 +9692,7 @@ body.dark-mode .data-updated-badge {
         }
 
         function shouldPreferRedirectLogin() {
-            const ua = navigator.userAgent || '';
-            const isIOS = /iPhone|iPod|iPad/i.test(ua);
-            const isMobile = /Android|iPhone|iPod|iPad/i.test(ua);
-            return isEmbeddedWebView() || isIOS || isMobile;
+            return isEmbeddedWebView();
         }
 
         function mapGoogleAuthError(error) {
@@ -9775,7 +9801,8 @@ body.dark-mode .data-updated-badge {
             };
 
             attachListener('projects', 'projects', (projectsData, rawData) => {
-                window.projects = projectsData;
+                projects = projectsData;
+                window.projects = projects;
                 if (rawData && rawData.stagesConfig) {
                     const serializedStages = JSON.stringify(rawData.stagesConfig);
                     if (serializedStages !== localStorage.getItem('stagesConfig')) {
@@ -9790,12 +9817,14 @@ body.dark-mode .data-updated-badge {
             attachListener('reminders', 'reminders', (remindersData) => {
                 if (Array.isArray(remindersData)) {
                     reminders = remindersData;
+                    window.reminders = reminders;
                 }
             });
 
             attachListener('inbox', 'inbox', (inboxData) => {
                 if (Array.isArray(inboxData)) {
                     inbox = inboxData;
+                    window.inbox = inbox;
                 }
             });
         }
@@ -9913,7 +9942,6 @@ body.dark-mode .data-updated-badge {
                     const data = projectsSnap.data();
                     if (data.projects) {
                         localStorage.setItem('projects', JSON.stringify(data.projects));
-                        window.projects = data.projects;
                     }
                     if (data.stagesConfig) {
                         localStorage.setItem('stagesConfig', JSON.stringify(data.stagesConfig));
@@ -9927,9 +9955,6 @@ body.dark-mode .data-updated-badge {
                     const data = remindersSnap.data();
                     if (data.reminders) {
                         localStorage.setItem('reminders', JSON.stringify(data.reminders));
-                        if (window.reminders) {
-                            window.reminders = data.reminders;
-                        }
                     }
                 }
                 
@@ -9940,9 +9965,6 @@ body.dark-mode .data-updated-badge {
                     const data = inboxSnap.data();
                     if (data.inbox) {
                         localStorage.setItem('inbox', JSON.stringify(data.inbox));
-                        if (window.inbox) {
-                            window.inbox = data.inbox;
-                        }
                     }
                 }
                 
@@ -9956,6 +9978,8 @@ body.dark-mode .data-updated-badge {
                     }
                 }
                 
+                syncRuntimeDataFromStorage();
+
                 // Refresh UI
                 if (typeof renderAllMainContent === 'function') {
                     renderAllMainContent();
@@ -9985,6 +10009,7 @@ body.dark-mode .data-updated-badge {
             if (user) {
                 // User is signed in - load data from cloud
                 await loadDataFromFirestore(user);
+                syncRuntimeDataFromStorage();
                 startRealtimeSync(user);
                 
                 // Create user document if it doesn't exist
@@ -10288,13 +10313,18 @@ body.dark-mode .data-updated-badge {
 
             if (!projectsStr) return;
 
-            setDoc(projectsDocRef, {
-                projects: JSON.parse(projectsStr),
-                stagesConfig: stagesConfigStr ? JSON.parse(stagesConfigStr) : null,
-                updatedAt: serverTimestamp()
-            }, { merge: true }).catch(error => {
-                console.error('Error syncing projects to Firestore:', error);
-            });
+            try {
+                setDoc(projectsDocRef, {
+                    projects: JSON.parse(projectsStr),
+                    stagesConfig: stagesConfigStr ? JSON.parse(stagesConfigStr) : null,
+                    updatedAt: serverTimestamp()
+                }, { merge: true }).catch(error => {
+                    console.error('Error syncing projects to Firestore:', error);
+                });
+            } catch (parseError) {
+                console.error('Failed to parse projects before sync:', parseError);
+            }
+
         };
 
         const originalQueueRemindersSave = window.queueRemindersSave;
@@ -10308,13 +10338,17 @@ body.dark-mode .data-updated-badge {
             const remindersStr = localStorage.getItem('reminders');
             if (!remindersStr) return;
 
-            const remindersDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
-            setDoc(remindersDocRef, {
-                reminders: JSON.parse(remindersStr),
-                updatedAt: serverTimestamp()
-            }, { merge: true }).catch(error => {
-                console.error('Error syncing reminders to Firestore:', error);
-            });
+            try {
+                const remindersDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
+                setDoc(remindersDocRef, {
+                    reminders: JSON.parse(remindersStr),
+                    updatedAt: serverTimestamp()
+                }, { merge: true }).catch(error => {
+                    console.error('Error syncing reminders to Firestore:', error);
+                });
+            } catch (parseError) {
+                console.error('Failed to parse reminders before sync:', parseError);
+            }
         };
 
         const originalQueueInboxSave = window.queueInboxSave;
@@ -10328,13 +10362,17 @@ body.dark-mode .data-updated-badge {
             const inboxStr = localStorage.getItem('inbox');
             if (!inboxStr) return;
 
-            const inboxDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
-            setDoc(inboxDocRef, {
-                inbox: JSON.parse(inboxStr),
-                updatedAt: serverTimestamp()
-            }, { merge: true }).catch(error => {
-                console.error('Error syncing inbox to Firestore:', error);
-            });
+            try {
+                const inboxDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
+                setDoc(inboxDocRef, {
+                    inbox: JSON.parse(inboxStr),
+                    updatedAt: serverTimestamp()
+                }, { merge: true }).catch(error => {
+                    console.error('Error syncing inbox to Firestore:', error);
+                });
+            } catch (parseError) {
+                console.error('Failed to parse inbox before sync:', parseError);
+            }
         };
 
         // Always show auth modal after page loads if not authenticated
