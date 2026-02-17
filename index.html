@@ -9645,6 +9645,18 @@ body.dark-mode .data-updated-badge {
             }
         }
 
+        function refreshProjectsAndMetricsUI() {
+            const selectedYear = document.getElementById('projectYearFilter')?.value || 'all';
+
+            if (typeof window.renderProjectList === 'function') window.renderProjectList(selectedYear);
+            if (typeof window.populatePermissionProjectOptions === 'function') window.populatePermissionProjectOptions();
+            if (typeof window.renderStageNavigation === 'function') window.renderStageNavigation();
+            if (typeof window.loadCurrentStageContent === 'function') window.loadCurrentStageContent();
+            if (typeof window.updateProjectDetailsCard === 'function') window.updateProjectDetailsCard();
+            if (typeof window.renderPreviousStageOverview === 'function') window.renderPreviousStageOverview();
+            if (typeof window.renderComparisonProjectList === 'function') window.renderComparisonProjectList();
+        }
+
         function detachRealtimeListeners() {
             while (realtimeUnsubscribers.length) {
                 const unsubscribe = realtimeUnsubscribers.pop();
@@ -9673,8 +9685,7 @@ body.dark-mode .data-updated-badge {
                 }
             }
 
-            if (typeof window.renderProjects === 'function') window.renderProjects();
-            if (typeof window.renderCurrentStage === 'function') window.renderCurrentStage();
+            refreshProjectsAndMetricsUI();
 
             if (!isInitialSnapshot) {
                 showSyncUpdateBanner('הנתונים עודכנו.');
@@ -10021,8 +10032,7 @@ body.dark-mode .data-updated-badge {
                 }
 
                 // Reload UI
-                if (typeof window.renderProjects === 'function') window.renderProjects();
-                if (typeof window.renderCurrentStage === 'function') window.renderCurrentStage();
+                refreshProjectsAndMetricsUI();
                 if (typeof window.renderRemindersList === 'function') window.renderRemindersList();
                 if (typeof window.renderInbox === 'function') window.renderInbox();
 
