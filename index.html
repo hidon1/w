@@ -9959,12 +9959,10 @@ body.dark-mode .data-updated-badge {
                 await loadAllDataFromFirebase();
             } else if (!user) {
                 isInitialized = false;
-                // Show auth modal if user is not logged in (only on first load)
-                if (!localStorage.getItem('skipAuthModal')) {
-                    setTimeout(() => {
-                        openAuthModal();
-                    }, 1000);
-                }
+                // Show auth modal when user is not logged in
+                setTimeout(() => {
+                    openAuthModal();
+                }, 300);
             }
         });
     </script>
