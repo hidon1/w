@@ -9625,36 +9625,240 @@ body.dark-mode .data-updated-badge {
         }
     </script>
 
-    <!-- Firebase Integration using storage-firebase.js module -->
+    <!-- Firebase Integration (inline storage/auth logic + external firebase-config.js) -->
     <script type="module">
         import {
             auth,
             db,
-            signInWithGoogle,
-            registerWithEmail,
-            signInWithEmail,
-            signOutUser,
+            googleProvider,
+            signInWithPopup,
+            signInWithRedirect,
+            getRedirectResult,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut,
             onAuthStateChanged,
-            setCurrentUser,
-            getCurrentUser,
-            saveProjects,
-            loadProjects as loadProjectsFromFirebase,
-            saveReminders,
-            loadReminders,
-            saveInbox,
-            loadInbox,
-            savePreferences,
-            loadPreferences,
-            saveStagesConfig,
-            loadStagesConfig,
             doc,
             setDoc,
             getDoc,
             serverTimestamp
-        } from './storage-firebase.js';
+        } from './firebase-config.js';
 
         let currentUser = null;
         let isInitialized = false;
+
+
+        const STORAGE_KEYS = {
+            PROJECTS: 'projects',
+            REMINDERS: 'reminders',
+            INBOX: 'inbox',
+            PREFERENCES: 'preferences',
+            STAGES_CONFIG: 'stagesConfig'
+        };
+
+        function setCurrentUser(user) {
+            currentUser = user;
+        }
+
+
+        function isWebViewEnvironment() {
+            const ua = navigator.userAgent || '';
+            return /; wv\)|\bwv\b|WebView|FBAN|FBAV|Instagram|Line\//i.test(ua);
+        }
+
+        async function signInWithGoogle() {
+            if (isWebViewEnvironment()) {
+                await signInWithRedirect(auth, googleProvider);
+                return null;
+            }
+
+            try {
+                const result = await signInWithPopup(auth, googleProvider);
+                return result.user;
+            } catch (error) {
+                const fallbackErrors = [
+                    'auth/popup-blocked',
+                    'auth/popup-closed-by-user',
+                    'auth/cancelled-popup-request',
+                    'auth/operation-not-supported-in-this-environment'
+                ];
+
+                if (fallbackErrors.includes(error.code)) {
+                    await signInWithRedirect(auth, googleProvider);
+                    return null;
+                }
+
+                throw error;
+            }
+        }
+
+        async function registerWithEmail(email, password) {
+            const result = await createUserWithEmailAndPassword(auth, email, password);
+            const userDocRef = doc(db, 'accounts', result.user.uid);
+            await setDoc(userDocRef, {
+                email: result.user.email,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+            return result.user;
+        }
+
+        async function signInWithEmail(email, password) {
+            const result = await signInWithEmailAndPassword(auth, email, password);
+            return result.user;
+        }
+
+        async function signOutUser() {
+            await signOut(auth);
+            currentUser = null;
+        }
+
+        async function saveProjects(projects) {
+            localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+            if (!currentUser) return;
+            try {
+                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+                await setDoc(userDocRef, { projects, updatedAt: serverTimestamp() }, { merge: true });
+            } catch (error) {
+                console.error('Error saving projects to Firestore:', error);
+            }
+        }
+
+        async function loadProjectsFromFirebase() {
+            if (currentUser) {
+                try {
+                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(data.projects));
+                        return data.projects || {};
+                    }
+                } catch (error) {
+                    console.error('Error loading projects from Firestore:', error);
+                }
+            }
+            const data = localStorage.getItem(STORAGE_KEYS.PROJECTS);
+            return data ? JSON.parse(data) : {};
+        }
+
+        async function saveReminders(reminders) {
+            localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(reminders));
+            if (!currentUser) return;
+            try {
+                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
+                await setDoc(userDocRef, { reminders, updatedAt: serverTimestamp() }, { merge: true });
+            } catch (error) {
+                console.error('Error saving reminders to Firestore:', error);
+            }
+        }
+
+        async function loadReminders() {
+            if (currentUser) {
+                try {
+                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(data.reminders));
+                        return data.reminders || [];
+                    }
+                } catch (error) {
+                    console.error('Error loading reminders from Firestore:', error);
+                }
+            }
+            const data = localStorage.getItem(STORAGE_KEYS.REMINDERS);
+            return data ? JSON.parse(data) : [];
+        }
+
+        async function saveInbox(inbox) {
+            localStorage.setItem(STORAGE_KEYS.INBOX, JSON.stringify(inbox));
+            if (!currentUser) return;
+            try {
+                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
+                await setDoc(userDocRef, { inbox, updatedAt: serverTimestamp() }, { merge: true });
+            } catch (error) {
+                console.error('Error saving inbox to Firestore:', error);
+            }
+        }
+
+        async function loadInbox() {
+            if (currentUser) {
+                try {
+                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        localStorage.setItem(STORAGE_KEYS.INBOX, JSON.stringify(data.inbox));
+                        return data.inbox || [];
+                    }
+                } catch (error) {
+                    console.error('Error loading inbox from Firestore:', error);
+                }
+            }
+            const data = localStorage.getItem(STORAGE_KEYS.INBOX);
+            return data ? JSON.parse(data) : [];
+        }
+
+        async function savePreferences(preferences) {
+            localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(preferences));
+            if (!currentUser) return;
+            try {
+                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'preferences');
+                await setDoc(userDocRef, { preferences, updatedAt: serverTimestamp() }, { merge: true });
+            } catch (error) {
+                console.error('Error saving preferences to Firestore:', error);
+            }
+        }
+
+        async function loadPreferences() {
+            if (currentUser) {
+                try {
+                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'preferences');
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(data.preferences));
+                        return data.preferences || {};
+                    }
+                } catch (error) {
+                    console.error('Error loading preferences from Firestore:', error);
+                }
+            }
+            const data = localStorage.getItem(STORAGE_KEYS.PREFERENCES);
+            return data ? JSON.parse(data) : {};
+        }
+
+        async function saveStagesConfig(config) {
+            localStorage.setItem(STORAGE_KEYS.STAGES_CONFIG, JSON.stringify(config));
+            if (!currentUser) return;
+            try {
+                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+                await setDoc(userDocRef, { stagesConfig: config, updatedAt: serverTimestamp() }, { merge: true });
+            } catch (error) {
+                console.error('Error saving stages config to Firestore:', error);
+            }
+        }
+
+        async function loadStagesConfig() {
+            if (currentUser) {
+                try {
+                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        if (data.stagesConfig) {
+                            localStorage.setItem(STORAGE_KEYS.STAGES_CONFIG, JSON.stringify(data.stagesConfig));
+                            return data.stagesConfig;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading stages config from Firestore:', error);
+                }
+            }
+            const data = localStorage.getItem(STORAGE_KEYS.STAGES_CONFIG);
+            return data ? JSON.parse(data) : null;
+        }
 
         // Show auth error message
         function showAuthError(message) {
@@ -9841,11 +10045,20 @@ body.dark-mode .data-updated-badge {
         window.toggleAuthForm = toggleAuthForm;
 
         // Initialize Firebase integration when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             console.log('Firebase integration initializing...');
 
             // Wire save hooks
             wireSaveHooks();
+
+            try {
+                const redirectResult = await getRedirectResult(auth);
+                if (redirectResult?.user) {
+                    closeAuthModal();
+                }
+            } catch (error) {
+                console.error('Redirect sign-in error:', error);
+            }
 
             // Set up auth modal buttons
             document.getElementById('loginBtn')?.addEventListener('click', openAuthModal);
@@ -9871,7 +10084,7 @@ body.dark-mode .data-updated-badge {
                     }
                 } catch (error) {
                     console.error('Google sign-in error:', error);
-                    showAuthError('התחברות עם Google נכשלה. נסה שוב.');
+                    showAuthError('התחברות עם Google נכשלה. אם זה בתוך WebView, ודא שהאפליקציה מאפשרת חלונות קופצים/ניווט חיצוני ו-Cookies צד-שלישי.');
                 }
             });
 
@@ -9955,6 +10168,7 @@ body.dark-mode .data-updated-badge {
 
             if (user && !isInitialized) {
                 isInitialized = true;
+                closeAuthModal();
                 // Load data from Firebase when user signs in
                 await loadAllDataFromFirebase();
             } else if (!user) {

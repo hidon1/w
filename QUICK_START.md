@@ -83,7 +83,6 @@ Since data is stored only in your browser:
 4. Look for keys: `projects`, `reminders`, `inbox`, `preferences`
 
 ### Storage Limits:
-- localStorage typically has 5-10MB limit per domain
 - Images stored in IndexedDB (larger limit)
 - For very large projects, consider periodic cleanup
 
