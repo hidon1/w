@@ -6304,8 +6304,48 @@ body.dark-mode .data-updated-badge {
             }
             permissionsList.innerHTML = items.map(item => {
                 const scope = item.projectScope === 'all' ? 'כל הפרויקטים' : (projects[item.projectScope]?.name || item.projectScope);
-                return `<li class="user-access-item"><div><strong>${item.collaboratorEmail || ''}</strong><div class="user-permissions"><span class="permission-badge ${item.allowEdit ? 'edit':'view'}">${item.allowEdit ? 'עריכה' : 'צפייה'}</span><span class="permission-badge project">${scope}</span><span class="permission-badge ${item.allowFinance ? 'finance-yes':'finance-no'}">${item.allowFinance ? 'כספים: כן':'כספים: לא'}</span></div></div></li>`;
+                const collaboratorUid = item.collaboratorUid || item.id;
+                const safeEmail = item.collaboratorEmail || '';
+                return `<li class="user-access-item" role="button" tabindex="0" data-collaborator-uid="${collaboratorUid}" data-collaborator-email="${safeEmail}"><div><strong>${safeEmail}</strong><div class="user-permissions"><span class="permission-badge ${item.allowEdit ? 'edit':'view'}">${item.allowEdit ? 'עריכה' : 'צפייה'}</span><span class="permission-badge project">${scope}</span><span class="permission-badge ${item.allowFinance ? 'finance-yes':'finance-no'}">${item.allowFinance ? 'כספים: כן':'כספים: לא'}</span></div></div><i class="fas fa-user-minus" title="בטל הרשאה"></i></li>`;
             }).join('');
+
+            permissionsList.querySelectorAll('.user-access-item').forEach((itemEl) => {
+                const handleRevoke = async () => {
+                    const collaboratorUid = itemEl.dataset.collaboratorUid;
+                    const collaboratorEmail = itemEl.dataset.collaboratorEmail || 'משתמש זה';
+                    if (!collaboratorUid) return;
+                    const shouldRevoke = window.confirm(`לבטל את ההרשאה עבור ${collaboratorEmail}?`);
+                    if (!shouldRevoke) return;
+                    await revokeAccessForCollaborator(collaboratorUid, collaboratorEmail);
+                };
+
+                itemEl.addEventListener('click', handleRevoke);
+                itemEl.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleRevoke();
+                    }
+                });
+            });
+        }
+
+        async function revokeAccessForCollaborator(collaboratorUid, collaboratorEmail) {
+            const api = window.firebaseAccess;
+            if (!api?.revokeAccessPermission) {
+                showNotification('שירות ביטול ההרשאות לא זמין כרגע.', 'error');
+                return;
+            }
+            try {
+                await api.revokeAccessPermission({ collaboratorUid });
+                showNotification(`ההרשאה עבור ${collaboratorEmail} בוטלה.`, 'success');
+                await refreshAccessLists();
+            } catch (error) {
+                const map = {
+                    AUTH_REQUIRED: 'יש להתחבר כדי לבטל הרשאות.',
+                    COLLABORATOR_REQUIRED: 'לא נבחר משתמש תקין לביטול הרשאה.'
+                };
+                showNotification(map[error.message] || 'ביטול ההרשאה נכשל.', 'error');
+            }
         }
         async function renderConnectedAccountsList() {
             if (!connectedAccountsList) return;
@@ -6342,8 +6382,12 @@ body.dark-mode .data-updated-badge {
             const projectScope = permissionProjectSelect?.value || 'all';
             const allowFinance = !!permissionFinanceCheckbox?.checked;
             try {
-                await api.grantAccessPermission({ targetEmail, projectScope, permissionLevel, allowFinance });
-                showNotification('ההרשאה נשמרה בהצלחה.', 'success');
+                const result = await api.grantAccessPermission({ targetEmail, projectScope, permissionLevel, allowFinance });
+                if (result?.sharedListSyncWarning) {
+                    showNotification('ההרשאה נשמרה, אך רשימת החשבונות של המשתמש השני לא התעדכנה. בדוק כללי Firestore.', 'warning');
+                } else {
+                    showNotification('ההרשאה נשמרה בהצלחה.', 'success');
+                }
                 if (permissionUserEmailInput) permissionUserEmailInput.value = '';
                 if (permissionFinanceCheckbox) permissionFinanceCheckbox.checked = false;
                 await refreshAccessLists();
@@ -9743,6 +9787,7 @@ body.dark-mode .data-updated-badge {
             query,
             where,
             setDoc,
+            deleteDoc,
             getDoc,
             onSnapshot,
             serverTimestamp
@@ -9818,8 +9863,27 @@ body.dark-mode .data-updated-badge {
             };
 
             await setDoc(doc(db, 'accounts', currentUser.uid, 'permissions', collaboratorUid), payload, { merge: true });
-            await setDoc(doc(db, 'accounts', collaboratorUid, 'sharedWith', currentUser.uid), payload, { merge: true });
-            return payload;
+
+            let sharedListSyncWarning = false;
+            try {
+                await setDoc(doc(db, 'accounts', collaboratorUid, 'sharedWith', currentUser.uid), payload, { merge: true });
+            } catch (error) {
+                console.warn('Failed to sync sharedWith list for collaborator:', error);
+                sharedListSyncWarning = true;
+            }
+            return { ...payload, sharedListSyncWarning };
+        }
+
+        async function revokeAccessPermission({ collaboratorUid }) {
+            if (!currentUser || !currentUser.email) throw new Error('AUTH_REQUIRED');
+            if (!collaboratorUid) throw new Error('COLLABORATOR_REQUIRED');
+
+            await deleteDoc(doc(db, 'accounts', currentUser.uid, 'permissions', collaboratorUid));
+            try {
+                await deleteDoc(doc(db, 'accounts', collaboratorUid, 'sharedWith', currentUser.uid));
+            } catch (error) {
+                console.warn('Failed to remove sharedWith entry for collaborator:', error);
+            }
         }
 
         async function listOwnerPermissions() {
@@ -9837,9 +9901,19 @@ body.dark-mode .data-updated-badge {
         async function findOwnerByEmail(ownerEmail) {
             const ownerUid = await getUidByEmail(ownerEmail);
             if (!ownerUid) return null;
-            const permDoc = await getDoc(doc(db, 'accounts', ownerUid, 'permissions', currentUser.uid));
-            if (!permDoc.exists()) return null;
-            return { ownerUid, permission: permDoc.data() };
+
+            try {
+                const permDoc = await getDoc(doc(db, 'accounts', ownerUid, 'permissions', currentUser.uid));
+                if (permDoc.exists()) {
+                    return { ownerUid, permission: permDoc.data() };
+                }
+            } catch (error) {
+                console.warn('Cannot read owner permissions directly, trying sharedWith fallback.', error);
+            }
+
+            const sharedDoc = await getDoc(doc(db, 'accounts', currentUser.uid, 'sharedWith', ownerUid));
+            if (!sharedDoc.exists()) return null;
+            return { ownerUid, permission: sharedDoc.data() };
         }
 
         async function loadOwnerProjects(ownerUid) {
@@ -9855,6 +9929,7 @@ body.dark-mode .data-updated-badge {
             grantAccessPermission,
             listOwnerPermissions,
             listSharedWithMe,
+            revokeAccessPermission,
             findOwnerByEmail,
             loadOwnerProjects,
             reloadOwnAccountData: () => loadAllDataFromFirebase()
