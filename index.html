@@ -9673,9 +9673,7 @@ body.dark-mode .data-updated-badge {
         
         // Configure Google Provider for better compatibility
         googleProvider.setCustomParameters({
-            prompt: 'select_account',
-            // Allow access from any origin - useful for testing and development
-            ux_mode: 'popup' // We'll handle redirect fallback manually
+            prompt: 'select_account'
         });
         
         // Add required scopes
@@ -10066,14 +10064,11 @@ body.dark-mode .data-updated-badge {
                 await ensureAccountExists(result.user);
                 await syncDataToFirestore(result.user);
                 closeAuthModal();
-                showNotification('התחברת בהצלחה עם Google!', 'success');
+                showNotification('התחברת בהצלחה!', 'success');
             })
             .catch((error) => {
                 console.error('Redirect result error:', error);
-                // Only show error if it's not a "no redirect result" error
-                if (error.code && error.code !== 'auth/invalid-api-key') {
-                    showAuthError(mapGoogleAuthError(error));
-                }
+                showAuthError(mapGoogleAuthError(error));
             });
 
         // Google Sign-In
