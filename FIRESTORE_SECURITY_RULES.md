@@ -8,9 +8,20 @@ These rules are compatible with the current data structure used by the app:
   - `reminders`
   - `inbox`
   - `preferences`
-- `/accounts/{userId}/permissions/{email}`
+- `/accounts/{userId}/permissions/{collaboratorUid}`
+- `/accounts/{userId}/sharedWith/{ownerUid}`
 
-## Recommended Rules (Production-safe baseline)
+## Why permissions looked "saved" but didn't actually work
+
+In the app flow, the account owner writes two docs when granting access:
+
+1. `accounts/{ownerUid}/permissions/{collaboratorUid}`
+2. `accounts/{collaboratorUid}/sharedWith/{ownerUid}`
+
+With the old rule `allow read, write: if isSelf(uid);` on `sharedWith`, step 2 is denied (because the owner is **not** `isSelf(collaboratorUid)`).
+So the UI can still show an item under the owner's list, but the collaborator cannot see/use the shared account reliably.
+
+## Recommended Rules (matching current permission-sharing logic)
 
 Paste these rules in **Firebase Console → Firestore Database → Rules**:
 
@@ -25,6 +36,14 @@ service cloud.firestore {
 
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isCollaborator(collaboratorUid) {
+      return isSignedIn() && request.auth.uid == collaboratorUid;
+    }
+
+    function isOwnerUid(ownerUid) {
+      return isSignedIn() && request.auth.uid == ownerUid;
     }
 
     function validAccountCreate(userId) {
@@ -56,9 +75,33 @@ service cloud.firestore {
         allow read, write: if isOwner(userId) && validDataDocId(docId);
       }
 
-      match /permissions/{email} {
-        allow read, write: if isOwner(userId);
+      // owner -> collaborator permission documents
+      match /permissions/{collaboratorUid} {
+        // owner can always read/write; collaborator can read their own permission doc
+        allow read: if isOwner(userId) || isCollaborator(collaboratorUid);
+        allow write: if isOwner(userId);
       }
+
+      // mirrored list shown under collaborator account
+      match /sharedWith/{ownerUid} {
+        // collaborator can read their shared accounts list
+        allow read: if isOwner(userId);
+
+        // write/delete allowed to:
+        // - collaborator themself
+        // - owner that is granting/revoking access
+        allow create, update, delete: if isOwner(userId) || isOwnerUid(ownerUid);
+      }
+    }
+
+    // Email index for collaborator lookup by email
+    match /usersByEmail/{emailKey} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 3;
+      allow delete: if false;
     }
 
     match /{document=**} {
@@ -80,6 +123,8 @@ service cloud.firestore {
 
 ## Quick test matrix
 
-- Signed in as owner UID → read/write `/accounts/{uid}` and `/accounts/{uid}/data/*` ✅
-- Signed in as another UID → access `/accounts/{uid}` ❌
+- Signed in as owner UID → can write `/accounts/{ownerUid}/permissions/{collaboratorUid}` ✅
+- Signed in as owner UID → can write `/accounts/{collaboratorUid}/sharedWith/{ownerUid}` ✅
+- Signed in as collaborator UID → can read `/accounts/{collaboratorUid}/sharedWith/*` ✅
+- Signed in as collaborator UID → can read `/accounts/{ownerUid}/permissions/{collaboratorUid}` ✅
 - Unauthenticated → any read/write ❌
