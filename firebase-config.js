@@ -20,6 +20,9 @@ import {
   updateDoc,
   deleteDoc,
   collection,
+  getDocs,
+  query,
+  where,
   onSnapshot,
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
@@ -58,6 +61,9 @@ export {
   firebaseOnAuthStateChanged as onAuthStateChanged,
   doc,
   collection,
+  getDocs,
+  query,
+  where,
   setDoc,
   getDoc,
   updateDoc,

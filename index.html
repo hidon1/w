@@ -6172,12 +6172,21 @@ body.dark-mode .data-updated-badge {
             return /wv/.test(userAgent) || /WebView/.test(userAgent) || isIOSWebView;
         }
         function updateSharedAccessNotice() {
-            // Shared access not supported in local-only mode
             if (!sharedAccessNotice) return;
-            sharedAccessNotice.style.display = 'none';
-            sharedAccessNotice.classList.remove('view-only');
-            sharedAccessNotice.textContent = '';
-            document.body.classList.remove('view-only');
+            if (!sharedAccessContext.active) {
+                sharedAccessNotice.style.display = 'none';
+                sharedAccessNotice.classList.remove('view-only');
+                sharedAccessNotice.textContent = '';
+                document.body.classList.remove('view-only');
+                return;
+            }
+            const scopeText = sharedAccessContext.allowedProjectId ? 'לפרויקט מסוים' : 'לכל הפרויקטים';
+            const modeText = sharedAccessContext.allowEdit ? 'עריכה' : 'צפייה בלבד';
+            const financeText = sharedAccessContext.allowFinance ? 'עם גישה לכספים' : 'ללא גישה לכספים';
+            sharedAccessNotice.style.display = 'block';
+            sharedAccessNotice.classList.toggle('view-only', !sharedAccessContext.allowEdit);
+            sharedAccessNotice.textContent = `מחובר לחשבון של ${sharedAccessContext.ownerEmail} • ${scopeText} • ${modeText} • ${financeText}`;
+            document.body.classList.toggle('view-only', !sharedAccessContext.allowEdit);
         }
         function updateAuthUi() {
             // Default signed-out state until Firebase auth state is resolved
@@ -6213,14 +6222,27 @@ body.dark-mode .data-updated-badge {
             // Firebase hooks trigger sync; no localStorage persistence in Firebase-only mode.
         }
         function applySharedAccess(permissionData, ownerUid, ownerEmail) {
-            // Shared access not supported in local-only mode
-            console.warn('Shared access not supported in local-only mode');
+            sharedAccessContext = {
+                active: true,
+                ownerUid,
+                ownerEmail,
+                allowEdit: !!permissionData.allowEdit,
+                allowFinance: !!permissionData.allowFinance,
+                allowedProjectId: permissionData.projectScope && permissionData.projectScope !== 'all' ? permissionData.projectScope : null
+            };
+            localStorage.setItem('sharedAccessOwnerUid', ownerUid || '');
+            localStorage.setItem('sharedAccessOwnerEmail', ownerEmail || '');
+            localStorage.setItem('sharedAccessPermissions', JSON.stringify(permissionData || {}));
+            if (switchBackBtn) switchBackBtn.style.display = 'block';
+            updateSharedAccessNotice();
         }
         function clearSharedAccess() {
-            // Shared access not supported in local-only mode
+            sharedAccessContext = { active: false, ownerUid: null, ownerEmail: null, allowEdit: false, allowFinance: false, allowedProjectId: null };
             localStorage.removeItem('sharedAccessOwnerUid');
             localStorage.removeItem('sharedAccessOwnerEmail');
             localStorage.removeItem('sharedAccessPermissions');
+            if (switchBackBtn) switchBackBtn.style.display = 'none';
+            updateSharedAccessNotice();
         }
         
         // Local-only mode - no authentication
@@ -6236,9 +6258,17 @@ body.dark-mode .data-updated-badge {
             if (permissionsTab) permissionsTab.classList.toggle('active', tabName === 'permissions');
         }
         function openAccessModal(tabName = 'connect') {
-            // Access/sharing not available in local-only mode
-            console.warn('Access modal not available in local-only mode');
-            return;
+            const user = window.firebaseAccess?.getCurrentUser?.();
+            if (!user) {
+                showNotification('יש להתחבר לפני ניהול הרשאות.', 'error');
+                return;
+            }
+            if (!accessModal) return;
+            setActiveAccessTab(tabName);
+            if (connectUserEmailInput) connectUserEmailInput.value = user.email || '';
+            populatePermissionProjectOptions();
+            refreshAccessLists();
+            accessModal.style.display = 'flex';
         }
         function closeAccessModal() {
             if (!accessModal) return;
@@ -6262,29 +6292,131 @@ body.dark-mode .data-updated-badge {
         // Access/permission management - not supported in local-only mode
         async function refreshPermissionsList() {
             if (!permissionsList) return;
-            permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> שיתוף לא זמין במצב מקומי.</li>';
+            const api = window.firebaseAccess;
+            if (!api?.listOwnerPermissions) {
+                permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> שירות ההרשאות לא זמין.</li>';
+                return;
+            }
+            const items = await api.listOwnerPermissions();
+            if (!items.length) {
+                permissionsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> עדיין לא הוגדרו הרשאות.</li>';
+                return;
+            }
+            permissionsList.innerHTML = items.map(item => {
+                const scope = item.projectScope === 'all' ? 'כל הפרויקטים' : (projects[item.projectScope]?.name || item.projectScope);
+                return `<li class="user-access-item"><div><strong>${item.collaboratorEmail || ''}</strong><div class="user-permissions"><span class="permission-badge ${item.allowEdit ? 'edit':'view'}">${item.allowEdit ? 'עריכה' : 'צפייה'}</span><span class="permission-badge project">${scope}</span><span class="permission-badge ${item.allowFinance ? 'finance-yes':'finance-no'}">${item.allowFinance ? 'כספים: כן':'כספים: לא'}</span></div></div></li>`;
+            }).join('');
         }
-        function renderConnectedAccountsList() {
+        async function renderConnectedAccountsList() {
             if (!connectedAccountsList) return;
-            connectedAccountsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> חשבונות מחוברים לא זמינים במצב מקומי.</li>';
+            const api = window.firebaseAccess;
+            if (!api?.listSharedWithMe) {
+                connectedAccountsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> שירות החשבונות לא זמין.</li>';
+                return;
+            }
+            const items = await api.listSharedWithMe();
+            if (!items.length) {
+                connectedAccountsList.innerHTML = '<li class="no-users-message" role="status" aria-live="polite"><i class="fas fa-info-circle"></i> אין חשבונות זמינים לחיבור.</li>';
+                return;
+            }
+            connectedAccountsList.innerHTML = items.map(item => `<li class="user-access-item"><div><strong>${item.ownerEmail || ''}</strong><div class="account-permissions"><span class="permission-badge ${item.allowEdit ? 'edit':'view'}">${item.allowEdit ? 'עריכה' : 'צפייה'}</span></div></div></li>`).join('');
         }
-        function refreshAccessLists() {
-            renderConnectedAccountsList();
-            refreshPermissionsList();
+        async function refreshAccessLists() {
+            await Promise.all([renderConnectedAccountsList(), refreshPermissionsList()]);
             if (grantAccessBtn) {
-                grantAccessBtn.disabled = true;
+                grantAccessBtn.disabled = false;
             }
         }
         async function grantAccessToUser() {
-            console.warn('Access granting not supported in local-only mode');
-            showNotification('שיתוף לא זמין במצב מקומי.', 'error');
+            const api = window.firebaseAccess;
+            if (!api?.grantAccessPermission) {
+                showNotification('שירות ההרשאות לא זמין כרגע.', 'error');
+                return;
+            }
+            const targetEmail = permissionUserEmailInput?.value?.trim();
+            if (!targetEmail) {
+                showNotification('יש להזין אימייל משתמש.', 'error');
+                return;
+            }
+            const permissionLevel = document.querySelector('input[name="permissionLevel"]:checked')?.value || 'view';
+            const projectScope = permissionProjectSelect?.value || 'all';
+            const allowFinance = !!permissionFinanceCheckbox?.checked;
+            try {
+                await api.grantAccessPermission({ targetEmail, projectScope, permissionLevel, allowFinance });
+                showNotification('ההרשאה נשמרה בהצלחה.', 'success');
+                if (permissionUserEmailInput) permissionUserEmailInput.value = '';
+                if (permissionFinanceCheckbox) permissionFinanceCheckbox.checked = false;
+                await refreshAccessLists();
+            } catch (error) {
+                const map = {
+                    EMAIL_REQUIRED: 'יש להזין אימייל תקין.',
+                    TARGET_NOT_FOUND: 'לא נמצא משתמש עם האימייל הזה. עליו להתחבר לפחות פעם אחת.',
+                    SELF_NOT_ALLOWED: 'לא ניתן להעניק הרשאה לעצמך.',
+                    AUTH_REQUIRED: 'יש להתחבר כדי להעניק הרשאות.'
+                };
+                showNotification(map[error.message] || 'שמירת ההרשאה נכשלה.', 'error');
+            }
         }
         async function connectToAccount() {
-            console.warn('Account connection not supported in local-only mode');
-            showNotification('חיבור לחשבון אחר לא זמין במצב מקומי.', 'error');
+            const api = window.firebaseAccess;
+            if (!api?.findOwnerByEmail || !api?.loadOwnerProjects) {
+                showNotification('שירות החיבור לחשבון לא זמין כרגע.', 'error');
+                return;
+            }
+            const targetEmail = connectAccountEmailInput?.value?.trim();
+            if (!targetEmail) {
+                showNotification('יש להזין אימייל של החשבון המבוקש.', 'error');
+                return;
+            }
+            try {
+                const match = await api.findOwnerByEmail(targetEmail);
+                if (!match) {
+                    showNotification('אין הרשאה לחשבון המבוקש.', 'error');
+                    return;
+                }
+                const ownerProjectsPayload = await api.loadOwnerProjects(match.ownerUid);
+                if (!ownerProjectsPayload || !ownerProjectsPayload.projects) {
+                    showNotification('לא נמצאו נתונים בחשבון המבוקש.', 'error');
+                    return;
+                }
+                if (typeof setProjectsData === 'function') {
+                    setProjectsData(ownerProjectsPayload.projects);
+                } else {
+                    projects = ownerProjectsPayload.projects;
+                }
+                if (ownerProjectsPayload.stagesConfig) {
+                    if (typeof setStagesConfigData === 'function') {
+                        setStagesConfigData(ownerProjectsPayload.stagesConfig);
+                    } else {
+                        stagesConfig = ownerProjectsPayload.stagesConfig;
+                    }
+                }
+                applySharedAccess(match.permission, match.ownerUid, match.permission.ownerEmail || targetEmail);
+                populatePermissionProjectOptions();
+                renderProjectList(projectYearFilter.value);
+                renderStageNavigation();
+                loadCurrentStageContent();
+                updateProjectDetailsCard();
+                closeAccessModal();
+                showNotification('התחברת לחשבון בהצלחה.', 'success');
+            } catch (error) {
+                console.error('Failed to connect to account:', error);
+                showNotification('החיבור לחשבון נכשל.', 'error');
+            }
         }
         async function switchBackToOwner() {
-            console.warn('Account switching not supported in local-only mode');
+            const api = window.firebaseAccess;
+            if (!api?.reloadOwnAccountData) {
+                showNotification('לא ניתן לחזור לחשבון כרגע.', 'error');
+                return;
+            }
+            clearSharedAccess();
+            await api.reloadOwnAccountData();
+            renderProjectList(projectYearFilter.value);
+            renderStageNavigation();
+            loadCurrentStageContent();
+            updateProjectDetailsCard();
+            showNotification('חזרת לחשבון שלך.', 'success');
         }
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
@@ -9606,6 +9738,10 @@ body.dark-mode .data-updated-badge {
             signOut,
             onAuthStateChanged,
             doc,
+            collection,
+            getDocs,
+            query,
+            where,
             setDoc,
             getDoc,
             onSnapshot,
@@ -9625,6 +9761,104 @@ body.dark-mode .data-updated-badge {
             STAGES_CONFIG: 'stagesConfig'
         };
 
+
+
+        function normalizeEmail(email) {
+            return (email || '').trim().toLowerCase();
+        }
+
+        function emailLookupKey(email) {
+            return normalizeEmail(email).replace(/[^a-z0-9]/g, '_');
+        }
+
+        async function ensureUserAccountIndex(user) {
+            if (!user || !user.email) return;
+            const normalizedEmail = normalizeEmail(user.email);
+            await setDoc(doc(db, 'accounts', user.uid), {
+                email: normalizedEmail,
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp()
+            }, { merge: true });
+            await setDoc(doc(db, 'usersByEmail', emailLookupKey(normalizedEmail)), {
+                uid: user.uid,
+                email: normalizedEmail,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+        }
+
+        async function getUidByEmail(email) {
+            const normalizedEmail = normalizeEmail(email);
+            if (!normalizedEmail) return null;
+            const lookupDoc = await getDoc(doc(db, 'usersByEmail', emailLookupKey(normalizedEmail)));
+            if (!lookupDoc.exists()) return null;
+            const payload = lookupDoc.data() || {};
+            return payload.uid || null;
+        }
+
+        async function grantAccessPermission({ targetEmail, projectScope, permissionLevel, allowFinance }) {
+            if (!currentUser || !currentUser.email) throw new Error('AUTH_REQUIRED');
+            const normalizedTarget = normalizeEmail(targetEmail);
+            if (!normalizedTarget) throw new Error('EMAIL_REQUIRED');
+
+            const collaboratorUid = await getUidByEmail(normalizedTarget);
+            if (!collaboratorUid) throw new Error('TARGET_NOT_FOUND');
+            if (collaboratorUid === currentUser.uid) throw new Error('SELF_NOT_ALLOWED');
+
+            const payload = {
+                ownerUid: currentUser.uid,
+                ownerEmail: normalizeEmail(currentUser.email),
+                collaboratorUid,
+                collaboratorEmail: normalizedTarget,
+                projectScope: projectScope || 'all',
+                permissionLevel: permissionLevel === 'edit' ? 'edit' : 'view',
+                allowEdit: permissionLevel === 'edit',
+                allowFinance: !!allowFinance,
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp()
+            };
+
+            await setDoc(doc(db, 'accounts', currentUser.uid, 'permissions', collaboratorUid), payload, { merge: true });
+            await setDoc(doc(db, 'accounts', collaboratorUid, 'sharedWith', currentUser.uid), payload, { merge: true });
+            return payload;
+        }
+
+        async function listOwnerPermissions() {
+            if (!currentUser) return [];
+            const snap = await getDocs(collection(db, 'accounts', currentUser.uid, 'permissions'));
+            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        async function listSharedWithMe() {
+            if (!currentUser) return [];
+            const snap = await getDocs(collection(db, 'accounts', currentUser.uid, 'sharedWith'));
+            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        async function findOwnerByEmail(ownerEmail) {
+            const ownerUid = await getUidByEmail(ownerEmail);
+            if (!ownerUid) return null;
+            const permDoc = await getDoc(doc(db, 'accounts', ownerUid, 'permissions', currentUser.uid));
+            if (!permDoc.exists()) return null;
+            return { ownerUid, permission: permDoc.data() };
+        }
+
+        async function loadOwnerProjects(ownerUid) {
+            const snap = await getDoc(doc(db, 'accounts', ownerUid, 'data', 'projects'));
+            if (!snap.exists()) return null;
+            return snap.data() || null;
+        }
+
+        window.firebaseAccess = {
+            getCurrentUser: () => currentUser,
+            normalizeEmail,
+            ensureUserAccountIndex,
+            grantAccessPermission,
+            listOwnerPermissions,
+            listSharedWithMe,
+            findOwnerByEmail,
+            loadOwnerProjects,
+            reloadOwnAccountData: () => loadAllDataFromFirebase()
+        };
         function clearLegacyLocalData() {
             Object.values(STORAGE_KEYS).forEach((key) => {
                 try {
@@ -10269,6 +10503,11 @@ body.dark-mode .data-updated-badge {
             if (user && !isInitialized) {
                 isInitialized = true;
                 closeAuthModal();
+                try {
+                    await ensureUserAccountIndex(user);
+                } catch (error) {
+                    console.warn('Failed to update user account index:', error);
+                }
                 // Load data from Firebase when user signs in
                 await loadAllDataFromFirebase();
                 initializeRealtimeDataListeners();
