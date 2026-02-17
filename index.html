@@ -1796,6 +1796,25 @@ body.dark-mode .project-list li:hover {
     transition: color 0.2s ease;
 }
 
+.project-actions .select-project-btn {
+    background: linear-gradient(135deg, #1E88E5, #42A5F5);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-right: 0;
+}
+
+.project-actions .select-project-btn:hover {
+    color: #fff;
+    text-decoration: none;
+    background: linear-gradient(135deg, #1976D2, #1E88E5);
+}
+
+.project-actions .current-project-btn {
+    background: linear-gradient(135deg, #2E7D32, #66BB6A);
+}
+
 .project-actions button:hover {
     color: var(--secondary-color);
     text-decoration: underline;
@@ -2122,6 +2141,16 @@ body.dark-mode .current-project-finance-report-table th, body.dark-mode .current
 
 .global-finance-modal-content h3 {
     text-align: center;
+}
+
+@media (min-width: 1024px) {
+    .project-modal-content,
+    .finance-modal-content,
+    .global-finance-modal-content {
+        width: min(760px, 88vw);
+        max-width: 760px;
+        max-height: 78vh;
+    }
 }
 
 .global-finance-report-summary {
@@ -5169,33 +5198,6 @@ body.dark-mode .auth-error {
 }
 
 
-.data-updated-badge {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    background: rgba(76, 175, 80, 0.95);
-    color: #fff;
-    font-size: 12px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    z-index: 1300;
-    opacity: 0;
-    transform: translateY(-6px);
-    pointer-events: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.data-updated-badge.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-body.dark-mode .data-updated-badge {
-    background: rgba(120, 170, 120, 0.95);
-    color: #111;
-}
-
 @media (max-width: 768px) {
     .login-modal-content {
         width: 95%;
@@ -5351,7 +5353,6 @@ body.dark-mode .data-updated-badge {
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div id="sharedAccessNotice" class="shared-access-notice" style="display:none;"></div>
-    <div id="dataUpdatedBadge" class="data-updated-badge">הנתונים עודכנו</div>
     <!-- Reminder Popup Notification -->
     <div id="reminderPopupNotification" class="reminder-popup-notification" style="display:none;">
         <div class="reminder-popup-content">
@@ -7348,7 +7349,7 @@ body.dark-mode .data-updated-badge {
                         listItem.innerHTML = `
                             <span>${project.name} (${year})</span>
                             <div class="project-actions">
-                                <button onclick="switchProject('${project.id}')">${project.id === currentProjectId ? 'נוכחי' : 'בחר'}</button>
+                                <button class="select-project-btn ${project.id === currentProjectId ? 'current-project-btn' : ''}" onclick="switchProject('${project.id}')">${project.id === currentProjectId ? 'נוכחי' : 'בחר'}</button>
                                 <button class="close-project" onclick="toggleProjectClosed('${project.id}')">${project.isClosed ? 'פתח' : 'סגור'}</button>
                                 ${project.id !== 'default_project' || Object.keys(projects).length > 1 ? `<button class="delete" onclick="deleteProject('${project.id}')">מחק</button>` : ''}
                             </div>
@@ -7372,7 +7373,7 @@ body.dark-mode .data-updated-badge {
                 listItem.innerHTML = `
                     <span>${project.name} (${year})</span>
                     <div class="project-actions">
-                        <button onclick="switchProject('${project.id}')">${project.id === currentProjectId ? 'נוכחי' : 'בחר'}</button>
+                        <button class="select-project-btn ${project.id === currentProjectId ? 'current-project-btn' : ''}" onclick="switchProject('${project.id}')">${project.id === currentProjectId ? 'נוכחי' : 'בחר'}</button>
                         <button class="close-project" onclick="toggleProjectClosed('${project.id}')">${project.isClosed ? 'פתח' : 'סגור'}</button>
                         ${project.id !== 'default_project' || Object.keys(projects).length > 1 ? `<button class="delete" onclick="deleteProject('${project.id}')">מחק</button>` : ''}
                     </div>
@@ -8535,7 +8536,7 @@ body.dark-mode .data-updated-badge {
         }
         function renderPreviousStageOverview() {
             stepCardsGrid.innerHTML = '';
-            const stageOrder = Object.keys(stagesConfig).filter(id => id !== 'wineDetails');
+            const stageOrder = ['stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'stage6'].filter(id => stagesConfig[id]);
             const currentStageIndex = stageOrder.indexOf(currentStageId);
             
             // Always show the container, even in harvest stage (stage1)
@@ -8569,10 +8570,9 @@ body.dark-mode .data-updated-badge {
                         const entries = prevStageData[metricId];
                         let displayValue = '--';
                         if (entries && entries.length > 0) {
-                            // Show the FIRST value instead of the last one
-                            displayValue = metricConfig.type === 'number' && typeof entries[0].value === 'number'
-                                ? entries[0].value.toFixed(metricConfig.precision)
-                                : entries[0].value;
+                            displayValue = metricConfig.type === 'number' && typeof entries[entries.length - 1].value === 'number'
+                                ? entries[entries.length - 1].value.toFixed(metricConfig.precision)
+                                : entries[entries.length - 1].value;
                         }
                         card.innerHTML += `<p>${metricConfig.name}: <span class="summary-value">${displayValue}</span></p>`;
                     });
@@ -9949,9 +9949,7 @@ body.dark-mode .data-updated-badge {
         }
 
         function showSyncUpdateBanner(message) {
-            if (typeof window.showNotification === 'function') {
-                window.showNotification(message, 'success');
-            }
+            // Intentionally no-op to avoid interrupting banner on every update.
         }
 
         function refreshProjectsAndMetricsUI() {
