@@ -9606,6 +9606,9 @@ body.dark-mode .data-updated-badge {
             signInWithPopup, 
             signInWithRedirect,
             getRedirectResult,
+            setPersistence,
+            browserLocalPersistence,
+            inMemoryPersistence,
             createUserWithEmailAndPassword,
             signInWithEmailAndPassword,
             signOut as firebaseSignOut,
@@ -9638,6 +9641,18 @@ body.dark-mode .data-updated-badge {
         const auth = getAuth(app);
         const db = getFirestore(app);
         const googleProvider = new GoogleAuthProvider();
+        googleProvider.setCustomParameters({
+            prompt: 'select_account'
+        });
+
+        async function configureAuthPersistence() {
+            try {
+                await setPersistence(auth, browserLocalPersistence);
+            } catch (error) {
+                console.warn('Local persistence unavailable, using in-memory persistence:', error);
+                await setPersistence(auth, inMemoryPersistence);
+            }
+        }
 
         function isEmbeddedWebView() {
             const ua = navigator.userAgent || '';
@@ -9645,6 +9660,13 @@ body.dark-mode .data-updated-badge {
             const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(ua);
             const isLineInApp = /Line\//i.test(ua);
             return hasGenericWebViewToken || isFacebookInApp || isLineInApp;
+        }
+
+        function shouldPreferRedirectLogin() {
+            const ua = navigator.userAgent || '';
+            const isIOS = /iPhone|iPod|iPad/i.test(ua);
+            const isMobile = /Android|iPhone|iPod|iPad/i.test(ua);
+            return isEmbeddedWebView() || isIOS || isMobile;
         }
 
         function mapGoogleAuthError(error) {
@@ -9950,6 +9972,10 @@ body.dark-mode .data-updated-badge {
         }
 
         // Auth state change handler
+        configureAuthPersistence().catch((error) => {
+            console.warn('Auth persistence configuration failed, continuing with default persistence:', error);
+        });
+
         firebaseOnAuthStateChanged(auth, async (user) => {
             currentUser = user;
             window.currentFirebaseUser = user;
@@ -10000,13 +10026,14 @@ body.dark-mode .data-updated-badge {
             try {
                 showLoading('מתחבר עם Google...');
 
-                // Popups are blocked in many mobile WebViews, so prefer redirect there.
-                const isWebView = isEmbeddedWebView();
-                const result = isWebView
+                // Popups are blocked in many mobile browsers/WebViews, so prefer redirect there.
+                const useRedirect = shouldPreferRedirectLogin();
+                const result = useRedirect
                     ? null
                     : await signInWithPopup(auth, googleProvider);
 
-                if (isWebView) {
+                if (useRedirect) {
+                    hideLoading();
                     await signInWithRedirect(auth, googleProvider);
                     return;
                 }
