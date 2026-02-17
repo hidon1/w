@@ -9738,6 +9738,7 @@ body.dark-mode .data-updated-badge {
         // Global variables for authentication state
         let currentUser = null;
         let authInitialized = false;
+        let authTemporarilyUnavailable = false;
         let realtimeUnsubscribers = [];
         let dataUpdatedBadgeTimeout = null;
 
@@ -9879,7 +9880,7 @@ body.dark-mode .data-updated-badge {
                     connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>לא מחובר</span>';
                 }
 
-                if (authInitialized) {
+                if (authInitialized && !authTemporarilyUnavailable) {
                     openAuthModal();
                 }
             }
@@ -9887,8 +9888,33 @@ body.dark-mode .data-updated-badge {
 
         // Force auth modal for non-authenticated users
         function showAuthBannerIfNeeded() {
-            if (!currentUser) {
+            if (!currentUser && !authTemporarilyUnavailable) {
                 openAuthModal();
+            }
+        }
+
+        function setLocalOnlyMode(message) {
+            authTemporarilyUnavailable = true;
+            closeAuthModal();
+
+            const googleBtn = document.getElementById('googleSignInBtn');
+            if (googleBtn) {
+                googleBtn.disabled = true;
+                googleBtn.style.opacity = '0.65';
+                googleBtn.title = 'Google Sign-In לא זמין כרגע בסביבה זו';
+            }
+
+            const authStatus = document.getElementById('authStatus');
+            if (authStatus) authStatus.textContent = 'מצב מקומי בלבד';
+
+            const connectionStatus = document.getElementById('connectionStatus');
+            if (connectionStatus) {
+                connectionStatus.className = 'connection-status disconnected';
+                connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>שמירה מקומית בלבד</span>';
+            }
+
+            if (message) {
+                showNotification(message, 'warning');
             }
         }
 
@@ -10068,6 +10094,9 @@ body.dark-mode .data-updated-badge {
             })
             .catch((error) => {
                 console.error('Redirect result error:', error);
+                if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/network-request-failed') {
+                    setLocalOnlyMode('החיבור לענן לא זמין כרגע. העבודה נשמרת מקומית במכשיר.');
+                }
                 showAuthError(mapGoogleAuthError(error));
             });
 
@@ -10109,6 +10138,9 @@ body.dark-mode .data-updated-badge {
                 if (error.code !== 'auth/popup-closed-by-user' && 
                     error.code !== 'auth/cancelled-popup-request') {
                     console.error('Google sign-in error:', error);
+                    if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/network-request-failed') {
+                        setLocalOnlyMode('Google לא זמין כרגע. הנתונים יישמרו מקומית עד שחיבור הענן יחזור.');
+                    }
                     showAuthError(mapGoogleAuthError(error));
                 }
             }
@@ -10145,6 +10177,9 @@ body.dark-mode .data-updated-badge {
                     errorMessage = 'סיסמה שגויה';
                 } else if (error.code === 'auth/invalid-email') {
                     errorMessage = 'כתובת אימייל לא תקינה';
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = 'אין כרגע חיבור לענן. ניתן להמשיך לעבוד והשמירה מתבצעת מקומית.';
+                    setLocalOnlyMode('אין כרגע חיבור לענן. העבודה נשמרת מקומית.');
                 }
                 showAuthError(errorMessage);
             }
@@ -10178,6 +10213,9 @@ body.dark-mode .data-updated-badge {
                     errorMessage = 'כתובת אימייל לא תקינה';
                 } else if (error.code === 'auth/weak-password') {
                     errorMessage = 'הסיסמה חלשה מדי (לפחות 6 תווים)';
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = 'אין כרגע חיבור לענן. ניתן להמשיך לעבוד והשמירה מתבצעת מקומית.';
+                    setLocalOnlyMode('אין כרגע חיבור לענן. העבודה נשמרת מקומית.');
                 }
                 showAuthError(errorMessage);
             }
@@ -10210,6 +10248,11 @@ body.dark-mode .data-updated-badge {
 
         // Modal functions
         window.openAuthModal = function() {
+            if (authTemporarilyUnavailable) {
+                showNotification('החיבור לענן לא זמין כרגע. ניתן להמשיך לעבוד במצב מקומי.', 'warning');
+                return;
+            }
+
             const modal = document.getElementById('authModal');
             if (modal) {
                 modal.style.display = 'flex';
@@ -10407,7 +10450,7 @@ body.dark-mode .data-updated-badge {
         // Always show auth modal after page loads if not authenticated
         window.addEventListener('load', () => {
             setTimeout(() => {
-                if (!currentUser) {
+                if (!currentUser && !authTemporarilyUnavailable) {
                     showAuthBannerIfNeeded();
                 }
             }, 700);
