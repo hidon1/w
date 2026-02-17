@@ -9664,11 +9664,6 @@ body.dark-mode .data-updated-badge {
                 window.showNotification(message, 'success');
             }
         }
-
-        function isRemoteUpdateFromAnotherDevice(data) {
-            return !!data?.updatedByDeviceId && data.updatedByDeviceId !== currentDeviceSyncId;
-        }
-
         function detachRealtimeListeners() {
             while (realtimeUnsubscribers.length) {
                 const unsubscribe = realtimeUnsubscribers.pop();
@@ -9694,8 +9689,8 @@ body.dark-mode .data-updated-badge {
             if (typeof window.renderProjects === 'function') window.renderProjects();
             if (typeof window.renderCurrentStage === 'function') window.renderCurrentStage();
 
-            if (!isInitialSnapshot && isRemoteUpdateFromAnotherDevice(data)) {
-                showSyncUpdateBanner('הנתונים סונכרנו ממכשיר אחר.');
+            if (!isInitialSnapshot) {
+                showSyncUpdateBanner('הנתונים עודכנו.');
             }
         }
 
@@ -9717,7 +9712,7 @@ body.dark-mode .data-updated-badge {
                             window.reminders = remoteReminders;
                         }
                         if (typeof window.renderRemindersList === 'function') window.renderRemindersList();
-                        if (!isInitialSnapshot && isRemoteUpdateFromAnotherDevice(data)) showSyncUpdateBanner('תזכורות עודכנו ממכשיר אחר.');
+                        if (!isInitialSnapshot) showSyncUpdateBanner('הנתונים עודכנו.');
                     }
                 },
                 {
@@ -9729,7 +9724,7 @@ body.dark-mode .data-updated-badge {
                             window.inbox = remoteInbox;
                         }
                         if (typeof window.renderInbox === 'function') window.renderInbox();
-                        if (!isInitialSnapshot && isRemoteUpdateFromAnotherDevice(data)) showSyncUpdateBanner('תיבת הדואר עודכנה ממכשיר אחר.');
+                        if (!isInitialSnapshot) showSyncUpdateBanner('הנתונים עודכנו.');
                     }
                 }
             ];
@@ -10255,6 +10250,7 @@ body.dark-mode .data-updated-badge {
             if (user && !isInitialized) {
                 isInitialized = true;
                 closeAuthModal();
+                showSyncUpdateBanner('התחברת בהצלחה.');
                 // Load data from Firebase when user signs in
                 await loadAllDataFromFirebase();
                 initializeRealtimeDataListeners();
