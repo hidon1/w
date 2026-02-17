@@ -57,7 +57,7 @@ echo ""
 
 # Check that Firebase config is present
 echo "5️⃣  Checking Firebase configuration..."
-if grep -q "hidon1-e4c91" firebase-config.js; then
+if grep -q "wine-f57cb" firebase-config.js; then
     echo "✅ Firebase project configuration found"
 else
     echo "❌ Firebase configuration is missing or incorrect"
@@ -101,10 +101,10 @@ echo "✨ All checks passed!"
 echo ""
 echo "📋 Next steps:"
 echo "1. Open the app in a browser"
-echo "2. Verify the auth modal appears after 1 second"
+echo "2. Verify the auth modal appears immediately when signed out"
 echo "3. Try signing in with Google or Email/Password"
 echo "4. Create/edit a project and verify it saves to Firebase"
 echo "5. Sign out and sign back in to verify data persists"
 echo ""
-echo "🔗 Firebase Console: https://console.firebase.google.com/project/hidon1-e4c91"
+echo "🔗 Firebase Console: https://console.firebase.google.com/project/wine-f57cb"
 echo ""
