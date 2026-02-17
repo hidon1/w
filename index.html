@@ -9641,23 +9641,114 @@ body.dark-mode .data-updated-badge {
             doc,
             setDoc,
             getDoc,
+            onSnapshot,
             serverTimestamp
         } from './firebase-config.js';
 
         let currentUser = null;
         let isInitialized = false;
-
-
-        const STORAGE_KEYS = {
-            PROJECTS: 'projects',
-            REMINDERS: 'reminders',
-            INBOX: 'inbox',
-            PREFERENCES: 'preferences',
-            STAGES_CONFIG: 'stagesConfig'
-        };
+        let realtimeListenersInitialized = false;
+        const realtimeUnsubscribers = [];
+        const currentDeviceSyncId = sessionStorage.getItem('deviceSyncId') || (() => {
+            const id = (self.crypto?.randomUUID?.() || `device-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+            sessionStorage.setItem('deviceSyncId', id);
+            return id;
+        })();
 
         function setCurrentUser(user) {
             currentUser = user;
+        }
+
+        function showSyncUpdateBanner(message) {
+            if (typeof window.showNotification === 'function') {
+                window.showNotification(message, 'success');
+            }
+        }
+
+        function isRemoteUpdateFromAnotherDevice(data) {
+            return !!data?.updatedByDeviceId && data.updatedByDeviceId !== currentDeviceSyncId;
+        }
+
+        function detachRealtimeListeners() {
+            while (realtimeUnsubscribers.length) {
+                const unsubscribe = realtimeUnsubscribers.pop();
+                try {
+                    unsubscribe();
+                } catch (error) {
+                    console.warn('Failed to detach realtime listener:', error);
+                }
+            }
+            realtimeListenersInitialized = false;
+        }
+
+        function applyRemoteProjectsData(data, isInitialSnapshot) {
+            const remoteProjects = data.projects || {};
+            if (typeof window.projects !== 'undefined') {
+                window.projects = remoteProjects;
+            }
+
+            if (data.stagesConfig) {
+                window.stagesConfig = data.stagesConfig;
+            }
+
+            if (typeof window.renderProjects === 'function') window.renderProjects();
+            if (typeof window.renderCurrentStage === 'function') window.renderCurrentStage();
+
+            if (!isInitialSnapshot && isRemoteUpdateFromAnotherDevice(data)) {
+                showSyncUpdateBanner('הנתונים סונכרנו ממכשיר אחר.');
+            }
+        }
+
+        function initializeRealtimeDataListeners() {
+            if (!currentUser || realtimeListenersInitialized) return;
+
+            const listeners = [
+                {
+                    key: 'projects',
+                    docRef: doc(db, 'accounts', currentUser.uid, 'data', 'projects'),
+                    applyData: (data, isInitialSnapshot) => applyRemoteProjectsData(data, isInitialSnapshot)
+                },
+                {
+                    key: 'reminders',
+                    docRef: doc(db, 'accounts', currentUser.uid, 'data', 'reminders'),
+                    applyData: (data, isInitialSnapshot) => {
+                        const remoteReminders = data.reminders || [];
+                        if (typeof window.reminders !== 'undefined') {
+                            window.reminders = remoteReminders;
+                        }
+                        if (typeof window.renderRemindersList === 'function') window.renderRemindersList();
+                        if (!isInitialSnapshot && isRemoteUpdateFromAnotherDevice(data)) showSyncUpdateBanner('תזכורות עודכנו ממכשיר אחר.');
+                    }
+                },
+                {
+                    key: 'inbox',
+                    docRef: doc(db, 'accounts', currentUser.uid, 'data', 'inbox'),
+                    applyData: (data, isInitialSnapshot) => {
+                        const remoteInbox = data.inbox || [];
+                        if (typeof window.inbox !== 'undefined') {
+                            window.inbox = remoteInbox;
+                        }
+                        if (typeof window.renderInbox === 'function') window.renderInbox();
+                        if (!isInitialSnapshot && isRemoteUpdateFromAnotherDevice(data)) showSyncUpdateBanner('תיבת הדואר עודכנה ממכשיר אחר.');
+                    }
+                }
+            ];
+
+            listeners.forEach(({ key, docRef, applyData }) => {
+                let isInitialSnapshot = true;
+                const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                    if (!docSnap.exists() || docSnap.metadata.hasPendingWrites) return;
+                    const data = docSnap.data() || {};
+                    applyData(data, isInitialSnapshot);
+                    isInitialSnapshot = false;
+                }, (error) => {
+                    console.error(`Realtime listener error (${key}):`, error);
+                });
+                realtimeUnsubscribers.push(unsubscribe);
+            });
+
+            realtimeListenersInitialized = true;
+            console.log('Realtime listeners initialized');
         }
 
 
@@ -9714,11 +9805,10 @@ body.dark-mode .data-updated-badge {
         }
 
         async function saveProjects(projects) {
-            localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
-                await setDoc(userDocRef, { projects, updatedAt: serverTimestamp() }, { merge: true });
+                await setDoc(userDocRef, { projects, updatedAt: serverTimestamp(), updatedByDeviceId: currentDeviceSyncId }, { merge: true });
             } catch (error) {
                 console.error('Error saving projects to Firestore:', error);
             }
@@ -9731,23 +9821,22 @@ body.dark-mode .data-updated-badge {
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(data.projects));
                         return data.projects || {};
                     }
+                    return {};
                 } catch (error) {
                     console.error('Error loading projects from Firestore:', error);
+                    return {};
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-            return data ? JSON.parse(data) : {};
+            return {};
         }
 
         async function saveReminders(reminders) {
-            localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(reminders));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
-                await setDoc(userDocRef, { reminders, updatedAt: serverTimestamp() }, { merge: true });
+                await setDoc(userDocRef, { reminders, updatedAt: serverTimestamp(), updatedByDeviceId: currentDeviceSyncId }, { merge: true });
             } catch (error) {
                 console.error('Error saving reminders to Firestore:', error);
             }
@@ -9760,23 +9849,22 @@ body.dark-mode .data-updated-badge {
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(data.reminders));
                         return data.reminders || [];
                     }
+                    return [];
                 } catch (error) {
                     console.error('Error loading reminders from Firestore:', error);
+                    return [];
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.REMINDERS);
-            return data ? JSON.parse(data) : [];
+            return [];
         }
 
         async function saveInbox(inbox) {
-            localStorage.setItem(STORAGE_KEYS.INBOX, JSON.stringify(inbox));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
-                await setDoc(userDocRef, { inbox, updatedAt: serverTimestamp() }, { merge: true });
+                await setDoc(userDocRef, { inbox, updatedAt: serverTimestamp(), updatedByDeviceId: currentDeviceSyncId }, { merge: true });
             } catch (error) {
                 console.error('Error saving inbox to Firestore:', error);
             }
@@ -9789,23 +9877,22 @@ body.dark-mode .data-updated-badge {
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        localStorage.setItem(STORAGE_KEYS.INBOX, JSON.stringify(data.inbox));
                         return data.inbox || [];
                     }
+                    return [];
                 } catch (error) {
                     console.error('Error loading inbox from Firestore:', error);
+                    return [];
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.INBOX);
-            return data ? JSON.parse(data) : [];
+            return [];
         }
 
         async function savePreferences(preferences) {
-            localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(preferences));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'preferences');
-                await setDoc(userDocRef, { preferences, updatedAt: serverTimestamp() }, { merge: true });
+                await setDoc(userDocRef, { preferences, updatedAt: serverTimestamp(), updatedByDeviceId: currentDeviceSyncId }, { merge: true });
             } catch (error) {
                 console.error('Error saving preferences to Firestore:', error);
             }
@@ -9818,23 +9905,22 @@ body.dark-mode .data-updated-badge {
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(data.preferences));
                         return data.preferences || {};
                     }
+                    return {};
                 } catch (error) {
                     console.error('Error loading preferences from Firestore:', error);
+                    return {};
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.PREFERENCES);
-            return data ? JSON.parse(data) : {};
+            return {};
         }
 
         async function saveStagesConfig(config) {
-            localStorage.setItem(STORAGE_KEYS.STAGES_CONFIG, JSON.stringify(config));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
-                await setDoc(userDocRef, { stagesConfig: config, updatedAt: serverTimestamp() }, { merge: true });
+                await setDoc(userDocRef, { stagesConfig: config, updatedAt: serverTimestamp(), updatedByDeviceId: currentDeviceSyncId }, { merge: true });
             } catch (error) {
                 console.error('Error saving stages config to Firestore:', error);
             }
@@ -9848,16 +9934,16 @@ body.dark-mode .data-updated-badge {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         if (data.stagesConfig) {
-                            localStorage.setItem(STORAGE_KEYS.STAGES_CONFIG, JSON.stringify(data.stagesConfig));
                             return data.stagesConfig;
                         }
                     }
+                    return null;
                 } catch (error) {
                     console.error('Error loading stages config from Firestore:', error);
+                    return null;
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.STAGES_CONFIG);
-            return data ? JSON.parse(data) : null;
+            return null;
         }
 
         // Show auth error message
@@ -10171,8 +10257,10 @@ body.dark-mode .data-updated-badge {
                 closeAuthModal();
                 // Load data from Firebase when user signs in
                 await loadAllDataFromFirebase();
+                initializeRealtimeDataListeners();
             } else if (!user) {
                 isInitialized = false;
+                detachRealtimeListeners();
                 // Show auth modal when user is not logged in
                 setTimeout(() => {
                     openAuthModal();
