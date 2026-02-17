@@ -9625,59 +9625,38 @@ body.dark-mode .data-updated-badge {
         }
     </script>
 
-    <!-- Firebase SDK and Authentication -->
+    <!-- Firebase Integration using storage-firebase.js module -->
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import {
-            getAuth,
-            GoogleAuthProvider,
-            signInWithPopup,
-            createUserWithEmailAndPassword,
-            signInWithEmailAndPassword,
-            signOut,
-            onAuthStateChanged
-        } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-        import {
-            getFirestore,
+            auth,
+            db,
+            signInWithGoogle,
+            registerWithEmail,
+            signInWithEmail,
+            signOutUser,
+            onAuthStateChanged,
+            setCurrentUser,
+            getCurrentUser,
+            saveProjects,
+            loadProjects as loadProjectsFromFirebase,
+            saveReminders,
+            loadReminders,
+            saveInbox,
+            loadInbox,
+            savePreferences,
+            loadPreferences,
+            saveStagesConfig,
+            loadStagesConfig,
             doc,
             setDoc,
             getDoc,
             serverTimestamp
-        } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-
-        const firebaseConfig = window.FIREBASE_CONFIG || {
-            apiKey: "AIzaSyABKn0GfHYi_1UG_0sfSn68CNNz4Q9nS7g",
-            authDomain: "hidon1-e4c91.firebaseapp.com",
-            projectId: "hidon1-e4c91",
-            storageBucket: "hidon1-e4c91.firebasestorage.app",
-            messagingSenderId: "411517496015",
-            appId: "1:411517496015:web:2d9c176783d062110465ba"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const googleProvider = new GoogleAuthProvider();
+        } from './storage-firebase.js';
 
         let currentUser = null;
+        let isInitialized = false;
 
-        const DATA_KEYS = ['projects', 'reminders', 'inbox', 'stagesConfig', 'preferences'];
-
-        function parseLocalJson(key) {
-            const value = localStorage.getItem(key);
-            if (!value) return null;
-            try {
-                return JSON.parse(value);
-            } catch (error) {
-                console.warn(`Failed to parse localStorage key: ${key}`, error);
-                return null;
-            }
-        }
-
-        function writeLocalJson(key, value) {
-            localStorage.setItem(key, JSON.stringify(value));
-        }
-
+        // Show auth error message
         function showAuthError(message) {
             const errorDiv = document.getElementById('authError');
             if (!errorDiv) return;
@@ -9685,6 +9664,7 @@ body.dark-mode .data-updated-badge {
             errorDiv.style.display = 'block';
         }
 
+        // Clear auth error message
         function clearAuthError() {
             const errorDiv = document.getElementById('authError');
             if (!errorDiv) return;
@@ -9692,6 +9672,7 @@ body.dark-mode .data-updated-badge {
             errorDiv.style.display = 'none';
         }
 
+        // Update UI based on authentication state
         function updateAuthUi() {
             const authStatus = document.getElementById('authStatus');
             const loginBtn = document.getElementById('loginBtn');
@@ -9719,53 +9700,94 @@ body.dark-mode .data-updated-badge {
             }
         }
 
-        async function syncAllDataToFirestore() {
+        // Load all data from Firebase after authentication
+        async function loadAllDataFromFirebase() {
             if (!currentUser) return;
-            const payload = {};
-            DATA_KEYS.forEach((key) => {
-                const parsed = parseLocalJson(key);
-                if (parsed !== null) payload[key] = parsed;
-            });
 
-            await setDoc(doc(db, 'users', currentUser.uid, 'app', 'state'), {
-                ...payload,
-                updatedAt: serverTimestamp()
-            }, { merge: true });
-        }
+            try {
+                // Load all data from Firebase
+                const [projects, reminders, inbox, preferences, stagesConf] = await Promise.all([
+                    loadProjectsFromFirebase(),
+                    loadReminders(),
+                    loadInbox(),
+                    loadPreferences(),
+                    loadStagesConfig()
+                ]);
 
-        async function loadAllDataFromFirestore(user) {
-            const stateRef = doc(db, 'users', user.uid, 'app', 'state');
-            const stateSnap = await getDoc(stateRef);
-            if (!stateSnap.exists()) {
-                await syncAllDataToFirestore();
-                return;
-            }
-
-            const data = stateSnap.data();
-            DATA_KEYS.forEach((key) => {
-                if (data[key] !== undefined) {
-                    writeLocalJson(key, data[key]);
+                // Update global variables if they exist
+                if (typeof window.projects !== 'undefined' && projects && Object.keys(projects).length > 0) {
+                    window.projects = projects;
                 }
-            });
+                if (typeof window.reminders !== 'undefined' && reminders) {
+                    window.reminders = reminders;
+                }
+                if (typeof window.inbox !== 'undefined' && inbox) {
+                    window.inbox = inbox;
+                }
+                if (stagesConf) {
+                    window.stagesConfig = stagesConf;
+                }
 
-            if (typeof window.renderProjects === 'function') window.renderProjects();
-            if (typeof window.renderCurrentStage === 'function') window.renderCurrentStage();
-            if (typeof window.renderRemindersList === 'function') window.renderRemindersList();
-            if (typeof window.renderInbox === 'function') window.renderInbox();
+                // Reload UI
+                if (typeof window.renderProjects === 'function') window.renderProjects();
+                if (typeof window.renderCurrentStage === 'function') window.renderCurrentStage();
+                if (typeof window.renderRemindersList === 'function') window.renderRemindersList();
+                if (typeof window.renderInbox === 'function') window.renderInbox();
+
+                console.log('Successfully loaded data from Firebase');
+            } catch (error) {
+                console.error('Failed to load data from Firebase:', error);
+            }
         }
 
+        // Save all current data to Firebase
+        async function syncAllDataToFirebase() {
+            if (!currentUser) return;
+
+            try {
+                const promises = [];
+
+                // Save projects
+                if (typeof window.projects !== 'undefined') {
+                    promises.push(saveProjects(window.projects));
+                }
+
+                // Save reminders
+                if (typeof window.reminders !== 'undefined') {
+                    promises.push(saveReminders(window.reminders));
+                }
+
+                // Save inbox
+                if (typeof window.inbox !== 'undefined') {
+                    promises.push(saveInbox(window.inbox));
+                }
+
+                // Save stages config
+                if (typeof window.stagesConfig !== 'undefined') {
+                    promises.push(saveStagesConfig(window.stagesConfig));
+                }
+
+                await Promise.all(promises);
+                console.log('Successfully synced data to Firebase');
+            } catch (error) {
+                console.error('Failed to sync data to Firebase:', error);
+            }
+        }
+
+        // Debounced sync function
         let syncTimeout = null;
         function queueSync() {
             if (!currentUser) return;
             if (syncTimeout) clearTimeout(syncTimeout);
             syncTimeout = setTimeout(() => {
-                syncAllDataToFirestore().catch((error) => {
+                syncAllDataToFirebase().catch((error) => {
                     console.error('Firebase sync failed:', error);
                 });
                 syncTimeout = null;
             }, 500);
         }
 
+        // Hook into save functions to trigger Firebase sync
         function wireSaveHooks() {
             const hookTargets = ['saveAllProjects', 'queueRemindersSave', 'queueInboxSave'];
             hookTargets.forEach((fnName) => {
@@ -9778,25 +9800,29 @@ body.dark-mode .data-updated-badge {
                 };
             });
 
+            // Sync on page unload
             window.addEventListener('beforeunload', () => {
                 if (currentUser) {
-                    syncAllDataToFirestore().catch(() => {});
+                    syncAllDataToFirebase().catch(() => {});
                 }
             });
         }
 
+        // Open authentication modal
         function openAuthModal() {
             const modal = document.getElementById('authModal');
             if (modal) modal.style.display = 'flex';
             clearAuthError();
         }
 
+        // Close authentication modal
         function closeAuthModal() {
             const modal = document.getElementById('authModal');
             if (modal) modal.style.display = 'none';
             clearAuthError();
         }
 
+        // Toggle between login and register forms
         function toggleAuthForm() {
             const loginForm = document.getElementById('loginForm');
             const registerForm = document.getElementById('registerForm');
@@ -9810,31 +9836,46 @@ body.dark-mode .data-updated-badge {
             clearAuthError();
         }
 
+        // Expose functions globally
         window.closeAuthModal = closeAuthModal;
         window.toggleAuthForm = toggleAuthForm;
 
+        // Initialize Firebase integration when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('Firebase integration initializing...');
+
+            // Wire save hooks
             wireSaveHooks();
 
+            // Set up auth modal buttons
             document.getElementById('loginBtn')?.addEventListener('click', openAuthModal);
+            
             document.getElementById('logoutBtn')?.addEventListener('click', async () => {
                 try {
-                    await signOut(auth);
+                    await signOutUser();
+                    currentUser = null;
+                    updateAuthUi();
                 } catch (error) {
+                    console.error('Sign out error:', error);
                     showAuthError('שגיאה בהתנתקות. נסה שוב.');
                 }
             });
 
+            // Google Sign-In
             document.getElementById('googleSignInBtn')?.addEventListener('click', async () => {
                 clearAuthError();
                 try {
-                    await signInWithPopup(auth, googleProvider);
-                    closeAuthModal();
+                    const user = await signInWithGoogle();
+                    if (user) {
+                        closeAuthModal();
+                    }
                 } catch (error) {
-                    showAuthError('התחברות עם Google נכשלה. בדוק הגדרות Firebase.');
+                    console.error('Google sign-in error:', error);
+                    showAuthError('התחברות עם Google נכשלה. נסה שוב.');
                 }
             });
 
+            // Email/Password Login
             document.getElementById('loginForm')?.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 clearAuthError();
@@ -9842,14 +9883,21 @@ body.dark-mode .data-updated-badge {
                 const email = document.getElementById('loginEmail')?.value?.trim();
                 const password = document.getElementById('loginPassword')?.value || '';
 
+                if (!email || !password) {
+                    showAuthError('נא למלא את כל השדות.');
+                    return;
+                }
+
                 try {
-                    await signInWithEmailAndPassword(auth, email, password);
+                    await signInWithEmail(email, password);
                     closeAuthModal();
                 } catch (error) {
+                    console.error('Email sign-in error:', error);
                     showAuthError('אימייל או סיסמה לא תקינים.');
                 }
             });
 
+            // Email/Password Registration
             document.getElementById('registerForm')?.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 clearAuthError();
@@ -9858,36 +9906,65 @@ body.dark-mode .data-updated-badge {
                 const password = document.getElementById('registerPassword')?.value || '';
                 const confirmPassword = document.getElementById('registerPasswordConfirm')?.value || '';
 
+                if (!email || !password || !confirmPassword) {
+                    showAuthError('נא למלא את כל השדות.');
+                    return;
+                }
+
                 if (password !== confirmPassword) {
                     showAuthError('הסיסמאות לא תואמות.');
                     return;
                 }
 
+                if (password.length < 6) {
+                    showAuthError('הסיסמה חייבת להכיל לפחות 6 תווים.');
+                    return;
+                }
+
                 try {
-                    await createUserWithEmailAndPassword(auth, email, password);
+                    await registerWithEmail(email, password);
                     closeAuthModal();
                 } catch (error) {
-                    showAuthError('ההרשמה נכשלה. בדוק את הפרטים ונסה שוב.');
+                    console.error('Registration error:', error);
+                    let errorMessage = 'ההרשמה נכשלה. נסה שוב.';
+                    if (error.code === 'auth/email-already-in-use') {
+                        errorMessage = 'האימייל כבר קיים במערכת.';
+                    } else if (error.code === 'auth/invalid-email') {
+                        errorMessage = 'כתובת אימייל לא תקינה.';
+                    }
+                    showAuthError(errorMessage);
                 }
             });
 
+            // Close modal on background click
             const authModal = document.getElementById('authModal');
             authModal?.addEventListener('click', (event) => {
                 if (event.target === authModal) closeAuthModal();
             });
+
+            console.log('Firebase integration initialized');
         });
 
+        // Listen for authentication state changes
         onAuthStateChanged(auth, async (user) => {
+            console.log('Auth state changed:', user ? user.email : 'No user');
             currentUser = user;
+            setCurrentUser(user);
             window.currentFirebaseUser = user;
             updateAuthUi();
 
-            if (!user) return;
-
-            try {
-                await loadAllDataFromFirestore(user);
-            } catch (error) {
-                console.error('Failed to load Firestore state:', error);
+            if (user && !isInitialized) {
+                isInitialized = true;
+                // Load data from Firebase when user signs in
+                await loadAllDataFromFirebase();
+            } else if (!user) {
+                isInitialized = false;
+                // Show auth modal if user is not logged in (only on first load)
+                if (!localStorage.getItem('skipAuthModal')) {
+                    setTimeout(() => {
+                        openAuthModal();
+                    }, 1000);
+                }
             }
         });
     </script>
