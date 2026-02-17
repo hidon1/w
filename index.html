@@ -6022,30 +6022,10 @@ body.dark-mode .data-updated-badge {
         let currentEditableDetailElement = null;
         let graphComparisonMode = null;
         let comparisonProjectId = null;
-        let inbox = JSON.parse(localStorage.getItem('inbox')) || [];
-        let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+        let inbox = [];
+        let reminders = [];
 
         function syncRuntimeDataFromStorage() {
-            try {
-                projects = JSON.parse(localStorage.getItem('projects')) || projects || {};
-            } catch (error) {
-                console.warn('Failed to parse projects from localStorage:', error);
-            }
-
-            try {
-                reminders = JSON.parse(localStorage.getItem('reminders')) || [];
-            } catch (error) {
-                console.warn('Failed to parse reminders from localStorage:', error);
-                reminders = [];
-            }
-
-            try {
-                inbox = JSON.parse(localStorage.getItem('inbox')) || [];
-            } catch (error) {
-                console.warn('Failed to parse inbox from localStorage:', error);
-                inbox = [];
-            }
-
             window.projects = projects;
             window.reminders = reminders;
             window.inbox = inbox;
@@ -6176,18 +6156,7 @@ body.dark-mode .data-updated-badge {
             return;
         }
         function mergeStoredStagesConfig() {
-            const savedStagesConfig = localStorage.getItem('stagesConfig');
-            if (!savedStagesConfig) return;
-            try {
-                const parsedConfig = JSON.parse(savedStagesConfig);
-                Object.keys(parsedConfig).forEach(stageId => {
-                    if (parsedConfig[stageId].customMetrics && stagesConfig[stageId]) {
-                        stagesConfig[stageId].customMetrics = parsedConfig[stageId].customMetrics;
-                    }
-                });
-            } catch (e) {
-                console.error('Failed to load stagesConfig from localStorage', e);
-            }
+            // Firebase-only mode: stagesConfig is loaded from Firestore snapshots.
         }
         
         // Local-only storage - no cloud functions needed
@@ -6195,20 +6164,10 @@ body.dark-mode .data-updated-badge {
         
         // Debounced save functions for reminders and inbox (local storage only)
         function queueRemindersSave() {
-            // Save reminders to localStorage
-            try {
-                localStorage.setItem('reminders', JSON.stringify(reminders));
-            } catch (e) {
-                console.warn('localStorage save failed for reminders:', e);
-            }
+            // Firebase hooks trigger sync; no localStorage persistence in Firebase-only mode.
         }
         function queueInboxSave() {
-            // Save inbox to localStorage
-            try {
-                localStorage.setItem('inbox', JSON.stringify(inbox));
-            } catch (e) {
-                console.warn('localStorage save failed for inbox:', e);
-            }
+            // Firebase hooks trigger sync; no localStorage persistence in Firebase-only mode.
         }
         function applySharedAccess(permissionData, ownerUid, ownerEmail) {
             // Shared access not supported in local-only mode
@@ -6471,14 +6430,12 @@ body.dark-mode .data-updated-badge {
             });
             
             if (remindersUpdated) {
-                localStorage.setItem('reminders', JSON.stringify(reminders));
                 renderRemindersList();
                 // Sync reminders to cloud (debounced to avoid excessive writes)
                 queueRemindersSave();
             }
             
             if (inboxUpdated) {
-                localStorage.setItem('inbox', JSON.stringify(inbox));
                 // Sync inbox to cloud (debounced to avoid excessive writes)
                 queueInboxSave();
             }
@@ -6661,17 +6618,6 @@ body.dark-mode .data-updated-badge {
                     // Also add to in-memory array
                     reminders.push(newReminder);
                     
-                    // Backup to localStorage (metadata only, without large base64 images)
-                    try {
-                        const remindersCopy = reminders.map(r => ({
-                            ...r,
-                            // Don't store base64 in localStorage to avoid quota
-                            imageUrl: r.imageUrl && r.imageUrl.startsWith('http') ? r.imageUrl : null
-                        }));
-                        localStorage.setItem('reminders', JSON.stringify(remindersCopy));
-                    } catch (storageErr) {
-                        console.warn('localStorage save failed (using IndexedDB instead):', storageErr);
-                    }
                     
                     reminderTextInput.value = '';
                     reminderDateTimeInput.value = '';
@@ -6679,6 +6625,7 @@ body.dark-mode .data-updated-badge {
                     if (soundSelect) soundSelect.value = 'alarm1';
                     removeReminderImage();
                     renderRemindersList();
+                    queueRemindersSave();
                     checkReminders();
                 } catch (error) {
                     console.error('Error adding reminder:', error);
@@ -6732,18 +6679,9 @@ body.dark-mode .data-updated-badge {
                 console.error('Error deleting from IndexedDB:', error);
             }
             
-            // Update localStorage backup
-            try {
-                const remindersCopy = reminders.map(r => ({
-                    ...r,
-                    imageUrl: r.imageUrl && r.imageUrl.startsWith('http') ? r.imageUrl : null
-                }));
-                localStorage.setItem('reminders', JSON.stringify(remindersCopy));
-            } catch (storageErr) {
-                console.warn('localStorage update failed:', storageErr);
-            }
             
             renderRemindersList();
+            queueRemindersSave();
         }
         function openInboxModal() {
             closeSidebar();
@@ -6824,7 +6762,7 @@ body.dark-mode .data-updated-badge {
         }
         async function deleteInbox(id) {
             inbox = inbox.filter(r => r.id !== id);
-            localStorage.setItem('inbox', JSON.stringify(inbox));
+            queueInboxSave();
             renderInboxList();
             updateInboxBadge();
         }
@@ -6835,6 +6773,7 @@ body.dark-mode .data-updated-badge {
             fixedDashboardSection.style.display = 'none';
             remindersModal.style.display = 'flex';
             renderRemindersList();
+            queueRemindersSave();
         }
         function closeRemindersModal() {
             remindersModal.style.display = 'none';
@@ -6998,8 +6937,8 @@ body.dark-mode .data-updated-badge {
             return newProject;
         }
         function loadProjects() {
-            const storedProjects = localStorage.getItem('projects');
-            let loaded = storedProjects ? JSON.parse(storedProjects) : {};
+            // Firebase-only mode: do not load project data from localStorage.
+            let loaded = {};
             if (Object.keys(loaded).length === 0) {
                 loaded['default_project'] = createNewProjectData('פרויקט ראשי');
             }
@@ -7055,12 +6994,7 @@ body.dark-mode .data-updated-badge {
         }
         
         function saveAllProjects() {
-            try {
-                localStorage.setItem('projects', JSON.stringify(projects));
-                localStorage.setItem('stagesConfig', JSON.stringify(stagesConfig)); // Save stagesConfig too
-            } catch (storageErr) {
-                handleLocalStorageError(storageErr);
-            }
+            // Firebase hooks trigger sync; no localStorage persistence in Firebase-only mode.
         }
         
         /**
@@ -9282,19 +9216,9 @@ body.dark-mode .data-updated-badge {
             }
         }
         
-        // Helper function to safely load and render from localStorage
+        // Firebase-only mode: do not load data from localStorage.
         function loadAndRenderFromLocalStorage() {
-            const localProjects = localStorage.getItem('projects');
-            if (localProjects) {
-                try {
-                    projects = JSON.parse(localProjects);
-                    if (typeof renderAllMainContent === 'function') {
-                        renderAllMainContent();
-                    }
-                } catch (parseErr) {
-                    console.error('Error parsing localStorage projects:', parseErr);
-                }
-            }
+            return;
         }
         
         function applyStateToUI(state) {
@@ -9658,6 +9582,16 @@ body.dark-mode .data-updated-badge {
             STAGES_CONFIG: 'stagesConfig'
         };
 
+        function clearLegacyLocalData() {
+            Object.values(STORAGE_KEYS).forEach((key) => {
+                try {
+                    localStorage.removeItem(key);
+                } catch (error) {
+                    console.warn(`Failed to clear localStorage key ${key}:`, error);
+                }
+            });
+        }
+
         function setCurrentUser(user) {
             currentUser = user;
         }
@@ -9682,13 +9616,11 @@ body.dark-mode .data-updated-badge {
 
         function applyRemoteProjectsData(data, isInitialSnapshot) {
             const remoteProjects = data.projects || {};
-            localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(remoteProjects));
             if (typeof window.projects !== 'undefined') {
                 window.projects = remoteProjects;
             }
 
             if (data.stagesConfig) {
-                localStorage.setItem(STORAGE_KEYS.STAGES_CONFIG, JSON.stringify(data.stagesConfig));
                 window.stagesConfig = data.stagesConfig;
             }
 
@@ -9696,7 +9628,7 @@ body.dark-mode .data-updated-badge {
             if (typeof window.renderCurrentStage === 'function') window.renderCurrentStage();
 
             if (!isInitialSnapshot) {
-                showSyncUpdateBanner('הנתונים סונכרנו ממכשיר אחר.');
+                showSyncUpdateBanner('הנתונים עודכנו בכל המכשירים.');
             }
         }
 
@@ -9714,12 +9646,11 @@ body.dark-mode .data-updated-badge {
                     docRef: doc(db, 'accounts', currentUser.uid, 'data', 'reminders'),
                     applyData: (data, isInitialSnapshot) => {
                         const remoteReminders = data.reminders || [];
-                        localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(remoteReminders));
                         if (typeof window.reminders !== 'undefined') {
                             window.reminders = remoteReminders;
                         }
                         if (typeof window.renderRemindersList === 'function') window.renderRemindersList();
-                        if (!isInitialSnapshot) showSyncUpdateBanner('תזכורות עודכנו ממכשיר אחר.');
+                        if (!isInitialSnapshot) showSyncUpdateBanner('הנתונים עודכנו בכל המכשירים.');
                     }
                 },
                 {
@@ -9727,12 +9658,11 @@ body.dark-mode .data-updated-badge {
                     docRef: doc(db, 'accounts', currentUser.uid, 'data', 'inbox'),
                     applyData: (data, isInitialSnapshot) => {
                         const remoteInbox = data.inbox || [];
-                        localStorage.setItem(STORAGE_KEYS.INBOX, JSON.stringify(remoteInbox));
                         if (typeof window.inbox !== 'undefined') {
                             window.inbox = remoteInbox;
                         }
                         if (typeof window.renderInbox === 'function') window.renderInbox();
-                        if (!isInitialSnapshot) showSyncUpdateBanner('תיבת הדואר עודכנה ממכשיר אחר.');
+                        if (!isInitialSnapshot) showSyncUpdateBanner('הנתונים עודכנו בכל המכשירים.');
                     }
                 }
             ];
@@ -9808,7 +9738,6 @@ body.dark-mode .data-updated-badge {
         }
 
         async function saveProjects(projects) {
-            localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
@@ -9825,7 +9754,6 @@ body.dark-mode .data-updated-badge {
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(data.projects));
                         return data.projects || {};
                     }
                     return {};
@@ -9834,12 +9762,10 @@ body.dark-mode .data-updated-badge {
                     return {};
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-            return data ? JSON.parse(data) : {};
+            return {};
         }
 
         async function saveReminders(reminders) {
-            localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(reminders));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
@@ -9856,7 +9782,6 @@ body.dark-mode .data-updated-badge {
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(data.reminders));
                         return data.reminders || [];
                     }
                     return [];
@@ -9865,12 +9790,10 @@ body.dark-mode .data-updated-badge {
                     return [];
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.REMINDERS);
-            return data ? JSON.parse(data) : [];
+            return [];
         }
 
         async function saveInbox(inbox) {
-            localStorage.setItem(STORAGE_KEYS.INBOX, JSON.stringify(inbox));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
@@ -9887,7 +9810,6 @@ body.dark-mode .data-updated-badge {
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        localStorage.setItem(STORAGE_KEYS.INBOX, JSON.stringify(data.inbox));
                         return data.inbox || [];
                     }
                     return [];
@@ -9896,12 +9818,10 @@ body.dark-mode .data-updated-badge {
                     return [];
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.INBOX);
-            return data ? JSON.parse(data) : [];
+            return [];
         }
 
         async function savePreferences(preferences) {
-            localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(preferences));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'preferences');
@@ -9918,7 +9838,6 @@ body.dark-mode .data-updated-badge {
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(data.preferences));
                         return data.preferences || {};
                     }
                     return {};
@@ -9927,12 +9846,10 @@ body.dark-mode .data-updated-badge {
                     return {};
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.PREFERENCES);
-            return data ? JSON.parse(data) : {};
+            return {};
         }
 
         async function saveStagesConfig(config) {
-            localStorage.setItem(STORAGE_KEYS.STAGES_CONFIG, JSON.stringify(config));
             if (!currentUser) return;
             try {
                 const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
@@ -9950,8 +9867,7 @@ body.dark-mode .data-updated-badge {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         if (data.stagesConfig) {
-                            localStorage.setItem(STORAGE_KEYS.STAGES_CONFIG, JSON.stringify(data.stagesConfig));
-                            return data.stagesConfig;
+                                        return data.stagesConfig;
                         }
                     }
                     return null;
@@ -9960,8 +9876,7 @@ body.dark-mode .data-updated-badge {
                     return null;
                 }
             }
-            const data = localStorage.getItem(STORAGE_KEYS.STAGES_CONFIG);
-            return data ? JSON.parse(data) : null;
+            return null;
         }
 
         // Show auth error message
@@ -10003,7 +9918,7 @@ body.dark-mode .data-updated-badge {
                 if (connectionStatus) {
                     connectionStatus.classList.add('disconnected');
                     connectionStatus.classList.remove('connected');
-                    connectionStatus.querySelector('span').textContent = 'עובד מקומית';
+                    connectionStatus.querySelector('span').textContent = 'ממתין להתחברות ל-Firebase';
                 }
             }
         }
@@ -10151,6 +10066,8 @@ body.dark-mode .data-updated-badge {
         // Initialize Firebase integration when DOM is ready
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('Firebase integration initializing...');
+
+            clearLegacyLocalData();
 
             // Wire save hooks
             wireSaveHooks();
