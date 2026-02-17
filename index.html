@@ -6025,13 +6025,56 @@ body.dark-mode .data-updated-badge {
         let inbox = [];
         let reminders = [];
 
-        function syncRuntimeDataFromStorage() {
+        function setProjectsData(nextProjects) {
+            if (nextProjects && typeof nextProjects === 'object') {
+                projects = nextProjects;
+            } else {
+                projects = {};
+            }
+
+            if (!projects[currentProjectId]) {
+                const firstProjectId = Object.keys(projects)[0];
+                currentProjectId = firstProjectId || 'default_project';
+                if (!projects[currentProjectId]) {
+                    projects[currentProjectId] = createNewProjectData('פרויקט ראשי');
+                }
+                localStorage.setItem('currentProjectId', currentProjectId);
+            }
+
             window.projects = projects;
+        }
+
+        function setRemindersData(nextReminders) {
+            reminders = Array.isArray(nextReminders) ? nextReminders : [];
             window.reminders = reminders;
+        }
+
+        function setInboxData(nextInbox) {
+            inbox = Array.isArray(nextInbox) ? nextInbox : [];
             window.inbox = inbox;
         }
 
+        function setStagesConfigData(nextConfig) {
+            if (!nextConfig || typeof nextConfig !== 'object') return;
+            Object.keys(stagesConfig).forEach((key) => {
+                delete stagesConfig[key];
+            });
+            Object.assign(stagesConfig, nextConfig);
+            window.stagesConfig = stagesConfig;
+        }
+
+        function syncRuntimeDataFromStorage() {
+            setProjectsData(projects);
+            setRemindersData(reminders);
+            setInboxData(inbox);
+            window.stagesConfig = stagesConfig;
+        }
+
         window.syncRuntimeDataFromStorage = syncRuntimeDataFromStorage;
+        window.setProjectsData = setProjectsData;
+        window.setRemindersData = setRemindersData;
+        window.setInboxData = setInboxData;
+        window.setStagesConfigData = setStagesConfigData;
         syncRuntimeDataFromStorage();
         // Card transition duration - set via JS at line 4984: projectDetailsCard.style.transition = 'left 0.3s ease'
         // Used to time the delayed visibility hide after slide-out animation completes
@@ -9616,19 +9659,25 @@ body.dark-mode .data-updated-badge {
 
         function applyRemoteProjectsData(data, isInitialSnapshot) {
             const remoteProjects = data.projects || {};
-            if (typeof window.projects !== 'undefined') {
+            if (typeof window.setProjectsData === 'function') {
+                window.setProjectsData(remoteProjects);
+            } else if (typeof window.projects !== 'undefined') {
                 window.projects = remoteProjects;
             }
 
             if (data.stagesConfig) {
-                window.stagesConfig = data.stagesConfig;
+                if (typeof window.setStagesConfigData === 'function') {
+                    window.setStagesConfigData(data.stagesConfig);
+                } else {
+                    window.stagesConfig = data.stagesConfig;
+                }
             }
 
             if (typeof window.renderProjects === 'function') window.renderProjects();
             if (typeof window.renderCurrentStage === 'function') window.renderCurrentStage();
 
             if (!isInitialSnapshot) {
-                showSyncUpdateBanner('הנתונים עודכנו בכל המכשירים.');
+                showSyncUpdateBanner('הנתונים עודכנו.');
             }
         }
 
@@ -9646,11 +9695,13 @@ body.dark-mode .data-updated-badge {
                     docRef: doc(db, 'accounts', currentUser.uid, 'data', 'reminders'),
                     applyData: (data, isInitialSnapshot) => {
                         const remoteReminders = data.reminders || [];
-                        if (typeof window.reminders !== 'undefined') {
+                        if (typeof window.setRemindersData === 'function') {
+                            window.setRemindersData(remoteReminders);
+                        } else if (typeof window.reminders !== 'undefined') {
                             window.reminders = remoteReminders;
                         }
                         if (typeof window.renderRemindersList === 'function') window.renderRemindersList();
-                        if (!isInitialSnapshot) showSyncUpdateBanner('הנתונים עודכנו בכל המכשירים.');
+                        if (!isInitialSnapshot) showSyncUpdateBanner('הנתונים עודכנו.');
                     }
                 },
                 {
@@ -9658,11 +9709,13 @@ body.dark-mode .data-updated-badge {
                     docRef: doc(db, 'accounts', currentUser.uid, 'data', 'inbox'),
                     applyData: (data, isInitialSnapshot) => {
                         const remoteInbox = data.inbox || [];
-                        if (typeof window.inbox !== 'undefined') {
+                        if (typeof window.setInboxData === 'function') {
+                            window.setInboxData(remoteInbox);
+                        } else if (typeof window.inbox !== 'undefined') {
                             window.inbox = remoteInbox;
                         }
                         if (typeof window.renderInbox === 'function') window.renderInbox();
-                        if (!isInitialSnapshot) showSyncUpdateBanner('הנתונים עודכנו בכל המכשירים.');
+                        if (!isInitialSnapshot) showSyncUpdateBanner('הנתונים עודכנו.');
                     }
                 }
             ];
@@ -9938,17 +9991,33 @@ body.dark-mode .data-updated-badge {
                 ]);
 
                 // Update global variables if they exist
-                if (typeof window.projects !== 'undefined' && projects && Object.keys(projects).length > 0) {
-                    window.projects = projects;
+                if (projects && Object.keys(projects).length > 0) {
+                    if (typeof window.setProjectsData === 'function') {
+                        window.setProjectsData(projects);
+                    } else if (typeof window.projects !== 'undefined') {
+                        window.projects = projects;
+                    }
                 }
-                if (typeof window.reminders !== 'undefined' && reminders) {
-                    window.reminders = reminders;
+                if (reminders) {
+                    if (typeof window.setRemindersData === 'function') {
+                        window.setRemindersData(reminders);
+                    } else if (typeof window.reminders !== 'undefined') {
+                        window.reminders = reminders;
+                    }
                 }
-                if (typeof window.inbox !== 'undefined' && inbox) {
-                    window.inbox = inbox;
+                if (inbox) {
+                    if (typeof window.setInboxData === 'function') {
+                        window.setInboxData(inbox);
+                    } else if (typeof window.inbox !== 'undefined') {
+                        window.inbox = inbox;
+                    }
                 }
                 if (stagesConf) {
-                    window.stagesConfig = stagesConf;
+                    if (typeof window.setStagesConfigData === 'function') {
+                        window.setStagesConfigData(stagesConf);
+                    } else {
+                        window.stagesConfig = stagesConf;
+                    }
                 }
 
                 // Reload UI
