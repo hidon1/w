@@ -9627,833 +9627,268 @@ body.dark-mode .data-updated-badge {
 
     <!-- Firebase SDK and Authentication -->
     <script type="module">
-        // Import Firebase modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { 
-            getAuth, 
-            GoogleAuthProvider, 
-            signInWithPopup, 
-            signInWithRedirect,
-            getRedirectResult,
-            setPersistence,
-            browserLocalPersistence,
-            inMemoryPersistence,
+        import {
+            getAuth,
+            GoogleAuthProvider,
+            signInWithPopup,
             createUserWithEmailAndPassword,
             signInWithEmailAndPassword,
-            signOut as firebaseSignOut,
-            onAuthStateChanged as firebaseOnAuthStateChanged
+            signOut,
+            onAuthStateChanged
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-        import { 
-            getFirestore, 
-            doc, 
-            setDoc, 
-            getDoc, 
-            onSnapshot,
-            updateDoc,
+        import {
+            getFirestore,
+            doc,
+            setDoc,
+            getDoc,
             serverTimestamp
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-        // Firebase configuration
-        const firebaseConfig = {
+        const firebaseConfig = window.FIREBASE_CONFIG || {
             apiKey: "AIzaSyABKn0GfHYi_1UG_0sfSn68CNNz4Q9nS7g",
             authDomain: "hidon1-e4c91.firebaseapp.com",
-            databaseURL: "https://hidon1-e4c91-default-rtdb.firebaseio.com",
             projectId: "hidon1-e4c91",
             storageBucket: "hidon1-e4c91.firebasestorage.app",
             messagingSenderId: "411517496015",
-            appId: "1:411517496015:web:2d9c176783d062110465ba",
-            measurementId: "G-FWTSZNY72T"
+            appId: "1:411517496015:web:2d9c176783d062110465ba"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const googleProvider = new GoogleAuthProvider();
-        
-        // Configure Google Provider for better compatibility
-        googleProvider.setCustomParameters({
-            prompt: 'select_account'
-        });
-        
-        // Add required scopes
-        googleProvider.addScope('profile');
-        googleProvider.addScope('email');
 
-        async function configureAuthPersistence() {
-            try {
-                await setPersistence(auth, browserLocalPersistence);
-            } catch (error) {
-                console.warn('Local persistence unavailable, using in-memory persistence:', error);
-                await setPersistence(auth, inMemoryPersistence);
-            }
-        }
-
-        function isEmbeddedWebView() {
-            const ua = navigator.userAgent || '';
-            const hasGenericWebViewToken = /\bwv\b|WebView|(iPhone|iPod|iPad)(?!.*Safari)/i.test(ua);
-            const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(ua);
-            const isLineInApp = /Line\//i.test(ua);
-            return hasGenericWebViewToken || isFacebookInApp || isLineInApp;
-        }
-
-        function shouldPreferRedirectLogin() {
-            return isEmbeddedWebView();
-        }
-
-        function mapGoogleAuthError(error) {
-            if (!error || !error.code) {
-                return 'שגיאה בהתחברות עם Google. נסה שוב.';
-            }
-
-            // Handle unauthorized domain error
-            if (error.code === 'auth/unauthorized-domain') {
-                return 'דומיין זה לא מאושר להתחברות Google. אנא הוסף את הדומיין ב-Firebase Console ב-Authentication > Settings > Authorized domains.';
-            }
-
-            // Handle web storage errors
-            if (error.code === 'auth/web-storage-unsupported') {
-                return 'אחסון הדפדפן אינו זמין. אנא ודא שקובצי Cookie מופעלים ונסה שוב.';
-            }
-
-            // Handle OAuth configuration errors
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-oauth-client-id') {
-                return 'הגדרת Google Sign-In אינה תקינה. אנא ודא שה-OAuth מוגדר כראוי ב-Firebase Console.';
-            }
-
-            // Handle network errors
-            if (error.code === 'auth/network-request-failed') {
-                return 'שגיאת רשת. אנא בדוק את החיבור לאינטרנט ונסה שוב.';
-            }
-
-            // Handle account errors
-            if (error.code === 'auth/account-exists-with-different-credential') {
-                return 'חשבון עם כתובת דוא"ל זו כבר קיים עם שיטת התחברות אחרת.';
-            }
-
-            // Generic error message
-            return `שגיאה בהתחברות עם Google: ${error.message || error.code}`;
-        }
-
-        // Global variables for authentication state
         let currentUser = null;
-        let authInitialized = false;
-        let authTemporarilyUnavailable = false;
-        let realtimeUnsubscribers = [];
-        let dataUpdatedBadgeTimeout = null;
 
-        // Make auth functions globally available
-        window.firebaseAuth = auth;
-        window.firebaseDb = db;
-        window.currentFirebaseUser = null;
+        const DATA_KEYS = ['projects', 'reminders', 'inbox', 'stagesConfig', 'preferences'];
 
-        function showDataUpdatedBadge() {
-            const badge = document.getElementById('dataUpdatedBadge');
-            if (!badge) return;
-
-            badge.classList.add('visible');
-
-            if (dataUpdatedBadgeTimeout) {
-                clearTimeout(dataUpdatedBadgeTimeout);
-            }
-
-            dataUpdatedBadgeTimeout = setTimeout(() => {
-                badge.classList.remove('visible');
-                dataUpdatedBadgeTimeout = null;
-            }, 2000);
-        }
-
-        function stopRealtimeSync() {
-            if (!realtimeUnsubscribers.length) return;
-            realtimeUnsubscribers.forEach((unsubscribe) => {
-                try {
-                    unsubscribe();
-                } catch (error) {
-                    console.warn('Failed to unsubscribe realtime listener:', error);
-                }
-            });
-            realtimeUnsubscribers = [];
-        }
-
-        function refreshUiAfterRealtimeUpdate() {
-            if (typeof renderAllMainContent === 'function') {
-                renderAllMainContent();
-            }
-            if (typeof updateInboxBadge === 'function') {
-                updateInboxBadge();
+        function parseLocalJson(key) {
+            const value = localStorage.getItem(key);
+            if (!value) return null;
+            try {
+                return JSON.parse(value);
+            } catch (error) {
+                console.warn(`Failed to parse localStorage key: ${key}`, error);
+                return null;
             }
         }
 
-        function startRealtimeSync(user) {
-            if (!user) return;
-            stopRealtimeSync();
-
-            const attachListener = (docName, payloadKey, applyData) => {
-                const docRef = doc(db, 'accounts', user.uid, 'data', docName);
-                let initialized = false;
-                const unsubscribe = onSnapshot(docRef, (snapshot) => {
-                    if (!snapshot.exists()) {
-                        initialized = true;
-                        return;
-                    }
-
-                    const data = snapshot.data();
-                    if (!data || typeof data[payloadKey] === 'undefined') {
-                        initialized = true;
-                        return;
-                    }
-
-                    const incomingSerialized = JSON.stringify(data[payloadKey]);
-                    const existingSerialized = localStorage.getItem(payloadKey);
-                    const hasChanged = incomingSerialized !== existingSerialized;
-
-                    if (hasChanged) {
-                        localStorage.setItem(payloadKey, incomingSerialized);
-                        applyData(data[payloadKey], data);
-                        refreshUiAfterRealtimeUpdate();
-                        if (initialized) {
-                            showDataUpdatedBadge();
-                        }
-                    }
-
-                    initialized = true;
-                }, (error) => {
-                    console.error(`Realtime sync error (${docName}):`, error);
-                });
-                realtimeUnsubscribers.push(unsubscribe);
-            };
-
-            attachListener('projects', 'projects', (projectsData, rawData) => {
-                projects = projectsData;
-                window.projects = projects;
-                if (rawData && rawData.stagesConfig) {
-                    const serializedStages = JSON.stringify(rawData.stagesConfig);
-                    if (serializedStages !== localStorage.getItem('stagesConfig')) {
-                        localStorage.setItem('stagesConfig', serializedStages);
-                    }
-                    if (typeof window.stagesConfig !== 'undefined') {
-                        window.stagesConfig = rawData.stagesConfig;
-                    }
-                }
-            });
-
-            attachListener('reminders', 'reminders', (remindersData) => {
-                if (Array.isArray(remindersData)) {
-                    reminders = remindersData;
-                    window.reminders = reminders;
-                }
-            });
-
-            attachListener('inbox', 'inbox', (inboxData) => {
-                if (Array.isArray(inboxData)) {
-                    inbox = inboxData;
-                    window.inbox = inbox;
-                }
-            });
+        function writeLocalJson(key, value) {
+            localStorage.setItem(key, JSON.stringify(value));
         }
 
-        // Update UI based on auth state
-        function updateAuthUI(user) {
+        function showAuthError(message) {
+            const errorDiv = document.getElementById('authError');
+            if (!errorDiv) return;
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function clearAuthError() {
+            const errorDiv = document.getElementById('authError');
+            if (!errorDiv) return;
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+        }
+
+        function updateAuthUi() {
             const authStatus = document.getElementById('authStatus');
             const loginBtn = document.getElementById('loginBtn');
             const logoutBtn = document.getElementById('logoutBtn');
             const connectionStatus = document.getElementById('connectionStatus');
-            
-            if (user) {
-                // User is signed in
-                const email = user.email || user.displayName || 'משתמש';
-                if (authStatus) authStatus.textContent = email;
+
+            if (currentUser) {
+                if (authStatus) authStatus.textContent = currentUser.email || 'משתמש מחובר';
                 if (loginBtn) loginBtn.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'block';
                 if (connectionStatus) {
-                    connectionStatus.className = 'connection-status connected';
-                    connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>מחובר לענן</span>';
+                    connectionStatus.classList.remove('disconnected');
+                    connectionStatus.classList.add('connected');
+                    connectionStatus.querySelector('span').textContent = 'מחובר ל-Firebase';
                 }
-                
             } else {
-                // User is signed out
                 if (authStatus) authStatus.textContent = 'לא מחובר';
                 if (loginBtn) loginBtn.style.display = 'block';
                 if (logoutBtn) logoutBtn.style.display = 'none';
                 if (connectionStatus) {
-                    connectionStatus.className = 'connection-status disconnected';
-                    connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>לא מחובר</span>';
-                }
-
-                if (authInitialized && !authTemporarilyUnavailable) {
-                    openAuthModal();
+                    connectionStatus.classList.add('disconnected');
+                    connectionStatus.classList.remove('connected');
+                    connectionStatus.querySelector('span').textContent = 'עובד מקומית';
                 }
             }
         }
 
-        // Force auth modal for non-authenticated users
-        function showAuthBannerIfNeeded() {
-            if (!currentUser && !authTemporarilyUnavailable) {
-                openAuthModal();
-            }
-        }
-
-        function setLocalOnlyMode(message) {
-            authTemporarilyUnavailable = true;
-            closeAuthModal();
-
-            const googleBtn = document.getElementById('googleSignInBtn');
-            if (googleBtn) {
-                googleBtn.disabled = true;
-                googleBtn.style.opacity = '0.65';
-                googleBtn.title = 'Google Sign-In לא זמין כרגע בסביבה זו';
-            }
-
-            const authStatus = document.getElementById('authStatus');
-            if (authStatus) authStatus.textContent = 'מצב מקומי בלבד';
-
-            const connectionStatus = document.getElementById('connectionStatus');
-            if (connectionStatus) {
-                connectionStatus.className = 'connection-status disconnected';
-                connectionStatus.innerHTML = '<i class="fas fa-circle"></i><span>שמירה מקומית בלבד</span>';
-            }
-
-            if (message) {
-                showNotification(message, 'warning');
-            }
-        }
-
-        // Sync data to Firestore
-        async function syncDataToFirestore(user) {
-            if (!user) return;
-            
-            try {
-                showLoading('מסנכרן נתונים...');
-                
-                // Get local data
-                const projects = localStorage.getItem('projects');
-                const reminders = localStorage.getItem('reminders');
-                const inbox = localStorage.getItem('inbox');
-                const preferences = localStorage.getItem('preferences');
-                const stagesConfig = localStorage.getItem('stagesConfig');
-                
-                // Sync projects
-                if (projects) {
-                    const projectsDocRef = doc(db, 'accounts', user.uid, 'data', 'projects');
-                    await setDoc(projectsDocRef, {
-                        projects: JSON.parse(projects),
-                        stagesConfig: stagesConfig ? JSON.parse(stagesConfig) : null,
-                        updatedAt: serverTimestamp()
-                    }, { merge: true });
-                }
-                
-                // Sync reminders
-                if (reminders) {
-                    const remindersDocRef = doc(db, 'accounts', user.uid, 'data', 'reminders');
-                    await setDoc(remindersDocRef, {
-                        reminders: JSON.parse(reminders),
-                        updatedAt: serverTimestamp()
-                    }, { merge: true });
-                }
-                
-                // Sync inbox
-                if (inbox) {
-                    const inboxDocRef = doc(db, 'accounts', user.uid, 'data', 'inbox');
-                    await setDoc(inboxDocRef, {
-                        inbox: JSON.parse(inbox),
-                        updatedAt: serverTimestamp()
-                    }, { merge: true });
-                }
-                
-                // Sync preferences
-                if (preferences) {
-                    const preferencesDocRef = doc(db, 'accounts', user.uid, 'data', 'preferences');
-                    await setDoc(preferencesDocRef, {
-                        preferences: JSON.parse(preferences),
-                        updatedAt: serverTimestamp()
-                    }, { merge: true });
-                }
-                
-                hideLoading();
-            } catch (error) {
-                console.error('Error syncing data to Firestore:', error);
-                hideLoading();
-            }
-        }
-
-        // Load data from Firestore
-        async function loadDataFromFirestore(user) {
-            if (!user) return;
-            
-            try {
-                showLoading('טוען נתונים מהענן...');
-                
-                // Load projects
-                const projectsDocRef = doc(db, 'accounts', user.uid, 'data', 'projects');
-                const projectsSnap = await getDoc(projectsDocRef);
-                if (projectsSnap.exists()) {
-                    const data = projectsSnap.data();
-                    if (data.projects) {
-                        localStorage.setItem('projects', JSON.stringify(data.projects));
-                    }
-                    if (data.stagesConfig) {
-                        localStorage.setItem('stagesConfig', JSON.stringify(data.stagesConfig));
-                    }
-                }
-                
-                // Load reminders
-                const remindersDocRef = doc(db, 'accounts', user.uid, 'data', 'reminders');
-                const remindersSnap = await getDoc(remindersDocRef);
-                if (remindersSnap.exists()) {
-                    const data = remindersSnap.data();
-                    if (data.reminders) {
-                        localStorage.setItem('reminders', JSON.stringify(data.reminders));
-                    }
-                }
-                
-                // Load inbox
-                const inboxDocRef = doc(db, 'accounts', user.uid, 'data', 'inbox');
-                const inboxSnap = await getDoc(inboxDocRef);
-                if (inboxSnap.exists()) {
-                    const data = inboxSnap.data();
-                    if (data.inbox) {
-                        localStorage.setItem('inbox', JSON.stringify(data.inbox));
-                    }
-                }
-                
-                // Load preferences
-                const preferencesDocRef = doc(db, 'accounts', user.uid, 'data', 'preferences');
-                const preferencesSnap = await getDoc(preferencesDocRef);
-                if (preferencesSnap.exists()) {
-                    const data = preferencesSnap.data();
-                    if (data.preferences) {
-                        localStorage.setItem('preferences', JSON.stringify(data.preferences));
-                    }
-                }
-                
-                syncRuntimeDataFromStorage();
-
-                // Refresh UI
-                if (typeof renderAllMainContent === 'function') {
-                    renderAllMainContent();
-                }
-                if (typeof updateInboxBadge === 'function') {
-                    updateInboxBadge();
-                }
-                
-                hideLoading();
-            } catch (error) {
-                console.error('Error loading data from Firestore:', error);
-                hideLoading();
-            }
-        }
-
-        // Auth state change handler
-        configureAuthPersistence().catch((error) => {
-            console.warn('Auth persistence configuration failed, continuing with default persistence:', error);
-        });
-
-        firebaseOnAuthStateChanged(auth, async (user) => {
-            currentUser = user;
-            window.currentFirebaseUser = user;
-            
-            updateAuthUI(user);
-            
-            if (user) {
-                // User is signed in - load data from cloud
-                await loadDataFromFirestore(user);
-                syncRuntimeDataFromStorage();
-                startRealtimeSync(user);
-                
-                // Create user document if it doesn't exist
-                const userDocRef = doc(db, 'accounts', user.uid);
-                const userSnap = await getDoc(userDocRef);
-                if (!userSnap.exists()) {
-                    await setDoc(userDocRef, {
-                        email: user.email,
-                        createdAt: serverTimestamp(),
-                        updatedAt: serverTimestamp()
-                    });
-                }
-            } else {
-                stopRealtimeSync();
-                // User is signed out - show banner
-                if (authInitialized) {
-                    showAuthBannerIfNeeded();
-                }
-            }
-            
-            authInitialized = true;
-        });
-
-        // Check for redirect result when page loads
-        getRedirectResult(auth)
-            .then(async (result) => {
-                if (!result || !result.user) return;
-                
-                console.log('Redirect result received:', result.user.email);
-                await ensureAccountExists(result.user);
-                await syncDataToFirestore(result.user);
-                closeAuthModal();
-                showNotification('התחברת בהצלחה!', 'success');
-            })
-            .catch((error) => {
-                console.error('Redirect result error:', error);
-                if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/network-request-failed') {
-                    setLocalOnlyMode('החיבור לענן לא זמין כרגע. העבודה נשמרת מקומית במכשיר.');
-                }
-                showAuthError(mapGoogleAuthError(error));
+        async function syncAllDataToFirestore() {
+            if (!currentUser) return;
+            const payload = {};
+            DATA_KEYS.forEach((key) => {
+                const parsed = parseLocalJson(key);
+                if (parsed !== null) payload[key] = parsed;
             });
 
-        // Google Sign-In
-        async function signInWithGoogle() {
-            try {
-                showLoading('מתחבר עם Google...');
-
-                // Try popup first for better UX
-                try {
-                    const result = await signInWithPopup(auth, googleProvider);
-                    await ensureAccountExists(result.user);
-                    closeAuthModal();
-                    await syncDataToFirestore(result.user);
-                    showNotification('התחברת בהצלחה!', 'success');
-                    hideLoading();
-                    return;
-                } catch (popupError) {
-                    // If popup fails, try redirect as fallback
-                    if (popupError.code === 'auth/popup-blocked' || 
-                        popupError.code === 'auth/popup-closed-by-user' ||
-                        popupError.code === 'auth/cancelled-popup-request' ||
-                        popupError.code === 'auth/operation-not-supported-in-this-environment') {
-                        
-                        console.log('Popup failed, falling back to redirect...', popupError.code);
-                        hideLoading();
-                        
-                        // Use redirect flow as fallback
-                        await signInWithRedirect(auth, googleProvider);
-                        // Function will return here, redirect result will be handled on page reload
-                        return;
-                    }
-                    // Re-throw if it's not a popup-related error
-                    throw popupError;
-                }
-            } catch (error) {
-                hideLoading();
-                // Don't show error if user closed the popup
-                if (error.code !== 'auth/popup-closed-by-user' && 
-                    error.code !== 'auth/cancelled-popup-request') {
-                    console.error('Google sign-in error:', error);
-                    if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/network-request-failed') {
-                        setLocalOnlyMode('Google לא זמין כרגע. הנתונים יישמרו מקומית עד שחיבור הענן יחזור.');
-                    }
-                    showAuthError(mapGoogleAuthError(error));
-                }
-            }
+            await setDoc(doc(db, 'users', currentUser.uid, 'app', 'state'), {
+                ...payload,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
         }
 
-        // Email/Password Login
-        async function signInWithEmail(email, password) {
-            try {
-                showLoading('מתחבר...');
-                const result = await signInWithEmailAndPassword(auth, email, password);
-
-                // Ensure account document exists for users that were created outside this app
-                await ensureAccountExists(result.user);
-
-                // If cloud data does not exist yet, upload current local data after login
-                const projectsDocRef = doc(db, 'accounts', result.user.uid, 'data', 'projects');
-                const projectsSnap = await getDoc(projectsDocRef);
-                if (!projectsSnap.exists()) {
-                    await syncDataToFirestore(result.user);
-                } else {
-                    await loadDataFromFirestore(result.user);
-                }
-
-                closeAuthModal();
-                showNotification('התחברת בהצלחה!', 'success');
-                hideLoading();
-            } catch (error) {
-                hideLoading();
-                console.error('Email sign-in error:', error);
-                let errorMessage = 'שגיאה בהתחברות';
-                if (error.code === 'auth/user-not-found') {
-                    errorMessage = 'משתמש לא נמצא';
-                } else if (error.code === 'auth/wrong-password') {
-                    errorMessage = 'סיסמה שגויה';
-                } else if (error.code === 'auth/invalid-email') {
-                    errorMessage = 'כתובת אימייל לא תקינה';
-                } else if (error.code === 'auth/network-request-failed') {
-                    errorMessage = 'אין כרגע חיבור לענן. ניתן להמשיך לעבוד והשמירה מתבצעת מקומית.';
-                    setLocalOnlyMode('אין כרגע חיבור לענן. העבודה נשמרת מקומית.');
-                }
-                showAuthError(errorMessage);
-            }
-        }
-
-        // Email/Password Registration
-        async function registerWithEmail(email, password) {
-            try {
-                showLoading('יוצר חשבון...');
-                const result = await createUserWithEmailAndPassword(auth, email, password);
-                
-                // Create user document
-                const userDocRef = doc(db, 'accounts', result.user.uid);
-                await setDoc(userDocRef, {
-                    email: result.user.email,
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp()
-                });
-                
-                closeAuthModal();
-                await syncDataToFirestore(result.user);
-                showNotification('נרשמת בהצלחה!', 'success');
-                hideLoading();
-            } catch (error) {
-                hideLoading();
-                console.error('Registration error:', error);
-                let errorMessage = 'שגיאה ברישום';
-                if (error.code === 'auth/email-already-in-use') {
-                    errorMessage = 'כתובת האימייל כבר בשימוש';
-                } else if (error.code === 'auth/invalid-email') {
-                    errorMessage = 'כתובת אימייל לא תקינה';
-                } else if (error.code === 'auth/weak-password') {
-                    errorMessage = 'הסיסמה חלשה מדי (לפחות 6 תווים)';
-                } else if (error.code === 'auth/network-request-failed') {
-                    errorMessage = 'אין כרגע חיבור לענן. ניתן להמשיך לעבוד והשמירה מתבצעת מקומית.';
-                    setLocalOnlyMode('אין כרגע חיבור לענן. העבודה נשמרת מקומית.');
-                }
-                showAuthError(errorMessage);
-            }
-        }
-
-        async function ensureAccountExists(user) {
-            if (!user) return;
-
-            const userDocRef = doc(db, 'accounts', user.uid);
-            const userSnap = await getDoc(userDocRef);
-            if (!userSnap.exists()) {
-                await setDoc(userDocRef, {
-                    email: user.email || '',
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp()
-                });
-            }
-        }
-
-        // Sign Out
-        async function signOut() {
-            try {
-                await firebaseSignOut(auth);
-                showNotification('התנתקת בהצלחה', 'success');
-            } catch (error) {
-                console.error('Sign-out error:', error);
-                showNotification('שגיאה בהתנתקות', 'error');
-            }
-        }
-
-        // Modal functions
-        window.openAuthModal = function() {
-            if (authTemporarilyUnavailable) {
-                showNotification('החיבור לענן לא זמין כרגע. ניתן להמשיך לעבוד במצב מקומי.', 'warning');
+        async function loadAllDataFromFirestore(user) {
+            const stateRef = doc(db, 'users', user.uid, 'app', 'state');
+            const stateSnap = await getDoc(stateRef);
+            if (!stateSnap.exists()) {
+                await syncAllDataToFirestore();
                 return;
             }
 
-            const modal = document.getElementById('authModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                // Show login form by default
-                document.getElementById('loginForm').style.display = 'block';
-                document.getElementById('registerForm').style.display = 'none';
-                document.getElementById('authModalTitle').textContent = 'התחבר למערכת';
-            }
-        };
+            const data = stateSnap.data();
+            DATA_KEYS.forEach((key) => {
+                if (data[key] !== undefined) {
+                    writeLocalJson(key, data[key]);
+                }
+            });
 
-        window.closeAuthModal = function() {
-            const modal = document.getElementById('authModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            // Clear error
-            const errorDiv = document.getElementById('authError');
-            if (errorDiv) {
-                errorDiv.style.display = 'none';
-                errorDiv.textContent = '';
-            }
-        };
-
-        window.toggleAuthForm = function() {
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const modalTitle = document.getElementById('authModalTitle');
-            const errorDiv = document.getElementById('authError');
-            
-            if (loginForm.style.display === 'none') {
-                // Switch to login
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-                modalTitle.textContent = 'התחבר למערכת';
-            } else {
-                // Switch to register
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-                modalTitle.textContent = 'הירשם למערכת';
-            }
-            
-            // Clear error
-            if (errorDiv) {
-                errorDiv.style.display = 'none';
-                errorDiv.textContent = '';
-            }
-        };
-
-        function showAuthError(message) {
-            const errorDiv = document.getElementById('authError');
-            if (errorDiv) {
-                errorDiv.textContent = message;
-                errorDiv.style.display = 'block';
-            }
+            if (typeof window.renderProjects === 'function') window.renderProjects();
+            if (typeof window.renderCurrentStage === 'function') window.renderCurrentStage();
+            if (typeof window.renderRemindersList === 'function') window.renderRemindersList();
+            if (typeof window.renderInbox === 'function') window.renderInbox();
         }
 
-        // Banner functions
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            // Login button
-            const loginBtn = document.getElementById('loginBtn');
-            if (loginBtn) {
-                loginBtn.addEventListener('click', openAuthModal);
-            }
-            
-            // Logout button
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', signOut);
-            }
-            
-            // Google sign-in button
-            const googleSignInBtn = document.getElementById('googleSignInBtn');
-            if (googleSignInBtn) {
-                googleSignInBtn.addEventListener('click', signInWithGoogle);
-            }
-            
-            // Login form
+        let syncTimeout = null;
+        function queueSync() {
+            if (!currentUser) return;
+            if (syncTimeout) clearTimeout(syncTimeout);
+            syncTimeout = setTimeout(() => {
+                syncAllDataToFirestore().catch((error) => {
+                    console.error('Firebase sync failed:', error);
+                });
+                syncTimeout = null;
+            }, 500);
+        }
+
+        function wireSaveHooks() {
+            const hookTargets = ['saveAllProjects', 'queueRemindersSave', 'queueInboxSave'];
+            hookTargets.forEach((fnName) => {
+                const original = window[fnName];
+                if (typeof original !== 'function') return;
+                window[fnName] = function(...args) {
+                    const result = original.apply(this, args);
+                    queueSync();
+                    return result;
+                };
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (currentUser) {
+                    syncAllDataToFirestore().catch(() => {});
+                }
+            });
+        }
+
+        function openAuthModal() {
+            const modal = document.getElementById('authModal');
+            if (modal) modal.style.display = 'flex';
+            clearAuthError();
+        }
+
+        function closeAuthModal() {
+            const modal = document.getElementById('authModal');
+            if (modal) modal.style.display = 'none';
+            clearAuthError();
+        }
+
+        function toggleAuthForm() {
             const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                loginForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const email = document.getElementById('loginEmail').value;
-                    const password = document.getElementById('loginPassword').value;
-                    signInWithEmail(email, password);
-                });
-            }
-            
-            // Registration form
             const registerForm = document.getElementById('registerForm');
-            if (registerForm) {
-                registerForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const email = document.getElementById('registerEmail').value;
-                    const password = document.getElementById('registerPassword').value;
-                    const confirmPassword = document.getElementById('registerPasswordConfirm').value;
-                    
-                    if (password !== confirmPassword) {
-                        showAuthError('הסיסמאות אינן תואמות');
-                        return;
-                    }
-                    
-                    registerWithEmail(email, password);
-                });
-            }
-            
-            // Close modal on outside click
+            const title = document.getElementById('authModalTitle');
+            if (!loginForm || !registerForm || !title) return;
+
+            const showingLogin = loginForm.style.display !== 'none';
+            loginForm.style.display = showingLogin ? 'none' : 'block';
+            registerForm.style.display = showingLogin ? 'block' : 'none';
+            title.textContent = showingLogin ? 'הרשמה למערכת' : 'התחבר למערכת';
+            clearAuthError();
+        }
+
+        window.closeAuthModal = closeAuthModal;
+        window.toggleAuthForm = toggleAuthForm;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            wireSaveHooks();
+
+            document.getElementById('loginBtn')?.addEventListener('click', openAuthModal);
+            document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+                try {
+                    await signOut(auth);
+                } catch (error) {
+                    showAuthError('שגיאה בהתנתקות. נסה שוב.');
+                }
+            });
+
+            document.getElementById('googleSignInBtn')?.addEventListener('click', async () => {
+                clearAuthError();
+                try {
+                    await signInWithPopup(auth, googleProvider);
+                    closeAuthModal();
+                } catch (error) {
+                    showAuthError('התחברות עם Google נכשלה. בדוק הגדרות Firebase.');
+                }
+            });
+
+            document.getElementById('loginForm')?.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                clearAuthError();
+
+                const email = document.getElementById('loginEmail')?.value?.trim();
+                const password = document.getElementById('loginPassword')?.value || '';
+
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    closeAuthModal();
+                } catch (error) {
+                    showAuthError('אימייל או סיסמה לא תקינים.');
+                }
+            });
+
+            document.getElementById('registerForm')?.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                clearAuthError();
+
+                const email = document.getElementById('registerEmail')?.value?.trim();
+                const password = document.getElementById('registerPassword')?.value || '';
+                const confirmPassword = document.getElementById('registerPasswordConfirm')?.value || '';
+
+                if (password !== confirmPassword) {
+                    showAuthError('הסיסמאות לא תואמות.');
+                    return;
+                }
+
+                try {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    closeAuthModal();
+                } catch (error) {
+                    showAuthError('ההרשמה נכשלה. בדוק את הפרטים ונסה שוב.');
+                }
+            });
+
             const authModal = document.getElementById('authModal');
-            if (authModal) {
-                authModal.addEventListener('click', (e) => {
-                    if (e.target === authModal) {
-                        closeAuthModal();
-                    }
-                });
-            }
+            authModal?.addEventListener('click', (event) => {
+                if (event.target === authModal) closeAuthModal();
+            });
         });
 
-        // Override save functions to sync with Firebase in real-time
-        const originalSaveAllProjects = window.saveAllProjects;
-        window.saveAllProjects = function() {
-            if (originalSaveAllProjects) {
-                originalSaveAllProjects();
-            }
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            window.currentFirebaseUser = user;
+            updateAuthUi();
 
-            if (!currentUser) return;
-
-            const projectsDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
-            const projectsStr = localStorage.getItem('projects');
-            const stagesConfigStr = localStorage.getItem('stagesConfig');
-
-            if (!projectsStr) return;
+            if (!user) return;
 
             try {
-                setDoc(projectsDocRef, {
-                    projects: JSON.parse(projectsStr),
-                    stagesConfig: stagesConfigStr ? JSON.parse(stagesConfigStr) : null,
-                    updatedAt: serverTimestamp()
-                }, { merge: true }).catch(error => {
-                    console.error('Error syncing projects to Firestore:', error);
-                });
-            } catch (parseError) {
-                console.error('Failed to parse projects before sync:', parseError);
+                await loadAllDataFromFirestore(user);
+            } catch (error) {
+                console.error('Failed to load Firestore state:', error);
             }
-
-        };
-
-        const originalQueueRemindersSave = window.queueRemindersSave;
-        window.queueRemindersSave = function() {
-            if (originalQueueRemindersSave) {
-                originalQueueRemindersSave();
-            }
-
-            if (!currentUser) return;
-
-            const remindersStr = localStorage.getItem('reminders');
-            if (!remindersStr) return;
-
-            try {
-                const remindersDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
-                setDoc(remindersDocRef, {
-                    reminders: JSON.parse(remindersStr),
-                    updatedAt: serverTimestamp()
-                }, { merge: true }).catch(error => {
-                    console.error('Error syncing reminders to Firestore:', error);
-                });
-            } catch (parseError) {
-                console.error('Failed to parse reminders before sync:', parseError);
-            }
-        };
-
-        const originalQueueInboxSave = window.queueInboxSave;
-        window.queueInboxSave = function() {
-            if (originalQueueInboxSave) {
-                originalQueueInboxSave();
-            }
-
-            if (!currentUser) return;
-
-            const inboxStr = localStorage.getItem('inbox');
-            if (!inboxStr) return;
-
-            try {
-                const inboxDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
-                setDoc(inboxDocRef, {
-                    inbox: JSON.parse(inboxStr),
-                    updatedAt: serverTimestamp()
-                }, { merge: true }).catch(error => {
-                    console.error('Error syncing inbox to Firestore:', error);
-                });
-            } catch (parseError) {
-                console.error('Failed to parse inbox before sync:', parseError);
-            }
-        };
-
-        // Always show auth modal after page loads if not authenticated
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                if (!currentUser && !authTemporarilyUnavailable) {
-                    showAuthBannerIfNeeded();
-                }
-            }, 700);
         });
     </script>
 
