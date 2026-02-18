@@ -6514,9 +6514,10 @@ body.dark-mode .auth-error {
             } catch (error) {
                 const map = {
                     EMAIL_REQUIRED: 'יש להזין אימייל תקין.',
-                    TARGET_NOT_FOUND: 'לא נמצא משתמש עם האימייל הזה. עליו להתחבר לפחות פעם אחת.',
+                    TARGET_NOT_FOUND: 'לא נמצא משתמש עם האימייל הזה. המשתמש צריך להירשם/להתחבר לפחות פעם אחת ולפתוח אינדוקס אימייל.',
                     SELF_NOT_ALLOWED: 'לא ניתן להעניק הרשאה לעצמך.',
-                    AUTH_REQUIRED: 'יש להתחבר כדי להעניק הרשאות.'
+                    AUTH_REQUIRED: 'יש להתחבר כדי להעניק הרשאות.',
+                    'permission-denied': 'אין הרשאה לקרוא אינדוקס אימייל. ודא שהמשתמש מחובר ושכללי Firestore מעודכנים.'
                 };
                 showNotification(map[error.message] || 'שמירת ההרשאה נכשלה.', 'error');
             }
@@ -10230,15 +10231,31 @@ body.dark-mode .auth-error {
             realtimeListenersInitialized = true;
             console.log('Realtime listeners initialized');
         }
-
-
         function isWebViewEnvironment() {
             const ua = navigator.userAgent || '';
             return /; wv\)|\bwv\b|WebView|FBAN|FBAV|Instagram|Line\//i.test(ua);
         }
 
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent || '');
+        }
+
+        function shouldPreferRedirectFlow() {
+            return isWebViewEnvironment() || isIOS();
+        }
+
+        function getGoogleSignInHint(errorCode) {
+            if (errorCode === 'auth/unauthorized-domain') {
+                return 'הדומיין לא מורשה ב-Firebase. יש להוסיף את הדומיין/סכמת האפליקציה ב-Authentication > Settings > Authorized domains.';
+            }
+            if (errorCode === 'auth/operation-not-supported-in-this-environment') {
+                return 'הסביבה הנוכחית לא תומכת בחלון קופץ. נסו התחברות בהפניה או פתיחה בדפדפן חיצוני.';
+            }
+            return 'אם זה בתוך WebView, ודא שהאפליקציה מאפשרת ניווט חיצוני/Custom Tabs, Cookies צד-שלישי ו-JavaScript.';
+        }
+
         async function signInWithGoogle() {
-            if (isWebViewEnvironment()) {
+            if (shouldPreferRedirectFlow()) {
                 await signInWithRedirect(auth, googleProvider);
                 return null;
             }
@@ -10251,7 +10268,8 @@ body.dark-mode .auth-error {
                     'auth/popup-blocked',
                     'auth/popup-closed-by-user',
                     'auth/cancelled-popup-request',
-                    'auth/operation-not-supported-in-this-environment'
+                    'auth/operation-not-supported-in-this-environment',
+                    'auth/internal-error'
                 ];
 
                 if (fallbackErrors.includes(error.code)) {
@@ -10667,7 +10685,7 @@ body.dark-mode .auth-error {
                     }
                 } catch (error) {
                     console.error('Google sign-in error:', error);
-                    showAuthError('התחברות עם Google נכשלה. אם זה בתוך WebView, ודא שהאפליקציה מאפשרת חלונות קופצים/ניווט חיצוני ו-Cookies צד-שלישי.');
+                    showAuthError(`התחברות עם Google נכשלה. ${getGoogleSignInHint(error?.code)}`);
                 }
             });
 
