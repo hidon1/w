@@ -6340,6 +6340,9 @@ body.dark-mode .auth-error {
                 allowFinance: !!permissionData.allowFinance,
                 allowedProjectId: permissionData.projectScope && permissionData.projectScope !== 'all' ? permissionData.projectScope : null
             };
+            if (typeof window.setActiveDataAccountUid === 'function') {
+                window.setActiveDataAccountUid(ownerUid || null);
+            }
             localStorage.setItem('sharedAccessOwnerUid', ownerUid || '');
             localStorage.setItem('sharedAccessOwnerEmail', ownerEmail || '');
             localStorage.setItem('sharedAccessPermissions', JSON.stringify(permissionData || {}));
@@ -6348,11 +6351,33 @@ body.dark-mode .auth-error {
         }
         function clearSharedAccess() {
             sharedAccessContext = { active: false, ownerUid: null, ownerEmail: null, allowEdit: false, allowFinance: false, allowedProjectId: null };
+            if (typeof window.setActiveDataAccountUid === 'function') {
+                window.setActiveDataAccountUid(null);
+            }
             localStorage.removeItem('sharedAccessOwnerUid');
             localStorage.removeItem('sharedAccessOwnerEmail');
             localStorage.removeItem('sharedAccessPermissions');
             if (switchBackBtn) switchBackBtn.style.display = 'none';
             updateSharedAccessNotice();
+        }
+
+        function restoreSharedAccessFromStorage() {
+            const ownerUid = localStorage.getItem('sharedAccessOwnerUid');
+            const ownerEmail = localStorage.getItem('sharedAccessOwnerEmail');
+            const permissionsRaw = localStorage.getItem('sharedAccessPermissions');
+            if (!ownerUid || !permissionsRaw) {
+                clearSharedAccess();
+                return false;
+            }
+            try {
+                const permissionData = JSON.parse(permissionsRaw) || {};
+                applySharedAccess(permissionData, ownerUid, ownerEmail || permissionData.ownerEmail || '');
+                return true;
+            } catch (error) {
+                console.warn('Failed to restore shared access context:', error);
+                clearSharedAccess();
+                return false;
+            }
         }
         
         // Local-only mode - no authentication
@@ -6524,7 +6549,7 @@ body.dark-mode .auth-error {
         }
         async function connectToAccount() {
             const api = window.firebaseAccess;
-            if (!api?.findOwnerByEmail || !api?.loadOwnerProjects) {
+            if (!api?.findOwnerByEmail || !api?.loadOwnerProjects || !api?.loadAccountDataByUid) {
                 showNotification('שירות החיבור לחשבון לא זמין כרגע.', 'error');
                 return;
             }
@@ -6544,19 +6569,8 @@ body.dark-mode .auth-error {
                     showNotification('לא נמצאו נתונים בחשבון המבוקש.', 'error');
                     return;
                 }
-                if (typeof setProjectsData === 'function') {
-                    setProjectsData(ownerProjectsPayload.projects);
-                } else {
-                    projects = ownerProjectsPayload.projects;
-                }
-                if (ownerProjectsPayload.stagesConfig) {
-                    if (typeof setStagesConfigData === 'function') {
-                        setStagesConfigData(ownerProjectsPayload.stagesConfig);
-                    } else {
-                        stagesConfig = ownerProjectsPayload.stagesConfig;
-                    }
-                }
                 applySharedAccess(match.permission, match.ownerUid, match.permission.ownerEmail || targetEmail);
+                await api.loadAccountDataByUid(match.ownerUid);
                 populatePermissionProjectOptions();
                 renderProjectList(projectYearFilter.value);
                 renderStageNavigation();
@@ -6576,12 +6590,12 @@ body.dark-mode .auth-error {
 
         async function switchBackToOwner() {
             const api = window.firebaseAccess;
-            if (!api?.reloadOwnAccountData) {
+            if (!api?.loadAccountDataByUid) {
                 showNotification('לא ניתן לחזור לחשבון כרגע.', 'error');
                 return;
             }
             clearSharedAccess();
-            await api.reloadOwnAccountData();
+            await api.loadAccountDataByUid(null);
             renderProjectList(projectYearFilter.value);
             renderStageNavigation();
             loadCurrentStageContent();
@@ -9939,9 +9953,19 @@ body.dark-mode .auth-error {
         } from './firebase-config.js';
 
         let currentUser = null;
+        let activeDataAccountUid = null;
         let isInitialized = false;
         let realtimeListenersInitialized = false;
         const realtimeUnsubscribers = [];
+
+        function getActiveDataAccountUid() {
+            if (!currentUser) return null;
+            return activeDataAccountUid || currentUser.uid;
+        }
+
+        function setActiveDataAccountUid(uid) {
+            activeDataAccountUid = uid || (currentUser ? currentUser.uid : null);
+        }
 
         const STORAGE_KEYS = {
             PROJECTS: 'projects',
@@ -10109,8 +10133,16 @@ body.dark-mode .auth-error {
             revokeAccessPermission,
             findOwnerByEmail,
             loadOwnerProjects,
-            reloadOwnAccountData: () => loadAllDataFromFirebase()
+            reloadOwnAccountData: () => loadAllDataFromFirebase(),
+            loadAccountDataByUid: async (uid) => {
+                setActiveDataAccountUid(uid || null);
+                detachRealtimeListeners();
+                await loadAllDataFromFirebase();
+                initializeRealtimeDataListeners();
+            }
         };
+
+        window.setActiveDataAccountUid = setActiveDataAccountUid;
         function clearLegacyLocalData() {
             Object.values(STORAGE_KEYS).forEach((key) => {
                 try {
@@ -10178,16 +10210,18 @@ body.dark-mode .auth-error {
 
         function initializeRealtimeDataListeners() {
             if (!currentUser || realtimeListenersInitialized) return;
+            const dataUid = getActiveDataAccountUid();
+            if (!dataUid) return;
 
             const listeners = [
                 {
                     key: 'projects',
-                    docRef: doc(db, 'accounts', currentUser.uid, 'data', 'projects'),
+                    docRef: doc(db, 'accounts', dataUid, 'data', 'projects'),
                     applyData: (data, isInitialSnapshot) => applyRemoteProjectsData(data, isInitialSnapshot)
                 },
                 {
                     key: 'reminders',
-                    docRef: doc(db, 'accounts', currentUser.uid, 'data', 'reminders'),
+                    docRef: doc(db, 'accounts', dataUid, 'data', 'reminders'),
                     applyData: (data, isInitialSnapshot) => {
                         const remoteReminders = data.reminders || [];
                         if (typeof window.setRemindersData === 'function') {
@@ -10201,7 +10235,7 @@ body.dark-mode .auth-error {
                 },
                 {
                     key: 'inbox',
-                    docRef: doc(db, 'accounts', currentUser.uid, 'data', 'inbox'),
+                    docRef: doc(db, 'accounts', dataUid, 'data', 'inbox'),
                     applyData: (data, isInitialSnapshot) => {
                         const remoteInbox = data.inbox || [];
                         if (typeof window.setInboxData === 'function') {
@@ -10305,7 +10339,9 @@ body.dark-mode .auth-error {
         async function saveProjects(projects) {
             if (!currentUser) return;
             try {
-                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+                const dataUid = getActiveDataAccountUid();
+                if (!dataUid) return;
+                const userDocRef = doc(db, 'accounts', dataUid, 'data', 'projects');
                 await setDoc(userDocRef, { projects, updatedAt: serverTimestamp() }, { merge: true });
             } catch (error) {
                 console.error('Error saving projects to Firestore:', error);
@@ -10315,7 +10351,9 @@ body.dark-mode .auth-error {
         async function loadProjectsFromFirebase() {
             if (currentUser) {
                 try {
-                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+                    const dataUid = getActiveDataAccountUid();
+                    if (!dataUid) return {};
+                    const userDocRef = doc(db, 'accounts', dataUid, 'data', 'projects');
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -10333,7 +10371,9 @@ body.dark-mode .auth-error {
         async function saveReminders(reminders) {
             if (!currentUser) return;
             try {
-                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
+                const dataUid = getActiveDataAccountUid();
+                if (!dataUid) return;
+                const userDocRef = doc(db, 'accounts', dataUid, 'data', 'reminders');
                 await setDoc(userDocRef, { reminders, updatedAt: serverTimestamp() }, { merge: true });
             } catch (error) {
                 console.error('Error saving reminders to Firestore:', error);
@@ -10343,7 +10383,9 @@ body.dark-mode .auth-error {
         async function loadReminders() {
             if (currentUser) {
                 try {
-                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'reminders');
+                    const dataUid = getActiveDataAccountUid();
+                    if (!dataUid) return [];
+                    const userDocRef = doc(db, 'accounts', dataUid, 'data', 'reminders');
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -10361,7 +10403,9 @@ body.dark-mode .auth-error {
         async function saveInbox(inbox) {
             if (!currentUser) return;
             try {
-                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
+                const dataUid = getActiveDataAccountUid();
+                if (!dataUid) return;
+                const userDocRef = doc(db, 'accounts', dataUid, 'data', 'inbox');
                 await setDoc(userDocRef, { inbox, updatedAt: serverTimestamp() }, { merge: true });
             } catch (error) {
                 console.error('Error saving inbox to Firestore:', error);
@@ -10371,7 +10415,9 @@ body.dark-mode .auth-error {
         async function loadInbox() {
             if (currentUser) {
                 try {
-                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'inbox');
+                    const dataUid = getActiveDataAccountUid();
+                    if (!dataUid) return [];
+                    const userDocRef = doc(db, 'accounts', dataUid, 'data', 'inbox');
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -10389,7 +10435,9 @@ body.dark-mode .auth-error {
         async function savePreferences(preferences) {
             if (!currentUser) return;
             try {
-                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'preferences');
+                const dataUid = getActiveDataAccountUid();
+                if (!dataUid) return;
+                const userDocRef = doc(db, 'accounts', dataUid, 'data', 'preferences');
                 await setDoc(userDocRef, { preferences, updatedAt: serverTimestamp() }, { merge: true });
             } catch (error) {
                 console.error('Error saving preferences to Firestore:', error);
@@ -10399,7 +10447,9 @@ body.dark-mode .auth-error {
         async function loadPreferences() {
             if (currentUser) {
                 try {
-                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'preferences');
+                    const dataUid = getActiveDataAccountUid();
+                    if (!dataUid) return {};
+                    const userDocRef = doc(db, 'accounts', dataUid, 'data', 'preferences');
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -10417,7 +10467,9 @@ body.dark-mode .auth-error {
         async function saveStagesConfig(config) {
             if (!currentUser) return;
             try {
-                const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+                const dataUid = getActiveDataAccountUid();
+                if (!dataUid) return;
+                const userDocRef = doc(db, 'accounts', dataUid, 'data', 'projects');
                 await setDoc(userDocRef, { stagesConfig: config, updatedAt: serverTimestamp() }, { merge: true });
             } catch (error) {
                 console.error('Error saving stages config to Firestore:', error);
@@ -10427,7 +10479,9 @@ body.dark-mode .auth-error {
         async function loadStagesConfig() {
             if (currentUser) {
                 try {
-                    const userDocRef = doc(db, 'accounts', currentUser.uid, 'data', 'projects');
+                    const dataUid = getActiveDataAccountUid();
+                    if (!dataUid) return null;
+                    const userDocRef = doc(db, 'accounts', dataUid, 'data', 'projects');
                     const docSnap = await getDoc(userDocRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -10763,6 +10817,7 @@ body.dark-mode .auth-error {
         onAuthStateChanged(auth, async (user) => {
             console.log('Auth state changed:', user ? user.email : 'No user');
             currentUser = user;
+            setActiveDataAccountUid(user ? user.uid : null);
             setCurrentUser(user);
             window.currentFirebaseUser = user;
             updateAuthUi();
@@ -10776,11 +10831,26 @@ body.dark-mode .auth-error {
                     console.warn('Failed to update user account index:', error);
                 }
                 // Load data from Firebase when user signs in
+                const restoredSharedAccess = typeof window.restoreSharedAccessFromStorage === 'function'
+                    ? window.restoreSharedAccessFromStorage()
+                    : false;
+                if (!restoredSharedAccess) {
+                    if (typeof window.clearSharedAccess === 'function') {
+                        window.clearSharedAccess();
+                    }
+                }
+                const restoredOwnerUid = window.sharedAccessContext?.ownerUid || localStorage.getItem('sharedAccessOwnerUid');
+                if (restoredSharedAccess && restoredOwnerUid) {
+                    setActiveDataAccountUid(restoredOwnerUid);
+                }
                 await loadAllDataFromFirebase();
                 initializeRealtimeDataListeners();
             } else if (!user) {
                 isInitialized = false;
                 detachRealtimeListeners();
+                if (typeof window.clearSharedAccess === 'function') {
+                    window.clearSharedAccess();
+                }
                 // Show auth modal when user is not logged in
                 setTimeout(() => {
                     openAuthModal();
