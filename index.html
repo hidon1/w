@@ -9070,9 +9070,7 @@ body.dark-mode .auth-error {
 ${item.url}`);
             const body = encodeURIComponent(`קבלות/חשבוניות לתקופה שנבחרה:
 
-${lines.join('
-
-')}`);
+${lines.join('\n\n')}`);
             if (channel === 'email') {
                 window.location.href = `mailto:?subject=${encodeURIComponent('קבלות ודוח כספי')}&body=${body}`;
                 return;
