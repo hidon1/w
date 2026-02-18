@@ -11,7 +11,6 @@ echo "1️⃣  Checking required files..."
 FILES=(
     "index.html"
     "firebase-config.js"
-    "storage-firebase.js"
 )
 
 for file in "${FILES[@]}"; do
@@ -35,12 +34,12 @@ else
 fi
 echo ""
 
-# Check that storage-firebase.js is imported in index.html
-echo "3️⃣  Checking storage-firebase.js import..."
-if grep -q "from './storage-firebase.js'" index.html; then
-    echo "✅ storage-firebase.js is properly imported in index.html"
+# Check that firebase-config.js is imported in module script
+echo "3️⃣  Checking firebase-config.js module import..."
+if grep -q "from './firebase-config.js'" index.html; then
+    echo "✅ firebase-config.js is properly imported in index.html"
 else
-    echo "❌ storage-firebase.js is not imported in index.html"
+    echo "❌ firebase-config.js is not imported in index.html"
     exit 1
 fi
 echo ""
