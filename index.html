@@ -118,7 +118,12 @@
         line-height: 1.2;
         text-align: center;
         white-space: normal;
-        word-wrap: break-word;
+        word-break: keep-all;
+        overflow-wrap: normal;
+    }
+
+    .stage-nav-button.tight-hebrew {
+        font-size: calc(var(--font-size-base) * 0.63);
     }
     .close-button {
         top: 20px;
@@ -230,8 +235,8 @@
     }
 
     .dashboard-section.collapsed-mobile {
-        transform: translateY(calc(100% - 22px));
-        padding-top: 2px;
+        transform: translateY(calc(100% - 42px));
+        padding-top: 4px;
     }
     
     .add-data-cube span {
@@ -256,6 +261,11 @@
     
     .dashboard-item h3 {
         font-size: calc(var(--font-size-base) * 0.72);
+        white-space: nowrap;
+        word-break: keep-all;
+        overflow-wrap: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .dashboard-item p {
@@ -4009,8 +4019,11 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
     }
     .dashboard-item h3 {
         font-size: calc(var(--font-size-base) * 0.72);
-        white-space: normal;
-        word-break: break-word;
+        white-space: nowrap;
+        word-break: keep-all;
+        overflow-wrap: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .dashboard-item p {
         font-size: calc(var(--font-size-base) * 0.88);
@@ -7633,6 +7646,7 @@ body.dark-mode .auth-error {
                 const button = document.createElement('button');
                 button.className = 'stage-nav-button';
                 button.textContent = `${stage.longName}`;
+                if (stageId === 'stage3' || stageId === 'stage4') button.classList.add('tight-hebrew');
                 button.onclick = () => switchStage(stageId);
                 if (stageId === currentStageId) {
                     button.classList.add('active');
@@ -7655,6 +7669,7 @@ body.dark-mode .auth-error {
                 const button = document.createElement('button');
                 button.className = 'stage-nav-button';
                 button.textContent = `${stage.longName}`;
+                if (stageId === 'stage3' || stageId === 'stage4') button.classList.add('tight-hebrew');
                 button.onclick = () => switchStage(stageId);
                 if (stageId === currentStageId) {
                     button.classList.add('active');
@@ -9917,7 +9932,9 @@ body.dark-mode .auth-error {
             deleteDoc,
             getDoc,
             onSnapshot,
-            serverTimestamp
+            serverTimestamp,
+            limit,
+            collectionGroup
         } from './firebase-config.js';
 
         let currentUser = null;
@@ -9940,6 +9957,10 @@ body.dark-mode .auth-error {
         }
 
         function emailLookupKey(email) {
+            return `email_${encodeURIComponent(normalizeEmail(email))}`;
+        }
+
+        function legacyEmailLookupKey(email) {
             return normalizeEmail(email).replace(/[^a-z0-9]/g, '_');
         }
 
@@ -9951,20 +9972,37 @@ body.dark-mode .auth-error {
                 updatedAt: serverTimestamp(),
                 createdAt: serverTimestamp()
             }, { merge: true });
-            await setDoc(doc(db, 'usersByEmail', emailLookupKey(normalizedEmail)), {
+            const lookupPayload = {
                 uid: user.uid,
                 email: normalizedEmail,
                 updatedAt: serverTimestamp()
-            }, { merge: true });
+            };
+            await Promise.all([
+                setDoc(doc(db, 'usersByEmail', emailLookupKey(normalizedEmail)), lookupPayload, { merge: true }),
+                setDoc(doc(db, 'usersByEmail', legacyEmailLookupKey(normalizedEmail)), lookupPayload, { merge: true })
+            ]);
         }
 
         async function getUidByEmail(email) {
             const normalizedEmail = normalizeEmail(email);
             if (!normalizedEmail) return null;
-            const lookupDoc = await getDoc(doc(db, 'usersByEmail', emailLookupKey(normalizedEmail)));
-            if (!lookupDoc.exists()) return null;
-            const payload = lookupDoc.data() || {};
-            return payload.uid || null;
+
+            const keysToTry = [emailLookupKey(normalizedEmail), legacyEmailLookupKey(normalizedEmail)];
+            for (const key of keysToTry) {
+                const lookupDoc = await getDoc(doc(db, 'usersByEmail', key));
+                if (lookupDoc.exists()) {
+                    const payload = lookupDoc.data() || {};
+                    if (payload.uid) return payload.uid;
+                }
+            }
+
+            const accountQuery = query(collection(db, 'accounts'), where('email', '==', normalizedEmail), limit(1));
+            const accountMatch = await getDocs(accountQuery);
+            if (!accountMatch.empty) {
+                return accountMatch.docs[0].id || null;
+            }
+
+            return null;
         }
 
         async function grantAccessPermission({ targetEmail, projectScope, permissionLevel, allowFinance }) {
@@ -10021,8 +10059,19 @@ body.dark-mode .auth-error {
 
         async function listSharedWithMe() {
             if (!currentUser) return [];
-            const snap = await getDocs(collection(db, 'accounts', currentUser.uid, 'sharedWith'));
-            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const sharedWithSnap = await getDocs(collection(db, 'accounts', currentUser.uid, 'sharedWith'));
+            const sharedWithItems = sharedWithSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (sharedWithItems.length) return sharedWithItems;
+
+            // Fallback: if sharedWith wasn't synced (e.g. Firestore rules blocked it), derive from owners' permission docs.
+            try {
+                const fallbackQuery = query(collectionGroup(db, 'permissions'), where('collaboratorUid', '==', currentUser.uid));
+                const fallbackSnap = await getDocs(fallbackQuery);
+                return fallbackSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            } catch (error) {
+                console.warn('Cannot derive shared accounts from permissions collection group.', error);
+                return [];
+            }
         }
 
         async function findOwnerByEmail(ownerEmail) {
@@ -10757,6 +10806,7 @@ body.dark-mode .auth-error {
           btn.className = 'stage-nav-button';
           btn.type = 'button';
           btn.textContent = stage.longName;
+          if (stage.id === 'stage3' || stage.id === 'stage4') btn.classList.add('tight-hebrew');
           btn.onclick = () => {
             if (typeof window.switchStage === 'function') {
               window.switchStage(stage.id);

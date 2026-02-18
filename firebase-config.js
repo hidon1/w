@@ -24,7 +24,9 @@ import {
   query,
   where,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  limit,
+  collectionGroup
 } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 
 // Firebase configuration
@@ -69,5 +71,7 @@ export {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  limit,
+  collectionGroup
 };
