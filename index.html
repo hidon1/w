@@ -1361,6 +1361,36 @@ body.dark-mode .modal-graph-container {
     transition: all var(--animation-speed);
 }
 
+.history-entry-main {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.history-entry-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.history-upload-btn {
+    background: linear-gradient(135deg, #1e88e5, #1565c0);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: calc(var(--font-size-base) * 0.72);
+}
+
+.history-upload-btn:hover {
+    background: linear-gradient(135deg, #1565c0, #0d47a1);
+}
+
 body.dark-mode .history-list li {
     background: linear-gradient(135deg, #3a3a5e, #2a2a2a);
     border-color: var(--dark-border-color);
@@ -1935,6 +1965,8 @@ body.dark-mode .project-list li:hover {
 .finance-modal-content {
     padding: 30px;
     text-align: right;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 .finance-modal-content h3 {
@@ -8041,45 +8073,105 @@ body.dark-mode .auth-error {
             updateDashboardForCurrentStage();
             renderPreviousStageOverview();
         }
-        async function uploadMetricImageForLatestEntry(stageId, metricId) {
+        
+        async function uploadMetricImageForEntry(stageId, metricId, entryIndex) {
             const entries = projects[currentProjectId]?.stages?.[stageId]?.[metricId];
-            if (!entries || !entries.length) {
-                alert('יש להזין מדידה לפני הוספת תמונה.');
+            if (!entries || entryIndex < 0 || entryIndex >= entries.length) {
+                alert('הרשומה לא נמצאה.');
                 return;
             }
-            const picker = document.createElement('input');
-            picker.type = 'file';
-            picker.accept = 'image/*';
-            picker.setAttribute('capture', 'environment');
-            picker.onchange = async () => {
-                const file = picker.files?.[0];
-                if (!file) return;
-                const api = window.firebaseAccess;
-                if (!api?.uploadFileToStorage || !api?.buildFinanceAttachmentPath) {
-                    alert('שירות אחסון התמונות לא זמין.');
-                    return;
-                }
+
+            const file = await pickImageWithCameraPreference();
+            if (!file) return;
+
+            const api = window.firebaseAccess;
+            if (!api?.uploadFileToStorage || !api?.buildMetricAttachmentPath) {
+                alert('שירות אחסון התמונות לא זמין.');
+                return;
+            }
+
+            try {
+                const targetEntry = entries[entryIndex];
+                const metricEntryId = targetEntry.id || Date.now();
+                targetEntry.id = metricEntryId;
+                const path = api.buildMetricAttachmentPath(currentProjectId, stageId, metricId, metricEntryId, file.name);
+                const uploaded = await api.uploadFileToStorage(path, file, {
+                    section: 'metric',
+                    projectId: currentProjectId,
+                    stageId,
+                    metricId,
+                    metricEntryId: String(metricEntryId)
+                });
+                targetEntry.imageUrl = uploaded.downloadUrl;
+                targetEntry.imagePath = uploaded.storagePath;
+                saveAllProjects();
+                updateDashboardForCurrentStage();
+                const metricDisplayName = stagesConfig[stageId]?.metrics?.[metricId]?.name
+                    || stagesConfig[stageId]?.customMetrics?.[metricId]?.name
+                    || 'מדד';
+                openHistoryModal(stageId, metricId, metricDisplayName);
+            } catch (error) {
+                console.error('Metric image upload failed:', error);
                 try {
-                    const latestEntry = entries[entries.length - 1];
-                    const metricEntryId = latestEntry.id || Date.now();
-                    latestEntry.id = metricEntryId;
-                    const path = api.buildFinanceAttachmentPath(currentProjectId, `${stageId}_${metricId}_${metricEntryId}`, file.name);
-                    const uploaded = await api.uploadFileToStorage(path, file, {
-                        section: 'metric',
-                        projectId: currentProjectId,
-                        stageId,
-                        metricId
-                    });
-                    latestEntry.imageUrl = uploaded.downloadUrl;
-                    latestEntry.imagePath = uploaded.storagePath;
+                    const localImageUrl = await fileToDataUrl(file);
+                    if (!localImageUrl) throw new Error('EMPTY_IMAGE_DATA');
+                    const targetEntry = entries[entryIndex];
+                    targetEntry.imageUrl = localImageUrl;
+                    targetEntry.imagePath = null;
                     saveAllProjects();
                     updateDashboardForCurrentStage();
-                } catch (error) {
-                    console.error('Metric image upload failed:', error);
+                    const metricDisplayName = stagesConfig[stageId]?.metrics?.[metricId]?.name
+                        || stagesConfig[stageId]?.customMetrics?.[metricId]?.name
+                        || 'מדד';
+                    openHistoryModal(stageId, metricId, metricDisplayName);
+                    alert('הועלתה תמונה מקומית (ללא אחסון ענן).');
+                } catch (fallbackError) {
+                    console.error('Metric local image fallback failed:', fallbackError);
                     alert('העלאת תמונת המדידה נכשלה.');
                 }
-            };
-            picker.click();
+            }
+        }
+
+        function pickImageWithCameraPreference() {
+            return new Promise((resolve) => {
+                const picker = document.createElement('input');
+                picker.type = 'file';
+                picker.accept = 'image/*';
+                picker.setAttribute('capture', 'environment');
+                picker.style.display = 'none';
+                document.body.appendChild(picker);
+
+                const cleanup = () => {
+                    picker.remove();
+                };
+
+                picker.addEventListener('change', () => {
+                    const file = picker.files?.[0] || null;
+                    cleanup();
+                    resolve(file);
+                }, { once: true });
+
+                picker.addEventListener('cancel', () => {
+                    cleanup();
+                    resolve(null);
+                }, { once: true });
+
+                picker.click();
+                setTimeout(() => {
+                    cleanup();
+                    resolve(null);
+                }, 60000);
+            });
+        }
+
+
+        function fileToDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => resolve(event.target?.result || null);
+                reader.onerror = () => reject(new Error('FILE_READ_ERROR'));
+                reader.readAsDataURL(file);
+            });
         }
 
         function openMetricImagePreview(url) {
@@ -8108,9 +8200,6 @@ body.dark-mode .auth-error {
             dashboardItem.innerHTML = `
                 <h3>${metricConfig.name} ${thumbHtml}</h3>
                 <p>${displayValue}</p>
-                <button class="metric-thumb-btn" onclick="event.stopPropagation(); uploadMetricImageForLatestEntry('${currentStageId}', '${metricId}')">
-                    <i class="fas fa-image"></i> העלה תמונה
-                </button>
             `;
             return dashboardItem;
         }
@@ -8203,10 +8292,22 @@ body.dark-mode .auth-error {
                     } else {
                         displayValue = entry.value;
                     }
+                    const imagePreviewHtml = entry.imageUrl
+                        ? `<img src="${entry.imageUrl}" class="metric-thumb-preview" onclick="event.stopPropagation(); openMetricImagePreview('${entry.imageUrl}')" alt="תמונת מדידה">`
+                        : '';
+                    const uploadMetricImageButton = sectionId !== 'wineDetails'
+                        ? `<button class="history-upload-btn" onclick="event.stopPropagation(); uploadMetricImageForEntry('${sectionId}', '${metricId}', ${originalIndex})"><i class="fas fa-camera"></i> העלאת תמונה</button>`
+                        : '';
                     listItem.innerHTML = `
-                        <strong>${displayValue}</strong>
-                        <span class="timestamp">${entry.timestamp}</span>
-                        <button class="undo-button" onclick="undoUpdate('${sectionId}', '${metricId}', ${originalIndex})">בטל</button>
+                        <div class="history-entry-main">
+                            <strong>${displayValue}</strong>
+                            <span class="timestamp">${entry.timestamp}</span>
+                        </div>
+                        <div class="history-entry-actions">
+                            ${imagePreviewHtml}
+                            ${uploadMetricImageButton}
+                            <button class="undo-button" onclick="undoUpdate('${sectionId}', '${metricId}', ${originalIndex})">בטל</button>
+                        </div>
                     `;
                     historyList.appendChild(listItem);
                 });
@@ -8549,12 +8650,10 @@ body.dark-mode .auth-error {
 
         function openFinanceCameraCapture() {
             if (!financeAttachmentInput) return;
+            financeAttachmentInput.value = '';
             financeAttachmentInput.setAttribute('accept', 'image/*');
             financeAttachmentInput.setAttribute('capture', 'environment');
             financeAttachmentInput.click();
-            setTimeout(() => {
-                financeAttachmentInput.setAttribute('accept', 'image/*,application/pdf');
-            }, 50);
         }
 
         function renderGeneralImagesList() {
@@ -8657,7 +8756,19 @@ body.dark-mode .auth-error {
                     };
                 } catch (error) {
                     console.error('Finance attachment upload failed:', error);
-                    alert('שמירת הקבלה נכשלה. התנועה תישמר ללא קובץ מצורף.');
+                    try {
+                        const localAttachmentUrl = await fileToDataUrl(pendingFinanceAttachmentFile);
+                        attachment = {
+                            type: pendingFinanceAttachmentFile.type,
+                            name: pendingFinanceAttachmentFile.name,
+                            url: localAttachmentUrl,
+                            path: null
+                        };
+                        alert('שמירת הקבלה בוצעה מקומית (ללא אחסון ענן).');
+                    } catch (fallbackError) {
+                        console.error('Finance attachment local fallback failed:', fallbackError);
+                        alert('שמירת הקבלה נכשלה. התנועה תישמר ללא קובץ מצורף.');
+                    }
                 }
             }
             projects[currentProjectId].finance.push({ id: entryId, type, amount, notes, timestamp, attachment });
@@ -10544,6 +10655,15 @@ ${lines.join('\n\n')}`);
             return `accounts/${dataUid}/projects/${projectId}/finance/${entryId}/${Date.now()}_${safeName}`;
         }
 
+        function buildMetricAttachmentPath(projectId, stageId, metricId, entryId, fileName) {
+            const dataUid = getActiveDataAccountUid();
+            const safeName = (fileName || 'metric-image').replace(/\s+/g, '_').replace(/[^\w.\-]/g, '');
+            const safeStageId = String(stageId || 'stage').replace(/[^\w.\-]/g, '_');
+            const safeMetricId = String(metricId || 'metric').replace(/[^\w.\-]/g, '_');
+            const safeEntryId = String(entryId || Date.now()).replace(/[^\w.\-]/g, '_');
+            return `accounts/${dataUid}/projects/${projectId}/metrics/${safeStageId}/${safeMetricId}/${safeEntryId}/${Date.now()}_${safeName}`;
+        }
+
         window.firebaseAccess = {
             getCurrentUser: () => currentUser,
             normalizeEmail,
@@ -10557,6 +10677,7 @@ ${lines.join('\n\n')}`);
             uploadFileToStorage,
             deleteFileFromStorage,
             buildFinanceAttachmentPath,
+            buildMetricAttachmentPath,
             reloadOwnAccountData: () => loadAllDataFromFirebase(),
             loadAccountDataByUid: async (uid) => {
                 setActiveDataAccountUid(uid || null);
