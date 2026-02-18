@@ -261,12 +261,12 @@
     }
     
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.72);
-        white-space: nowrap;
-        word-break: keep-all;
-        overflow-wrap: normal;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: calc(var(--font-size-base) * 0.64);
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.2;
+        max-width: 100%;
     }
     
     .dashboard-item p {
@@ -963,11 +963,12 @@ body.dark-mode .stage-nav-button:hover {
     margin-bottom: 2px;
     color: var(--accent-color);
     font-family: 'Noto Sans Hebrew', sans-serif;
-    font-size: calc(var(--font-size-base) * 0.65);
+    font-size: calc(var(--font-size-base) * 0.62);
     font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.2;
     transition: color var(--animation-speed);
 }
 
@@ -1233,7 +1234,7 @@ body.dark-mode .modal-content {
     overflow: hidden;
     transition: background-color var(--animation-speed), border-color var(--animation-speed);
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
 }
 
 body.dark-mode .modal-graph-container {
@@ -1291,19 +1292,6 @@ body.dark-mode .modal-graph-container {
     stroke-dasharray: 2,2;
     stroke-width: 0.5;
     transition: stroke var(--animation-speed);
-}
-
-.modal-graph-average-line {
-    stroke: var(--graph-average-color);
-    stroke-dasharray: 4, 4;
-    stroke-width: 2;
-}
-
-.modal-graph-average-label {
-    fill: var(--graph-average-color);
-    font-size: calc(var(--font-size-base) * 0.6);
-    font-weight: bold;
-    text-anchor: start;
 }
 
 .graph-controls {
@@ -4095,12 +4083,12 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
         z-index: 1110;
     }
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.72);
-        white-space: nowrap;
-        word-break: keep-all;
-        overflow-wrap: normal;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: calc(var(--font-size-base) * 0.64);
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.2;
+        max-width: 100%;
     }
     .dashboard-item p {
         font-size: calc(var(--font-size-base) * 0.88);
@@ -4108,6 +4096,29 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
     .input-section {
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
+    }
+
+    .history-list li {
+        padding: 10px;
+        align-items: stretch;
+    }
+    .history-entry-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    .history-upload-btn,
+    .history-list li .undo-button {
+        font-size: calc(var(--font-size-base) * 0.62);
+        padding: 5px 8px;
+        margin-right: 0;
+        min-height: 34px;
+    }
+    .modal-graph-container {
+        height: 260px;
+    }
+    .modal-graph-label-x {
+        font-size: calc(var(--font-size-base) * 0.52);
     }
 }
 
@@ -5784,24 +5795,24 @@ body.dark-mode .auth-error {
                 <div class="image-upload-section" style="margin:10px 0;">
                     <label for="financeAttachmentUpload"><i class="fas fa-paperclip"></i> קבלות/חשבוניות (תמונה או PDF)</label>
                     <div class="image-upload-buttons">
-                        <button type="button" onclick="document.getElementById('financeAttachmentUpload').click()" class="image-upload-btn">
+                        <button type="button" onclick="openFinanceAttachmentPicker()" class="image-upload-btn">
                             <i class="fas fa-upload"></i> העלה קובץ
                         </button>
                         <button type="button" onclick="openFinanceCameraCapture()" class="camera-btn">
                             <i class="fas fa-camera"></i> צלם קבלה
                         </button>
                     </div>
-                    <input type="file" id="financeAttachmentUpload" accept="image/*,application/pdf" capture="environment" style="display:none;" onchange="handleFinanceAttachmentSelection()">
+                    <input type="file" id="financeAttachmentUpload" accept="image/*,application/pdf" style="display:none;" onchange="handleFinanceAttachmentSelection()">
                     <div id="financeAttachmentPreview" style="font-size:12px; color:var(--light-text-color); margin-top:6px; display:none;"></div>
                 </div>
                 <div class="image-upload-section" style="margin:10px 0;">
                     <label for="generalImageUpload"><i class="fas fa-images"></i> תמונות כלליות</label>
                     <div class="image-upload-buttons">
-                        <button type="button" onclick="document.getElementById('generalImageUpload').click()" class="image-upload-btn">
+                        <button type="button" onclick="openGeneralImagePicker()" class="image-upload-btn">
                             <i class="fas fa-image"></i> העלה תמונה כללית
                         </button>
                     </div>
-                    <input type="file" id="generalImageUpload" accept="image/*" capture="environment" style="display:none;" onchange="uploadGeneralProjectImage()">
+                    <input type="file" id="generalImageUpload" accept="image/*" style="display:none;" onchange="uploadGeneralProjectImage()">
                     <ul id="generalImagesList" class="finance-attachments-list"></ul>
                 </div>
                 <div class="finance-input-buttons">
@@ -5847,6 +5858,9 @@ body.dark-mode .auth-error {
                 <div class="total-expense">סה"כ הוצאות: <span id="globalTotalExpense">0</span></div>
                 <div class="total-balance">יתרה כוללת: <span id="globalTotalBalance">0</span></div>
             </div>
+            <div class="yearly-report-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:12px;">
+                <button class="download-pdf-btn" onclick="openFinanceMediaListModal('global')">קבלות/תמונות כללי</button>
+            </div>
             <div id="globalFinanceProjectsDetails"></div>
             <button class="download-pdf-btn" onclick="downloadGlobalFinancePDF()">הורד כ-PDF</button>
         </div>
@@ -5886,10 +5900,18 @@ body.dark-mode .auth-error {
                 <div class="yearly-report-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px;">
                     <button class="download-pdf-btn" onclick="downloadYearlyFinancePDF()">הורד כ-PDF</button>
                     <button class="download-pdf-btn" onclick="downloadYearlyReceiptsZip()">הורד קבלות (ZIP)</button>
+                    <button class="download-pdf-btn" onclick="openFinanceMediaListModal('yearly')">קבלות/תמונות כללי</button>
                     <button class="download-pdf-btn" onclick="shareYearlyReceipts('email')">שלח במייל</button>
                     <button class="download-pdf-btn" onclick="shareYearlyReceipts('whatsapp')">שלח ב-WhatsApp</button>
                 </div>
             </div>
+        </div>
+    </div>
+    <div id="financeMediaListModal" class="modal">
+        <div class="modal-content finance-yearly-modal-content">
+            <span class="close-button" onclick="closeFinanceMediaListModal()">&times;</span>
+            <h3 id="financeMediaListTitle">קבצים מצורפים</h3>
+            <ul id="financeMediaList" class="history-list"></ul>
         </div>
     </div>
     <div id="inboxModal" class="reminders-modal">
@@ -5926,7 +5948,7 @@ body.dark-mode .auth-error {
                     </label>
                     <div class="image-upload-buttons">
                         <input type="file" id="reminderImageUpload" accept="image/*" style="display:none;" onchange="handleReminderImageSelect(event)">
-                        <button type="button" onclick="document.getElementById('reminderImageUpload').click()" class="image-upload-btn">
+                        <button type="button" onclick="triggerFilePickerById('reminderImageUpload')" class="image-upload-btn">
                             <i class="fas fa-folder-open"></i> בחר קובץ
                         </button>
                         <button type="button" onclick="openCameraForReminder()" class="camera-btn">
@@ -8165,6 +8187,18 @@ body.dark-mode .auth-error {
         }
 
 
+        function triggerFilePickerById(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            input.value = '';
+            input.removeAttribute('capture');
+            input.click();
+        }
+
+        function openGeneralImagePicker() {
+            triggerFilePickerById('generalImageUpload');
+        }
+
         function fileToDataUrl(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -8428,7 +8462,6 @@ body.dark-mode .auth-error {
                         tspanTime.textContent = timePart;
                         textX.appendChild(tspanTime);
                     }
-                    textX.setAttribute('transform', `rotate(-45 ${x}, ${svgHeight - paddingBottom + 10})`);
                     modalGraphSvg.appendChild(textX);
                 }
             });
@@ -8483,20 +8516,6 @@ body.dark-mode .auth-error {
                 compPath.setAttribute('stroke-width', '3');
                 modalGraphSvg.appendChild(compPath);
             }
-            const avgY = yScale(averageValue);
-            const avgLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            avgLine.setAttribute('x1', paddingLeft);
-            avgLine.setAttribute('y1', avgY);
-            avgLine.setAttribute('x2', svgWidth - paddingRight);
-            avgLine.setAttribute('y2', avgY);
-            avgLine.classList.add('modal-graph-average-line');
-            modalGraphSvg.appendChild(avgLine);
-            const avgLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            avgLabel.setAttribute('x', svgWidth - paddingRight + 5);
-            avgLabel.setAttribute('y', avgY + 3);
-            avgLabel.classList.add('modal-graph-average-label');
-            avgLabel.textContent = `ממוצע: ${averageValue.toFixed(precision)}`;
-            modalGraphSvg.appendChild(avgLabel);
             const zoom = d3.zoom().scaleExtent([0.5, 5]).on('zoom', (event) => {
                 const transform = event.transform;
                 modalGraphSvg.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`;
@@ -8646,6 +8665,14 @@ body.dark-mode .auth-error {
                 financeAttachmentPreview.style.display = 'block';
                 financeAttachmentPreview.textContent = `נבחר קובץ: ${file.name}`;
             }
+        }
+
+        function openFinanceAttachmentPicker() {
+            if (!financeAttachmentInput) return;
+            financeAttachmentInput.value = '';
+            financeAttachmentInput.setAttribute('accept', 'image/*,application/pdf');
+            financeAttachmentInput.removeAttribute('capture');
+            financeAttachmentInput.click();
         }
 
         function openFinanceCameraCapture() {
@@ -9060,12 +9087,10 @@ body.dark-mode .auth-error {
             yearlyFinanceProjectsDetails.innerHTML = '';
             const filteredProjects = Object.keys(projects).filter(projectId => {
                 const project = projects[projectId];
-                const vintageYearEntries = project.wineDetails.vintageYear;
-                if (vintageYearEntries && vintageYearEntries.length > 0) {
-                    const latestYear = vintageYearEntries[vintageYearEntries.length - 1].value;
-                    return latestYear == selectedYear;
-                }
-                return false;
+                const vintageYearEntries = project?.wineDetails?.vintageYear || [];
+                const hasProjectYearMatch = vintageYearEntries.some(entry => String(entry?.value) === String(selectedYear));
+                const hasFinanceInPeriod = getFinanceEntriesForYearAndMonth(project, selectedYear, selectedMonth).length > 0;
+                return hasProjectYearMatch || hasFinanceInPeriod;
             });
             if (filteredProjects.length === 0) {
                 yearlyFinanceProjectsDetails.innerHTML = '<p>אין פרויקטים בשנה זו.</p>';
@@ -9119,9 +9144,6 @@ body.dark-mode .auth-error {
             const attachments = [];
             Object.keys(projects).forEach(projectId => {
                 const project = projects[projectId];
-                const vintageYearEntries = project.wineDetails.vintageYear || [];
-                const latestYear = vintageYearEntries.length ? vintageYearEntries[vintageYearEntries.length - 1].value : null;
-                if (String(latestYear) !== String(selectedYear)) return;
                 const periodEntries = getFinanceEntriesForYearAndMonth(project, selectedYear, selectedMonth);
                 periodEntries.forEach(entry => {
                     if (entry.attachment?.url) {
@@ -9132,6 +9154,17 @@ body.dark-mode .auth-error {
                             url: entry.attachment.url
                         });
                     }
+                });
+                (project.generalImages || []).forEach((item) => {
+                    const dateObj = parseHebrewLocaleTimestamp(item.timestamp);
+                    if (dateObj && dateObj.getFullYear() !== parseInt(selectedYear, 10)) return;
+                    if (selectedMonth !== 'all' && dateObj && (dateObj.getMonth() + 1) !== parseInt(selectedMonth, 10)) return;
+                    attachments.push({
+                        projectName: project.name,
+                        timestamp: item.timestamp || '',
+                        name: item.name || 'general_image',
+                        url: item.url
+                    });
                 });
             });
             return attachments;
@@ -9148,14 +9181,15 @@ body.dark-mode .auth-error {
                 return;
             }
             const zip = new JSZip();
-            for (let i = 0; i < attachments.length; i += 1) {
-                const file = attachments[i];
+            const sortedAttachments = attachments.slice().sort((a, b) => (a.projectName || '').localeCompare(b.projectName || '') || (a.timestamp || '').localeCompare(b.timestamp || '') || (a.name || '').localeCompare(b.name || ''));
+            for (let i = 0; i < sortedAttachments.length; i += 1) {
+                const file = sortedAttachments[i];
                 try {
                     const response = await fetch(file.url);
                     const blob = await response.blob();
-                    const safeProject = (file.projectName || 'project').replace(/[^\w\-]/g, '_');
                     const safeName = (file.name || `receipt_${i + 1}`).replace(/[^\w.\-]/g, '_');
-                    zip.file(`${safeProject}/${safeName}`, blob);
+                    const sequence = String(i + 1).padStart(3, '0');
+                    zip.file(`${sequence}_${safeName}`, blob);
                 } catch (error) {
                     console.warn('Skipping file during ZIP build:', error);
                 }
@@ -9189,6 +9223,76 @@ ${lines.join('\n\n')}`);
             if (channel === 'whatsapp') {
                 window.open(`https://wa.me/?text=${body}`, '_blank');
             }
+        }
+
+        function openFinanceMediaListModal(mode = 'yearly') {
+            const listEl = document.getElementById('financeMediaList');
+            const titleEl = document.getElementById('financeMediaListTitle');
+            const modalEl = document.getElementById('financeMediaListModal');
+            if (!listEl || !titleEl || !modalEl) return;
+
+            const selectedYear = yearSelect.value;
+            const selectedMonth = monthSelect?.value || 'all';
+            const attachments = mode === 'global'
+                ? collectAllFinanceMedia()
+                : collectReceiptAttachmentsForReport();
+
+            titleEl.textContent = mode === 'global'
+                ? 'קבלות/תמונות/PDF - דוח כספי כולל'
+                : `קבלות/תמונות/PDF - ${selectedYear}${selectedMonth !== 'all' ? '/' + selectedMonth : ''}`;
+
+            listEl.innerHTML = '';
+            if (!attachments.length) {
+                listEl.innerHTML = '<li>לא נמצאו קבצים מצורפים.</li>';
+            } else {
+                attachments.forEach((item, idx) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div class="history-entry-main">
+                            <strong>${idx + 1}. ${item.name || 'קובץ'}</strong>
+                            <span class="timestamp">${item.projectName || ''} | ${item.timestamp || ''}</span>
+                        </div>
+                        <div class="history-entry-actions">
+                            <button class="history-upload-btn" onclick="window.open('${item.url}','_blank')">פתח</button>
+                        </div>
+                    `;
+                    listEl.appendChild(li);
+                });
+            }
+            modalEl.style.display = 'flex';
+        }
+
+        function closeFinanceMediaListModal() {
+            const modalEl = document.getElementById('financeMediaListModal');
+            if (modalEl) modalEl.style.display = 'none';
+        }
+
+        function collectAllFinanceMedia() {
+            const attachments = [];
+            Object.keys(projects).forEach(projectId => {
+                const project = projects[projectId];
+                (project.finance || []).forEach(entry => {
+                    if (entry.attachment?.url) {
+                        attachments.push({
+                            projectName: project.name,
+                            timestamp: entry.timestamp,
+                            name: entry.attachment.name || 'receipt',
+                            url: entry.attachment.url
+                        });
+                    }
+                });
+                (project.generalImages || []).forEach(item => {
+                    if (item?.url) {
+                        attachments.push({
+                            projectName: project.name,
+                            timestamp: item.timestamp || '',
+                            name: item.name || 'general_image',
+                            url: item.url
+                        });
+                    }
+                });
+            });
+            return attachments.sort((a, b) => (a.projectName || '').localeCompare(b.projectName || '') || (a.timestamp || '').localeCompare(b.timestamp || ''));
         }
 
         function renderPreviousStageOverview() {
@@ -10438,6 +10542,8 @@ ${lines.join('\n\n')}`);
             signInWithEmailAndPassword,
             signOut,
             onAuthStateChanged,
+            setPersistence,
+            browserLocalPersistence,
             doc,
             collection,
             getDocs,
@@ -10834,6 +10940,7 @@ ${lines.join('\n\n')}`);
         }
 
         async function signInWithGoogle() {
+            await setPersistence(auth, browserLocalPersistence);
             if (shouldPreferRedirectFlow()) {
                 await signInWithRedirect(auth, googleProvider);
                 return null;
@@ -10861,6 +10968,7 @@ ${lines.join('\n\n')}`);
         }
 
         async function registerWithEmail(email, password) {
+            await setPersistence(auth, browserLocalPersistence);
             const result = await createUserWithEmailAndPassword(auth, email, password);
             const userDocRef = doc(db, 'accounts', result.user.uid);
             await setDoc(userDocRef, {
@@ -10872,6 +10980,7 @@ ${lines.join('\n\n')}`);
         }
 
         async function signInWithEmail(email, password) {
+            await setPersistence(auth, browserLocalPersistence);
             const result = await signInWithEmailAndPassword(auth, email, password);
             return result.user;
         }
@@ -11073,7 +11182,7 @@ ${lines.join('\n\n')}`);
                 if (connectionStatus) {
                     connectionStatus.classList.remove('disconnected');
                     connectionStatus.classList.add('connected');
-                    connectionStatus.querySelector('span').textContent = 'מחובר ל-Firebase';
+                    connectionStatus.querySelector('span').textContent = 'מחובר';
                 }
             } else {
                 if (authStatus) authStatus.textContent = 'לא מחובר';
@@ -11082,7 +11191,7 @@ ${lines.join('\n\n')}`);
                 if (connectionStatus) {
                     connectionStatus.classList.add('disconnected');
                     connectionStatus.classList.remove('connected');
-                    connectionStatus.querySelector('span').textContent = 'ממתין להתחברות ל-Firebase';
+                    connectionStatus.querySelector('span').textContent = 'לא מחובר';
                 }
             }
         }
@@ -11250,6 +11359,12 @@ ${lines.join('\n\n')}`);
 
             // Wire save hooks
             wireSaveHooks();
+
+            try {
+                await setPersistence(auth, browserLocalPersistence);
+            } catch (error) {
+                console.warn('Failed to enforce local auth persistence:', error);
+            }
 
             try {
                 const redirectResult = await getRedirectResult(auth);

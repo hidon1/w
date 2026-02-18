@@ -10,7 +10,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
-  onAuthStateChanged as firebaseOnAuthStateChanged
+  onAuthStateChanged as firebaseOnAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence
 } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
 import { 
   getFirestore, 
@@ -77,6 +79,8 @@ export {
   signInWithEmailAndPassword,
   firebaseSignOut as signOut,
   firebaseOnAuthStateChanged as onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
   doc,
   collection,
   getDocs,
