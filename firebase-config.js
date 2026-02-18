@@ -28,6 +28,13 @@ import {
   limit,
   collectionGroup
 } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
+} from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -45,6 +52,7 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
@@ -56,6 +64,11 @@ export {
   analytics,
   auth,
   db,
+  storage,
+  storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
   googleProvider,
   signInWithPopup,
   signInWithRedirect,
