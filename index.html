@@ -5694,6 +5694,75 @@ body.dark-mode .auth-error {
     font-weight: 700;
 }
 
+.secondary-history-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.project-summary-modal-content {
+    max-width: 980px;
+}
+
+.project-summary-marquee {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px 0 6px;
+}
+
+.project-summary-pill {
+    white-space: nowrap;
+    background: rgba(26, 77, 46, 0.09);
+    border: 1px solid rgba(26, 77, 46, 0.25);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.86rem;
+}
+
+.project-summary-table-wrap {
+    max-height: 58vh;
+    overflow: auto;
+    margin-top: 10px;
+    border: 1px solid rgba(26, 77, 46, 0.18);
+    border-radius: 12px;
+}
+
+.project-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.project-summary-table th,
+.project-summary-table td {
+    border-bottom: 1px solid rgba(26, 77, 46, 0.14);
+    padding: 8px 10px;
+    text-align: right;
+    vertical-align: top;
+}
+
+.project-summary-table th {
+    position: sticky;
+    top: 0;
+    background: #f4f7f5;
+    z-index: 1;
+}
+
+body.dark-mode .project-summary-pill {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.18);
+}
+
+body.dark-mode .project-summary-table-wrap {
+    border-color: rgba(255,255,255,0.18);
+}
+
+body.dark-mode .project-summary-table th {
+    background: #222b2f;
+}
+
 body.dark-mode .secondary-panel {
     background: linear-gradient(135deg, #21282b, #2a3337);
     border-color: rgba(255,255,255,0.12);
@@ -5726,6 +5795,26 @@ body.dark-mode .history-row {
     .category-nav { z-index: 1000; }
 
     .dashboard-section { bottom: 0; }
+}
+
+@media (max-width: 768px) {
+    .secondary-input-row input,
+    .secondary-input-row select,
+    #additionsPanel .input-group input,
+    #additionsPanel .input-group select,
+    #extrasPanel .input-group input,
+    #extrasPanel .input-group select {
+        border-radius: 14px;
+        border: 1px solid rgba(26, 77, 46, 0.25);
+        background: linear-gradient(135deg, #fff, #f6faf7);
+        padding: 11px 12px;
+    }
+
+    .secondary-input-row button,
+    #additionsPanel .input-group button,
+    #extrasPanel .input-group button {
+        border-radius: 12px;
+    }
 }
 
 
@@ -5852,6 +5941,7 @@ body.dark-mode .history-row {
             <li class="divider"></li>
             <li><button onclick="openInstructionsModal()">הוראות</button></li>
             <li><button onclick="openTimelineModal()">ציר זמן</button></li>
+            <li><button onclick="openProjectSummaryModal()">נתונים כלליים</button></li>
         </ul>
         <div class="sidebar-footer">
             <div class="auth-section">
@@ -6042,6 +6132,25 @@ body.dark-mode .history-row {
             <h3 id="secondaryHistoryTitle"></h3>
             <div id="secondaryHistoryRows" class="secondary-history-rows"></div>
             <div id="secondaryHistoryTotal" class="secondary-history-total"></div>
+            <div class="secondary-history-actions">
+                <button class="download-pdf-btn" onclick="downloadSecondaryHistory()"><i class="fas fa-download"></i> הורדה</button>
+                <button onclick="addEntryFromSecondaryHistory()"><i class="fas fa-plus"></i> הוסף רשומה</button>
+            </div>
+        </div>
+    </div>
+    <div id="projectSummaryModal" class="modal">
+        <div class="modal-content project-summary-modal-content">
+            <span class="close-button" onclick="closeProjectSummaryModal()">&times;</span>
+            <h3><i class="fas fa-table"></i> נתונים כלליים לפרויקט</h3>
+            <div id="projectSummaryMarquee" class="project-summary-marquee"></div>
+            <div class="project-summary-table-wrap">
+                <table class="project-summary-table">
+                    <thead>
+                        <tr><th>קטגוריה</th><th>שם</th><th>עדכון אחרון</th><th>פרטים</th></tr>
+                    </thead>
+                    <tbody id="projectSummaryTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
     <div id="projectManagementModal" class="modal">
@@ -6554,6 +6663,9 @@ body.dark-mode .history-row {
         const secondaryHistoryTitle = document.getElementById('secondaryHistoryTitle');
         const secondaryHistoryRows = document.getElementById('secondaryHistoryRows');
         const secondaryHistoryTotal = document.getElementById('secondaryHistoryTotal');
+        const projectSummaryModal = document.getElementById('projectSummaryModal');
+        const projectSummaryMarquee = document.getElementById('projectSummaryMarquee');
+        const projectSummaryTableBody = document.getElementById('projectSummaryTableBody');
         const historyModal = document.getElementById('historyModal');
         const modalTitle = document.getElementById('modalTitle');
         const historyList = document.getElementById('historyList');
@@ -7758,7 +7870,7 @@ body.dark-mode .history-row {
         function handleDashboardCollapseVisibility() {
             if (!dashboardCollapseBtn || !fixedDashboardSection) return;
             const isMobile = window.innerWidth <= 768;
-            dashboardCollapseBtn.style.display = isMobile && activeCategory === 'metrics' ? 'flex' : 'none';
+            dashboardCollapseBtn.style.display = isMobile ? 'flex' : 'none';
             if (!isMobile) {
                 fixedDashboardSection.classList.remove('collapsed-mobile');
             }
@@ -7814,11 +7926,13 @@ body.dark-mode .history-row {
             switchCategory(activeCategory);
         }
 
-        let activeCategory = 'metrics';
+        const savedCategory = localStorage.getItem('activeCategory');
+        let activeCategory = ['metrics', 'additions', 'extras'].includes(savedCategory) ? savedCategory : 'metrics';
         let secondaryHistoryState = { mode: null, key: null };
 
         function switchCategory(category) {
             activeCategory = category;
+            localStorage.setItem('activeCategory', activeCategory);
             const navButtons = document.querySelectorAll('.category-nav-btn');
             navButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.category === category));
 
@@ -7830,15 +7944,15 @@ body.dark-mode .history-row {
             currentStageContent.style.display = isMetrics ? 'block' : 'none';
             stageOverviewContainer.style.display = isMetrics ? 'block' : 'none';
             stageNavContainer.style.display = isMetrics ? 'flex' : 'none';
-            projectDetailsCard.style.display = isMetrics ? 'block' : 'none';
-            document.querySelector('.top-section-wrapper').style.display = isMetrics ? 'block' : 'none';
-            if (currentStageContent.parentElement) currentStageContent.parentElement.style.display = isMetrics ? 'block' : 'none';
+            projectDetailsCard.style.display = 'block';
+            document.querySelector('.top-section-wrapper').style.display = 'block';
+            if (currentStageContent.parentElement) currentStageContent.parentElement.style.display = 'block';
             if (isMetrics) {
                 closeSecondaryHistoryModal();
             }
             fixedDashboardSection.classList.remove('collapsed-mobile');
             if (dashboardCollapseBtn) {
-                dashboardCollapseBtn.style.display = isMetrics && window.innerWidth <= 768 ? 'flex' : 'none';
+                dashboardCollapseBtn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
             }
 
             renderActiveCategoryDashboard();
@@ -8182,6 +8296,97 @@ body.dark-mode .history-row {
             renderExtrasPanel();
             if (activeCategory === 'extras') renderActiveCategoryDashboard();
             renderSecondaryHistoryRows();
+        }
+
+        function downloadSecondaryHistory() {
+            const { mode, key } = secondaryHistoryState;
+            if (!mode || !key) return;
+            const rows = mode === 'addition'
+                ? (projects[currentProjectId]?.additions?.[key] || []).map((entry) => ({
+                    timestamp: entry.timestamp || '',
+                    value: `${entry.amount ?? ''} ${entry.unit || ''}`,
+                    notes: ''
+                }))
+                : (projects[currentProjectId]?.extras || []).filter((item) => item.type === key).map((entry) => ({
+                    timestamp: entry.timestamp || '',
+                    value: entry.type || '',
+                    notes: entry.notes || ''
+                }));
+            const header = 'timestamp,value,notes';
+            const csv = [header, ...rows.map((row) => [row.timestamp, row.value, row.notes].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${mode}_${key}_${Date.now()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            URL.revokeObjectURL(a.href);
+            a.remove();
+        }
+
+        async function addEntryFromSecondaryHistory() {
+            const { mode, key } = secondaryHistoryState;
+            if (!mode || !key) return;
+            if (mode === 'addition') {
+                const amountRaw = prompt(`כמות חדשה עבור ${key}:`, '');
+                if (amountRaw === null) return;
+                const amount = parseFloat(amountRaw);
+                if (Number.isNaN(amount)) {
+                    alert('יש להזין כמות תקינה.');
+                    return;
+                }
+                appendAdditionAmount(key, amount);
+            } else {
+                const notes = prompt(`הערות עבור ${key}:`, '');
+                if (notes === null) return;
+                await addExtraEntry(key, { notesInput: { value: notes } });
+            }
+            renderSecondaryHistoryRows();
+        }
+
+        function openProjectSummaryModal() {
+            if (!projectSummaryModal) return;
+            const project = projects[currentProjectId];
+            const rows = [];
+            const pills = [];
+            Object.entries(project?.stages || {}).forEach(([stageId, metrics]) => {
+                Object.entries(metrics || {}).forEach(([metricId, entries]) => {
+                    const last = (entries || [])[entries.length - 1];
+                    if (!last) return;
+                    const metricName = stagesConfig?.[stageId]?.metrics?.[metricId]?.name || stagesConfig?.[stageId]?.customMetrics?.[metricId]?.name || metricId;
+                    pills.push(`${metricName}: ${last.value}`);
+                    rows.push({ category: 'מדדים', name: metricName, timestamp: last.timestamp || '', details: String(last.value ?? '') });
+                });
+            });
+            Object.entries(project?.additions || {}).forEach(([name, entries]) => {
+                const last = (entries || [])[entries.length - 1];
+                if (!last) return;
+                pills.push(`${name}: ${last.amount} ${last.unit || ''}`);
+                rows.push({ category: 'תוספות', name, timestamp: last.timestamp || '', details: `${last.amount ?? ''} ${last.unit || ''}`.trim() });
+            });
+            const extraGroups = {};
+            (project?.extras || []).forEach((entry) => {
+                if (!entry?.type) return;
+                if (!extraGroups[entry.type] || (new Date(entry.timestamp) > new Date(extraGroups[entry.type].timestamp))) extraGroups[entry.type] = entry;
+            });
+            Object.entries(extraGroups).forEach(([type, entry]) => {
+                pills.push(`${type}: ${(entry.notes || '').slice(0, 24)}`);
+                rows.push({ category: 'נתונים נוספים', name: type, timestamp: entry.timestamp || '', details: entry.notes || '' });
+            });
+            projectSummaryMarquee.innerHTML = pills.length ? pills.map((txt) => `<span class="project-summary-pill">${txt}</span>`).join('') : '<span class="project-summary-pill">אין עדכונים עדיין</span>';
+            const sortedRows = rows.sort((a, b) => {
+                const aTs = parseHebrewLocaleTimestamp(a.timestamp)?.getTime() || 0;
+                const bTs = parseHebrewLocaleTimestamp(b.timestamp)?.getTime() || 0;
+                return bTs - aTs;
+            });
+            projectSummaryTableBody.innerHTML = sortedRows.length
+                ? sortedRows.map((r) => `<tr><td>${r.category}</td><td>${r.name}</td><td>${r.timestamp}</td><td>${r.details}</td></tr>`).join('')
+                : '<tr><td colspan="4">אין נתונים להצגה.</td></tr>';
+            projectSummaryModal.style.display = 'flex';
+        }
+
+        function closeProjectSummaryModal() {
+            if (projectSummaryModal) projectSummaryModal.style.display = 'none';
         }
 
         function createNewProjectData(name) {
@@ -10954,6 +11159,9 @@ body.dark-mode .history-row {
             }
             if (event.target === secondaryHistoryModal) {
                 closeSecondaryHistoryModal();
+            }
+            if (event.target === projectSummaryModal) {
+                closeProjectSummaryModal();
             }
             if (event.target === projectManagementModal) {
                 closeProjectManagementModal();
