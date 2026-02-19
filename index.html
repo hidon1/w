@@ -5557,6 +5557,38 @@ body.dark-mode .auth-error {
     margin-bottom: 10px;
     color: #1a4d2e;
 }
+.secondary-panel-note {
+    margin: 0 0 12px;
+    color: #35533f;
+    font-size: 0.92rem;
+}
+
+.dashboard-item-form {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.dashboard-item-form .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: 8px;
+}
+
+.dashboard-item-form input,
+.dashboard-item-form select,
+.dashboard-item-form button {
+    width: 100%;
+}
+
+.secondary-action-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 9px 10px;
+    background: #1a4d2e;
+    color: #fff;
+    font-weight: 700;
+}
 
 .addition-summary {
     display: flex;
@@ -5922,38 +5954,13 @@ body.dark-mode .history-row {
     </div>
     <div class="secondary-panel category-panel" id="additionsPanel">
         <h3>דשבורד תוספות</h3>
-        <div class="secondary-input-card">
-            <h4>הזנת תוספת</h4>
-            <div class="secondary-input-row">
-                <input id="additionType" type="text" placeholder="שם התוספת (למשל ביסולפיט)">
-                <input id="additionAmount" type="number" step="any" placeholder="הכנס כמות">
-                <select id="additionUnit">
-                    <option value="גרם">גרם</option>
-                    <option value="קילוגרם">קילוגרם</option>
-                    <option value="ליטר">ליטר</option>
-                    <option value="מיליגרם">מיליגרם</option>
-                </select>
-                <button class="history-upload-btn" onclick="addAdditionEntry()">עדכן</button>
-            </div>
-            <div class="secondary-input-row">
-                <input id="additionTime" type="datetime-local">
-                <input id="additionStoryUpload" type="file" accept="image/*">
-            </div>
-        </div>
-        <div class="secondary-dashboard-grid" id="additionsDashboard"></div>
+        <p class="secondary-panel-note">עדכון הכמויות מתבצע מהקוביות בדשבורד העליון. להוספת תוספת חדשה השתמשו בכפתור הצהוב.</p>
+        <div class="secondary-dashboard-grid" id="additionsDashboard" style="display:none;"></div>
     </div>
     <div class="secondary-panel category-panel" id="extrasPanel">
         <h3>דשבורד נתונים נוספים</h3>
-        <div class="additions-form-grid">
-            <input id="extraType" type="text" placeholder="שם נתון (למשל שפייה)">
-            <input id="extraTime" type="datetime-local">
-            <input id="extraNotes" type="text" placeholder="הערות">
-        </div>
-        <div class="additions-form-grid" style="margin-top:-4px;">
-            <input id="extraStoryUpload" type="file" accept="image/*">
-            <button class="download-pdf-btn" onclick="addExtraEntry()">הוסף מדד/רשומה</button>
-        </div>
-        <div class="secondary-dashboard-grid" id="extrasDashboard"></div>
+        <p class="secondary-panel-note">עדכון נתונים נוספים מתבצע מהקוביות בדשבורד העליון. להוספת נתון חדש השתמשו בכפתור הצהוב.</p>
+        <div class="secondary-dashboard-grid" id="extrasDashboard" style="display:none;"></div>
     </div>
     <nav class="category-nav" id="categoryNav">
         <button class="category-nav-btn active" data-category="metrics" onclick="switchCategory('metrics')"><i class="fas fa-chart-line"></i><span>מדדים</span></button>
@@ -7835,11 +7842,13 @@ body.dark-mode .history-row {
             return formatLocalDateTimeForInput(parsed);
         }
 
-        async function addAdditionEntry() {
-            const name = additionTypeInput.value.trim();
-            const amount = parseFloat(additionAmountInput.value);
-            const unit = additionUnitInput.value;
-            const when = additionTimeInput.value ? new Date(additionTimeInput.value) : new Date();
+        async function addAdditionEntry(nameOverride = null, controls = {}) {
+            const name = (nameOverride || additionTypeInput?.value || '').trim();
+            const amountSource = controls.amountInput?.value ?? additionAmountInput?.value;
+            const amount = parseFloat(amountSource);
+            const unit = controls.unitInput?.value || additionUnitInput?.value || 'גרם';
+            const rawTime = controls.timeInput?.value ?? additionTimeInput?.value;
+            const when = rawTime ? new Date(rawTime) : new Date();
             if (!name) {
                 alert('יש להזין שם תוספת.');
                 return;
@@ -7855,7 +7864,7 @@ body.dark-mode .history-row {
                 unit,
                 timestamp: when.toLocaleString('he-IL')
             };
-            const file = additionStoryUploadInput?.files?.[0];
+            const file = controls.fileInput?.files?.[0] || additionStoryUploadInput?.files?.[0];
             if (file) {
                 const uploaded = await uploadSecondaryStoryImage(file, `addition_${newEntry.id}`);
                 if (uploaded) {
@@ -7865,10 +7874,12 @@ body.dark-mode .history-row {
             }
             projects[currentProjectId].additions[name].push(newEntry);
             saveAllProjects();
-            additionTypeInput.value = '';
-            additionAmountInput.value = '';
-            additionTimeInput.value = '';
-            if (additionStoryUploadInput) additionStoryUploadInput.value = '';
+            if (controls.amountInput) controls.amountInput.value = '';
+            if (controls.timeInput) controls.timeInput.value = '';
+            if (controls.fileInput) controls.fileInput.value = '';
+            if (!controls.amountInput && additionAmountInput) additionAmountInput.value = '';
+            if (!controls.timeInput && additionTimeInput) additionTimeInput.value = '';
+            if (!controls.fileInput && additionStoryUploadInput) additionStoryUploadInput.value = '';
             renderAdditionsPanel();
             if (activeCategory === 'additions') renderActiveCategoryDashboard();
         }
@@ -7912,7 +7923,7 @@ body.dark-mode .history-row {
         function appendAdditionAmount(name, amount) {
             const entries = projects[currentProjectId]?.additions?.[name];
             if (!entries || Number.isNaN(amount)) return;
-            const unit = entries[entries.length - 1]?.unit || additionUnitInput.value;
+            const unit = entries[entries.length - 1]?.unit || 'גרם';
             entries.push({ id: Date.now(), amount, unit, timestamp: new Date().toLocaleString('he-IL') });
             saveAllProjects();
             renderAdditionsPanel();
@@ -7944,16 +7955,17 @@ body.dark-mode .history-row {
             if (activeCategory === 'additions') renderActiveCategoryDashboard();
         }
 
-        async function addExtraEntry() {
-            const type = extraTypeInput.value.trim();
-            const notes = extraNotesInput.value.trim();
-            const when = extraTimeInput.value ? new Date(extraTimeInput.value) : new Date();
+        async function addExtraEntry(typeOverride = null, controls = {}) {
+            const type = (typeOverride || extraTypeInput?.value || '').trim();
+            const notes = (controls.notesInput?.value ?? extraNotesInput?.value ?? '').trim();
+            const rawTime = controls.timeInput?.value ?? extraTimeInput?.value;
+            const when = rawTime ? new Date(rawTime) : new Date();
             if (!type) {
                 alert('יש להזין שם נתון.');
                 return;
             }
             const newEntry = { id: Date.now(), type, notes, timestamp: when.toLocaleString('he-IL') };
-            const file = extraStoryUploadInput?.files?.[0];
+            const file = controls.fileInput?.files?.[0] || extraStoryUploadInput?.files?.[0];
             if (file) {
                 const uploaded = await uploadSecondaryStoryImage(file, `extra_${newEntry.id}`);
                 if (uploaded) {
@@ -7963,10 +7975,12 @@ body.dark-mode .history-row {
             }
             projects[currentProjectId].extras.push(newEntry);
             saveAllProjects();
-            extraTypeInput.value = '';
-            extraNotesInput.value = '';
-            extraTimeInput.value = '';
-            if (extraStoryUploadInput) extraStoryUploadInput.value = '';
+            if (controls.notesInput) controls.notesInput.value = '';
+            if (controls.timeInput) controls.timeInput.value = '';
+            if (controls.fileInput) controls.fileInput.value = '';
+            if (!controls.notesInput && extraNotesInput) extraNotesInput.value = '';
+            if (!controls.timeInput && extraTimeInput) extraTimeInput.value = '';
+            if (!controls.fileInput && extraStoryUploadInput) extraStoryUploadInput.value = '';
             renderExtrasPanel();
             if (activeCategory === 'extras') renderActiveCategoryDashboard();
         }
@@ -8053,6 +8067,12 @@ body.dark-mode .history-row {
                     row.innerHTML = `
                         <div class="secondary-input-row">
                             <input type="number" step="any" value="${entry.amount ?? ''}" onchange="editAdditionInline(decodeURIComponent('${safeKey}'), ${index}, 'amount', this.value)">
+                            <select onchange="editAdditionInline(decodeURIComponent('${safeKey}'), ${index}, 'unit', this.value)">
+                                <option value="גרם" ${entry.unit === 'גרם' ? 'selected' : ''}>גרם</option>
+                                <option value="קילוגרם" ${entry.unit === 'קילוגרם' ? 'selected' : ''}>קילוגרם</option>
+                                <option value="ליטר" ${entry.unit === 'ליטר' ? 'selected' : ''}>ליטר</option>
+                                <option value="מיליגרם" ${entry.unit === 'מיליגרם' ? 'selected' : ''}>מיליגרם</option>
+                            </select>
                             <input type="datetime-local" value="${parseDisplayTimestampToInputValue(entry.timestamp)}" onchange="editAdditionInline(decodeURIComponent('${safeKey}'), ${index}, 'timestamp', this.value)">
                             <input type="file" accept="image/*" onchange="updateSecondaryEntryImage('addition', decodeURIComponent('${safeKey}'), ${index}, this)">
                         </div>
@@ -8098,6 +8118,8 @@ body.dark-mode .history-row {
                 entry.amount = parsed;
             } else if (field === 'timestamp') {
                 entry.timestamp = value ? new Date(value).toLocaleString('he-IL') : entry.timestamp;
+            } else if (field === 'unit') {
+                entry.unit = value || entry.unit;
             }
             saveAllProjects();
             renderAdditionsPanel();
@@ -8920,6 +8942,80 @@ body.dark-mode .history-row {
             return dashboardItem;
         }
 
+        function createAdditionDashboardCard(name, entries) {
+            const total = entries.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
+            const unit = entries[entries.length - 1]?.unit || 'גרם';
+            const dashboardItem = document.createElement('div');
+            dashboardItem.className = 'dashboard-item';
+            dashboardItem.innerHTML = `
+                <h3>${name}</h3>
+                <p>סה"כ מצטבר: ${total} ${unit}</p>
+                <p>כמות עדכונים: ${entries.length}</p>
+                <div class="dashboard-item-form">
+                    <div class="form-row">
+                        <input type="number" step="any" placeholder="הכנס כמות">
+                        <select>
+                            <option value="גרם">גרם</option>
+                            <option value="קילוגרם">קילוגרם</option>
+                            <option value="ליטר">ליטר</option>
+                            <option value="מיליגרם">מיליגרם</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <button type="button" class="secondary-action-btn">עדכן</button>
+                        <button type="button" class="history-upload-btn">היסטוריה</button>
+                    </div>
+                </div>
+            `;
+            const amountInput = dashboardItem.querySelector('input[type="number"]');
+            const unitSelect = dashboardItem.querySelector('select');
+            const updateBtn = dashboardItem.querySelector('.secondary-action-btn');
+            const historyBtn = dashboardItem.querySelector('.history-upload-btn');
+            unitSelect.value = unit;
+            updateBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                addAdditionEntry(name, { amountInput, unitInput: unitSelect });
+            });
+            historyBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                openSecondaryHistoryModal('addition', name);
+            });
+            return dashboardItem;
+        }
+
+        function createExtraDashboardCard(type, entries) {
+            const latest = entries[entries.length - 1];
+            const dashboardItem = document.createElement('div');
+            dashboardItem.className = 'dashboard-item';
+            dashboardItem.innerHTML = `
+                <h3>${type}</h3>
+                <p>עדכונים: ${entries.length}</p>
+                <p>אחרון: ${latest?.timestamp || '-'}</p>
+                <p>הערות: ${latest?.notes || '-'}</p>
+                <div class="dashboard-item-form">
+                    <div class="form-row">
+                        <input type="text" placeholder="הערות">
+                        <button type="button" class="secondary-action-btn">עדכן</button>
+                    </div>
+                    <div class="form-row">
+                        <button type="button" class="history-upload-btn">היסטוריה</button>
+                    </div>
+                </div>
+            `;
+            const notesInput = dashboardItem.querySelector('input[type="text"]');
+            const updateBtn = dashboardItem.querySelector('.secondary-action-btn');
+            const historyBtn = dashboardItem.querySelector('.history-upload-btn');
+            updateBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                addExtraEntry(type, { notesInput });
+            });
+            historyBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                openSecondaryHistoryModal('extra', type);
+            });
+            return dashboardItem;
+        }
+
         function renderAdditionsToMainDashboard() {
             fixedDashboardGrid.innerHTML = '';
             const additions = projects[currentProjectId]?.additions || {};
@@ -8930,14 +9026,7 @@ body.dark-mode .history-row {
             }
             names.forEach((name) => {
                 const entries = additions[name] || [];
-                const total = entries.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
-                const unit = entries[entries.length - 1]?.unit || '';
-                fixedDashboardGrid.appendChild(createSecondaryDashboardItem(
-                    name,
-                    `סה"כ מצטבר: ${total} ${unit}`,
-                    `כמות עדכונים: ${entries.length}`,
-                    () => openSecondaryHistoryModal('addition', name)
-                ));
+                fixedDashboardGrid.appendChild(createAdditionDashboardCard(name, entries));
             });
         }
 
@@ -8954,14 +9043,7 @@ body.dark-mode .history-row {
                 return acc;
             }, {});
             Object.keys(grouped).forEach((type) => {
-                const typeEntries = grouped[type];
-                const latest = typeEntries[typeEntries.length - 1];
-                fixedDashboardGrid.appendChild(createSecondaryDashboardItem(
-                    type,
-                    `עדכונים: ${typeEntries.length}`,
-                    `אחרון: ${latest?.timestamp || '-'}`,
-                    () => openSecondaryHistoryModal('extra', type)
-                ));
+                fixedDashboardGrid.appendChild(createExtraDashboardCard(type, grouped[type]));
             });
         }
 
