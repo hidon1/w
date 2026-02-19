@@ -453,8 +453,8 @@
 
 /* Base styles for all screen sizes */
 :root {
-    --primary-color: #7B1F3D;
-    --secondary-color: #9D2449;
+    --primary-color: #65162f;
+    --secondary-color: #7f1d3a;
     --accent-color: #D4AF37; /* Golden accent */
     --background-color: #FAF7F2;
     --background-color-mid: #F5EEE6;
@@ -480,14 +480,14 @@
     --dark-light-text-color: #B8AFA0;
     --dark-border-color: #3A3A40;
     --dark-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
-    --dark-primary-color: #C73659;
+    --dark-primary-color: #a12c4a;
     --dark-secondary-color: #9D2449;
     --dark-accent-color: #E5C158; /* Golden accent for dark mode */
     --dark-graph-line-color: #C73659;
     --dark-graph-area-color: rgba(255, 215, 0, 0.2);
     --font-size-base: 16px;
     --mobile-add-button-size: 42px;
-    --card-width-desktop: 220px;
+    --card-width-desktop: 205px;
     --card-max-height-desktop: 85vh;
 }
 
@@ -511,6 +511,10 @@ input, textarea, select {
 button:focus, input:focus, textarea:focus, select:focus {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
+}
+
+button, .stage-nav-button, .add-data-cube, .finance-item-actions button {
+    touch-action: manipulation;
 }
 
 body.dark-mode button:focus, 
@@ -938,19 +942,19 @@ body.dark-mode .stage-nav-button:hover {
     backdrop-filter: blur(5px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: var(--border-radius);
-    padding: 6px 8px;
+    padding: 10px 12px;
     text-align: center;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
     flex: 1;
-    min-width: 60px;
-    max-width: 90px;
+    min-width: 95px;
+    max-width: 120px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    min-height: 50px;
+    min-height: 68px;
 }
 
 .dashboard-item:hover {
@@ -1221,6 +1225,27 @@ body.dark-mode .modal-content {
     gap: 10px;
     justify-content: flex-end;
     margin-top: 10px;
+}
+
+.custom-property-modal-content {
+    max-width: 420px;
+    width: min(92vw, 420px);
+    border: 1px solid rgba(101, 22, 47, 0.2);
+}
+
+.custom-property-modal-content .modal-actions {
+    justify-content: stretch;
+}
+
+.custom-property-modal-content .modal-actions button {
+    flex: 1;
+    min-height: 42px;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+.custom-property-modal-content input {
+    border-radius: 10px;
 }
 
 .modal-graph-container {
@@ -2335,6 +2360,7 @@ body.dark-mode .global-finance-project-section .project-balance.negative {
 
 .stage-overview-container {
     margin-bottom: 15px;
+    position: relative;
 }
 
 .stage-overview-container h4 {
@@ -4396,6 +4422,16 @@ body.dark-mode .add-user-section {
     margin-top: 0;
 }
 
+.stage-overview-container::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(176, 37, 75, 0.25), rgba(101, 22, 47, 0.75), rgba(176, 37, 75, 0.25));
+    margin-bottom: 14px;
+}
+
 .access-section h4 i {
     margin-left: 8px;
 }
@@ -5514,7 +5550,6 @@ body.dark-mode .auth-error {
             <li><a href="#" onclick="closeSidebar(); showMainContent();">ראשי</a></li>
             <li><button onclick="openProjectManagementModal();">ניהול פרויקטים</button></li>
             <li><button onclick="openFinanceModal();">ניהול כספים</button></li>
-            <li><button onclick="openCurrentProjectFinanceReportModal();">דוח כספי לפרויקט נוכחי</button></li>
             <li><button onclick="openGlobalFinanceReportModal();">דוח כספי כולל</button></li>
             <li><button onclick="openFinanceYearlyModal();">דוח כספי לפי שנה</button></li>
             <li><button onclick="openInboxModal();">תיבת דואר <span id="inboxBadge" class="inbox-badge" style="display:none;">0</span></button></li>
@@ -5657,7 +5692,7 @@ body.dark-mode .auth-error {
             </div>
         </div>
         <div id="customPropertyModal" class="modal">
-            <div class="modal-content">
+            <div class="modal-content custom-property-modal-content">
                 <span class="close-button" onclick="closeCustomPropertyModal()">&times;</span>
                 <h3>שדה מותאם אישית</h3>
                 <label for="customPropertyNameInput">שם השדה:</label>
@@ -5838,29 +5873,6 @@ body.dark-mode .auth-error {
             </div>
         </div>
     </div>
-    <div id="currentProjectFinanceReportModal" class="modal current-project-finance-report-modal">
-        <div class="modal-content">
-            <span class="close-button" onclick="closeCurrentProjectFinanceReportModal()">&times;</span>
-            <h3>דוח כספי - פרויקט נוכחי</h3>
-            <div class="current-project-finance-report-summary">
-                <div class="total-income">סה"כ הכנסות: <span id="currentProjectTotalIncome">0</span></div>
-                <div class="total-expense">סה"כ הוצאות: <span id="currentProjectTotalExpense">0</span></div>
-                <div class="total-balance">יתרה נוכחית: <span id="currentProjectTotalBalance">0</span></div>
-            </div>
-            <table class="current-project-finance-report-table" id="currentProjectFinanceReportTable">
-                <thead>
-                    <tr>
-                        <th>תאריך</th>
-                        <th>סוג</th>
-                        <th>סכום</th>
-                        <th>הערות</th>
-                    </tr>
-                </thead>
-                <tbody id="currentProjectFinanceReportTableBody"></tbody>
-            </table>
-            <button class="download-pdf-btn" onclick="downloadCurrentProjectFinancePDF()">הורד כ-PDF</button>
-        </div>
-    </div>
     <div id="globalFinanceReportModal" class="modal">
         <div class="modal-content global-finance-modal-content">
             <span class="close-button" onclick="closeGlobalFinanceReportModal()">&times;</span>
@@ -5999,7 +6011,6 @@ body.dark-mode .auth-error {
                 <li>**מעבר בין שלבים:** השתמשו בכפתורי השלבים (לדוגמה, "בציר") כדי לעבור בין שלבי הייצור של הפרויקט הנוכחי.</li>
                 <li>**ציר זמן:** צפו בכל המדידות של הפרויקט הנוכחי על גבי ציר זמן כרונולוגי אחד.</li>
                 <li>**ניהול כספים:** עקבו אחר הכנסות והוצאות לכל פרויקט, וצפו ביתרה הנוכחית. ניתן לסנן לפי סוג תנועה ותאריך.</li>
-                <li>**דוח כספי:** קבלו סיכום פיננסי רק לפרויקט הנוכחי.</li>
                 <li>**דוח כספי כולל:** קבלו סיכום פיננסי משולב מכל הפרויקטים שלכם.</li>
                 <li>**תזכורות:** הוסיפו תזכורות עם טקסט ותאריך/שעה, ותקבלו הודעה בדפדפן כשהזמן מגיע.</li>
                 <li>**תיבת דואר:** צפו בתזכורות שהתקבלו.</li>
@@ -6217,11 +6228,6 @@ body.dark-mode .auth-error {
         const financeEditModal = document.getElementById('financeEditModal');
         const financeEditAmountInput = document.getElementById('financeEditAmount');
         const financeEditNotesInput = document.getElementById('financeEditNotes');
-        const currentProjectFinanceReportModal = document.getElementById('currentProjectFinanceReportModal');
-        const currentProjectTotalIncomeDisplay = document.getElementById('currentProjectTotalIncome');
-        const currentProjectTotalExpenseDisplay = document.getElementById('currentProjectTotalExpense');
-        const currentProjectTotalBalanceDisplay = document.getElementById('currentProjectTotalBalance');
-        const currentProjectFinanceReportTableBody = document.getElementById('currentProjectFinanceReportTableBody');
         const globalFinanceReportModal = document.getElementById('globalFinanceReportModal');
         const globalTotalIncomeDisplay = document.getElementById('globalTotalIncome');
         const globalTotalExpenseDisplay = document.getElementById('globalTotalExpense');
@@ -7442,7 +7448,6 @@ body.dark-mode .auth-error {
             historyModal.style.display = 'none';
             projectManagementModal.style.display = 'none';
             financeModal.style.display = 'none';
-            currentProjectFinanceReportModal.style.display = 'none';
             globalFinanceReportModal.style.display = 'none';
             financeYearlyModal.style.display = 'none';
             inboxModal.style.display = 'none';
@@ -7978,22 +7983,6 @@ body.dark-mode .auth-error {
                             });
                         });
                     }
-                }
-            }
-            // Render custom metrics with update option (no delete button here)
-            if (stageConfig.customMetrics) {
-                for (const metricId in stageConfig.customMetrics) {
-                    const metric = stageConfig.customMetrics[metricId];
-                    const inputGroup = document.createElement('div');
-                    inputGroup.className = 'input-group';
-                    const inputType = metric.type === 'number' ? 'text' : (metric.type || 'text');
-                    const placeholder = metric.placeholder || '';
-                    inputGroup.innerHTML = `
-                        <label for="${metricId}Input">${metric.name}:</label>
-                        <input type="${inputType}" data-input-kind="${metric.type || 'text'}" id="${metricId}Input" ${metric.type === 'number' ? `inputmode="decimal"` : ''} placeholder="${placeholder}">
-                        <button onclick="updateMetricValue('${currentStageId}', '${metricId}')">עדכן</button>
-                    `;
-                    currentStageInputSection.appendChild(inputGroup);
                 }
             }
             updateDashboardForCurrentStage();
@@ -8733,7 +8722,8 @@ body.dark-mode .auth-error {
                     type: file.type,
                     url: result.downloadUrl,
                     path: result.storagePath,
-                    timestamp: new Date().toLocaleString('he-IL')
+                    timestamp: new Date().toLocaleString('he-IL'),
+                    createdAt: Date.now()
                 });
                 saveAllProjects();
                 renderGeneralImagesList();
@@ -8792,11 +8782,24 @@ body.dark-mode .auth-error {
                     };
                 } catch (error) {
                     console.error('Finance attachment upload failed:', error);
-                    attachment = null;
-                    alert('שמירת הקבלה ל-Firebase נכשלה. התנועה תישמר ללא קובץ מצורף.');
+                    try {
+                        const localUrl = await fileToDataUrl(pendingFinanceAttachmentFile);
+                        attachment = {
+                            type: pendingFinanceAttachmentFile.type,
+                            name: pendingFinanceAttachmentFile.name,
+                            url: localUrl,
+                            path: null,
+                            storedLocally: true
+                        };
+                        alert('שמירת הקבלה ב-Firebase נכשלה, הקובץ נשמר מקומית במכשיר זה.');
+                    } catch (localError) {
+                        console.error('Local attachment fallback failed:', localError);
+                        attachment = null;
+                        alert('שמירת הקבלה נכשלה גם בענן וגם מקומית. התנועה תישמר ללא קובץ מצורף.');
+                    }
                 }
             }
-            projects[currentProjectId].finance.push({ id: entryId, type, amount, notes, timestamp, attachment });
+            projects[currentProjectId].finance.push({ id: entryId, type, amount, notes, timestamp, attachment, createdAt: Date.now() });
             saveAllProjects();
             financeAmountInput.value = '';
             financeNotesInput.value = '';
@@ -8921,72 +8924,9 @@ body.dark-mode .auth-error {
             if (financeEditAmountInput) financeEditAmountInput.value = '';
             if (financeEditNotesInput) financeEditNotesInput.value = '';
         }
-        function openCurrentProjectFinanceReportModal() {
-            if (!ensureFinancePermission()) {
-                return;
-            }
-            closeSidebar();
-            document.querySelector('.container').style.display = 'none';
-            document.querySelector('.top-section-wrapper').style.display = 'none';
-            fixedDashboardSection.style.display = 'none';
-            currentProjectFinanceReportModal.style.display = 'flex';
-            renderCurrentProjectFinanceReport();
-        }
-        function closeCurrentProjectFinanceReportModal() {
-            currentProjectFinanceReportModal.style.display = 'none';
-            showMainContent();
-        }
-        function renderCurrentProjectFinanceReport() {
-            let totalIncome = 0;
-            let totalExpense = 0;
-            let totalBalance = 0;
-            currentProjectFinanceReportTableBody.innerHTML = '';
-            const sortedEntries = projects[currentProjectId].finance.slice().sort((a, b) => {
-                const parseDateString = (ts) => {
-                    const parts = ts.match(/(\d{2})\/(\d{2})\/(\d{4})(?:, (\d{2}):(\d{2}):(\d{2}))?/);
-                    if (parts) {
-                        const year = parseInt(parts[3], 10);
-                        const month = parseInt(parts[2], 10) - 1;
-                        const day = parseInt(parts[1], 10);
-                        const hour = parseInt(parts[4] || 0, 10);
-                        const minute = parseInt(parts[5] || 0, 10);
-                        const second = parseInt(parts[6] || 0, 10);
-                        return new Date(year, month, day, hour, minute, second);
-                    }
-                    return new Date(ts);
-                };
-                const dateA = parseDateString(a.timestamp);
-                const dateB = parseDateString(b.timestamp);
-                return dateA.getTime() - dateB.getTime();
-            });
-            sortedEntries.forEach(entry => {
-                const row = document.createElement('tr');
-                const typeText = entry.type === 'income' ? 'הכנסה' : 'הוצאה';
-                const amountText = entry.amount.toFixed(2) + ' ₪';
-                row.innerHTML = `
-                    <td>${entry.timestamp.split(',')[0]}</td>
-                    <td>${typeText}</td>
-                    <td>${amountText}</td>
-                    <td>${entry.notes || 'אין הערות'}</td>
-                `;
-                currentProjectFinanceReportTableBody.appendChild(row);
-                if (entry.type === 'income') {
-                    totalIncome += entry.amount;
-                } else {
-                    totalExpense += entry.amount;
-                }
-            });
-            totalBalance = totalIncome - totalExpense;
-            currentProjectTotalIncomeDisplay.textContent = totalIncome.toFixed(2);
-            currentProjectTotalExpenseDisplay.textContent = totalExpense.toFixed(2);
-            currentProjectTotalBalanceDisplay.textContent = totalBalance.toFixed(2);
-            currentProjectTotalBalanceDisplay.classList.remove('positive', 'negative');
-            if (totalBalance > 0) {
-                currentProjectTotalBalanceDisplay.classList.add('positive');
-            } else if (totalBalance < 0) {
-                currentProjectTotalBalanceDisplay.classList.add('negative');
-            }
-        }
+        
+        
+        
         function openGlobalFinanceReportModal() {
             if (!ensureFinancePermission()) {
                 return;
@@ -9062,8 +9002,8 @@ body.dark-mode .auth-error {
         function getFinanceEntriesForYearAndMonth(project, selectedYear, selectedMonth) {
             const monthNum = selectedMonth === 'all' ? null : parseInt(selectedMonth, 10);
             return (project.finance || []).filter(entry => {
-                const dateObj = parseHebrewLocaleTimestamp(entry.timestamp);
-                if (!dateObj) return false;
+                const dateObj = entry.createdAt ? new Date(entry.createdAt) : parseHebrewLocaleTimestamp(entry.timestamp);
+                if (!dateObj || Number.isNaN(dateObj.getTime())) return false;
                 const matchesYear = dateObj.getFullYear() === parseInt(selectedYear, 10);
                 if (!matchesYear) return false;
                 if (!monthNum) return true;
@@ -9085,10 +9025,7 @@ body.dark-mode .auth-error {
             yearlyFinanceProjectsDetails.innerHTML = '';
             const filteredProjects = Object.keys(projects).filter(projectId => {
                 const project = projects[projectId];
-                const vintageYearEntries = project?.wineDetails?.vintageYear || [];
-                const hasProjectYearMatch = vintageYearEntries.some(entry => String(entry?.value) === String(selectedYear));
-                const hasFinanceInPeriod = getFinanceEntriesForYearAndMonth(project, selectedYear, selectedMonth).length > 0;
-                return hasProjectYearMatch || hasFinanceInPeriod;
+                return getFinanceEntriesForYearAndMonth(project, selectedYear, selectedMonth).length > 0;
             });
             if (filteredProjects.length === 0) {
                 yearlyFinanceProjectsDetails.innerHTML = '<p>אין פרויקטים בשנה זו.</p>';
@@ -9159,7 +9096,7 @@ body.dark-mode .auth-error {
                     }
                 });
                 (project.generalImages || []).forEach((item) => {
-                    const dateObj = parseHebrewLocaleTimestamp(item.timestamp);
+                    const dateObj = item.createdAt ? new Date(item.createdAt) : parseHebrewLocaleTimestamp(item.timestamp);
                     if (dateObj && dateObj.getFullYear() !== parseInt(selectedYear, 10)) return;
                     if (selectedMonth !== 'all' && dateObj && (dateObj.getMonth() + 1) !== parseInt(selectedMonth, 10)) return;
                     attachments.push({
@@ -9498,7 +9435,7 @@ ${lines.join('\n\n')}`);
                 } else {
                     const customProp = projects[currentProjectId].wineDetails.customProperties.find(prop => prop.id === metricId);
                     metricConfig = { type: 'text', name: item.querySelector('.detail-label').textContent.replace(':', '') };
-                    if (customProp && customProp.history.every(entry => typeof entry.value === 'number')) {
+                    if (customProp && customProp.history.length > 0 && customProp.history.every(entry => typeof entry.value === 'number')) {
                         metricConfig.type = 'number';
                         metricConfig.step = 'any';
                         metricConfig.precision = 2;
@@ -9915,36 +9852,7 @@ ${lines.join('\n\n')}`);
             };
             pdfMake.createPdf(docDefinition).download('timeline.pdf');
         }
-        function downloadCurrentProjectFinancePDF() {
-            const docDefinition = {
-                content: [
-                    { text: 'דוח כספי - פרויקט נוכחי', style: 'header' },
-                    { text: `סה"כ הכנסות: ${currentProjectTotalIncomeDisplay.textContent} ₪`, style: 'text' },
-                    { text: `סה"כ הוצאות: ${currentProjectTotalExpenseDisplay.textContent} ₪`, style: 'text' },
-                    { text: `יתרה נוכחית: ${currentProjectTotalBalanceDisplay.textContent} ₪`, style: 'text' },
-                    { text: 'תנועות:', style: 'subheader' },
-                    {
-                        table: {
-                            headerRows: 1,
-                            widths: ['*', '*', '*', '*'],
-                            body: [
-                                ['תאריך', 'סוג', 'סכום', 'הערות'],
-                                ...Array.from(currentProjectFinanceReportTableBody.querySelectorAll('tr')).map(row => {
-                                    const cells = row.querySelectorAll('td');
-                                    return [cells[0].textContent, cells[1].textContent, cells[2].textContent, cells[3].textContent];
-                                })
-                            ]
-                        }
-                    }
-                ],
-                styles: {
-                    header: { fontSize: 18, bold: true, alignment: 'right' },
-                    subheader: { fontSize: 14, bold: true, alignment: 'right' },
-                    text: { fontSize: 12, alignment: 'right' }
-                }
-            };
-            pdfMake.createPdf(docDefinition).download('current_project_finance_report.pdf');
-        }
+        
         function downloadGlobalFinancePDF() {
             const docDefinition = {
                 content: [
@@ -9998,9 +9906,6 @@ ${lines.join('\n\n')}`);
             }
             if (event.target === financeModal) {
                 closeFinanceModal();
-            }
-            if (event.target === currentProjectFinanceReportModal) {
-                closeCurrentProjectFinanceReportModal();
             }
             if (event.target === globalFinanceReportModal) {
                 closeGlobalFinanceReportModal();
