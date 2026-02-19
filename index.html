@@ -254,10 +254,19 @@
         justify-content: center;
     }
     .dashboard-item {
-        min-width: 45px;
-        max-width: 75px;
+        flex: 0 0 72px;
+        min-width: 72px;
+        max-width: 72px;
         padding: 4px 5px;
         min-height: 50px;
+    }
+
+    .stage-overview-container::before {
+        display: none;
+    }
+
+    .mobile-stage-metric-separator {
+        display: block;
     }
     
     .dashboard-item h3 {
@@ -946,9 +955,9 @@ body.dark-mode .stage-nav-button:hover {
     text-align: center;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
-    flex: 1;
-    min-width: 95px;
-    max-width: 120px;
+    flex: 0 0 110px;
+    min-width: 110px;
+    max-width: 110px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -4463,6 +4472,15 @@ body.dark-mode .add-user-section {
     margin-bottom: 14px;
 }
 
+.mobile-stage-metric-separator {
+    display: none;
+    width: calc(100% - 36px);
+    height: 4px;
+    margin: 10px auto 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(176, 37, 75, 0.25), rgba(101, 22, 47, 0.75), rgba(176, 37, 75, 0.25));
+}
+
 .access-section h4 i {
     margin-left: 8px;
 }
@@ -5689,6 +5707,7 @@ body.dark-mode .auth-error {
             <h4>נתונים משלבים קודמים</h4>
             <div class="step-cards-grid" id="stepCardsGrid"></div>
         </div>
+        <div class="mobile-stage-metric-separator" aria-hidden="true"></div>
     </div>
     <div class="dashboard-section" id="fixedDashboardSection">
         <button class="dashboard-collapse-btn" id="dashboardCollapseBtn" onclick="toggleMobileDashboardCollapse()" aria-label="הסתר/הצג דשבורד תחתון">
@@ -5864,7 +5883,7 @@ body.dark-mode .auth-error {
     <div id="financeModal" class="modal">
         <div class="modal-content finance-modal-content">
             <span class="close-button" onclick="closeFinanceModal()">&times;</span>
-            <h3>ניהול כספים בפרויקט הנוכחי</h3>
+            <h3>ניהול כספים</h3>
             <div class="finance-input-group">
                 <label for="financeAmount">סכום:</label>
                 <input type="number" id="financeAmount" placeholder="הכנס סכום">
@@ -8707,12 +8726,24 @@ body.dark-mode .auth-error {
             if (!financeAttachmentInput) return;
             financeAttachmentInput.value = '';
             financeAttachmentInput.setAttribute('accept', 'image/*,application/pdf');
-            financeAttachmentInput.removeAttribute('capture');
+            if (window.innerWidth <= 768) {
+                financeAttachmentInput.setAttribute('capture', 'environment');
+            } else {
+                financeAttachmentInput.removeAttribute('capture');
+            }
             financeAttachmentInput.click();
         }
 
         async function openFinanceCameraCapture() {
             if (!financeAttachmentInput) return;
+
+            if (window.innerWidth <= 768) {
+                financeAttachmentInput.value = '';
+                financeAttachmentInput.accept = 'image/*';
+                financeAttachmentInput.capture = 'environment';
+                financeAttachmentInput.click();
+                return;
+            }
 
             if (navigator.mediaDevices?.getUserMedia) {
                 try {
@@ -8900,10 +8931,15 @@ body.dark-mode .auth-error {
             if (!ensureFinancePermission()) {
                 return;
             }
-            const amount = parseFloat(financeAmountInput.value);
+            const amountRaw = financeAmountInput.value.trim();
+            const parsedAmount = amountRaw === '' ? null : parseFloat(amountRaw);
             const notes = financeNotesInput.value.trim();
-            if (isNaN(amount) || amount <= 0) {
+            if (amountRaw !== '' && (isNaN(parsedAmount) || parsedAmount <= 0)) {
                 alert('אנא הזן סכום חוקי (חיובי) עבור התנועה.');
+                return;
+            }
+            if (parsedAmount === null && !pendingFinanceAttachmentFile) {
+                alert('הזן סכום או צרף קבלה/חשבונית לפני שמירה.');
                 return;
             }
             const entryId = Date.now();
@@ -8949,7 +8985,7 @@ body.dark-mode .auth-error {
                     }
                 }
             }
-            projects[currentProjectId].finance.push({ id: entryId, type, amount, notes, timestamp, attachment, createdAt: Date.now() });
+            projects[currentProjectId].finance.push({ id: entryId, type, amount: parsedAmount, notes, timestamp, attachment, createdAt: Date.now() });
             saveAllProjects();
             financeAmountInput.value = '';
             financeNotesInput.value = '';
@@ -8967,7 +9003,8 @@ body.dark-mode .auth-error {
             sortedEntries.forEach(entry => {
                 const listItem = document.createElement('li');
                 listItem.setAttribute('data-finance-id', entry.id);
-                const displayAmount = (entry.type === 'expense' ? '-' : '+') + entry.amount.toFixed(2);
+                const hasAmount = typeof entry.amount === 'number' && !isNaN(entry.amount);
+                const displayAmount = hasAmount ? (entry.type === 'expense' ? '-' : '+') + entry.amount.toFixed(2) : 'ללא סכום';
                 const amountClass = entry.type;
                 const attachmentHtml = entry.attachment
                     ? `<div class="notes"><i class="fas fa-paperclip"></i> ${entry.attachment.name || 'קובץ מצורף'}</div>`
@@ -8980,16 +9017,18 @@ body.dark-mode .auth-error {
                         <span class="timestamp" style="font-size:0.8em; color:var(--light-text-color);">${entry.timestamp}</span>
                     </div>
                     <div class="finance-item-actions">
-                        ${entry.attachment ? `<button type="button" onclick="openMediaPreview('${entry.attachment.url}', 'קבלה/חשבונית')">צפה</button>` : ''}
+                        ${entry.attachment ? `<button type="button" onclick="openMediaPreview('${entry.attachment.url}', 'קבלה/חשבונית')">צפה</button><button type="button" onclick="removeFinanceAttachment(${entry.id})">מחק קובץ</button>` : ''}
                         <button onclick="editFinanceEntry(${entry.id})">ערוך</button>
                         <button class="delete" onclick="deleteFinanceEntry(${entry.id})">מחק</button>
                     </div>
                 `;
                 financeList.appendChild(listItem);
-                if (entry.type === 'income') {
-                    balance += entry.amount;
-                } else {
-                    balance -= entry.amount;
+                if (hasAmount) {
+                    if (entry.type === 'income') {
+                        balance += entry.amount;
+                    } else {
+                        balance -= entry.amount;
+                    }
                 }
             });
             if (financeList.children.length === 0) {
@@ -9010,7 +9049,7 @@ body.dark-mode .auth-error {
             if (!entry) return;
             editingFinanceEntryId = id;
             if (financeEditAmountInput) {
-                financeEditAmountInput.value = entry.amount;
+                financeEditAmountInput.value = (typeof entry.amount === 'number' && !isNaN(entry.amount)) ? entry.amount : '';
             }
             if (financeEditNotesInput) {
                 financeEditNotesInput.value = entry.notes || '';
@@ -9041,6 +9080,27 @@ body.dark-mode .auth-error {
                 }
             }
         }
+
+        async function removeFinanceAttachment(id) {
+            if (!ensureFinancePermission()) {
+                return;
+            }
+            const entry = projects[currentProjectId].finance.find(item => item.id === id);
+            if (!entry || !entry.attachment) return;
+            const confirmed = await showConfirmation(
+                'למחוק את הקובץ המצורף מהתנועה?',
+                'מחיקת קובץ'
+            );
+            if (!confirmed) return;
+            const attachmentPath = entry.attachment.path;
+            entry.attachment = null;
+            saveAllProjects();
+            renderFinanceList();
+            if (attachmentPath && window.firebaseAccess?.deleteFileFromStorage) {
+                window.firebaseAccess.deleteFileFromStorage(attachmentPath).catch(() => {});
+            }
+        }
+
         function saveFinanceEdit() {
             if (!ensureFinancePermission()) {
                 return;
@@ -9054,9 +9114,14 @@ body.dark-mode .auth-error {
                 closeFinanceEditModal();
                 return;
             }
-            const newAmount = parseFloat(financeEditAmountInput ? financeEditAmountInput.value : '');
-            if (isNaN(newAmount) || newAmount <= 0) {
+            const amountRaw = financeEditAmountInput ? financeEditAmountInput.value.trim() : '';
+            const newAmount = amountRaw === '' ? null : parseFloat(amountRaw);
+            if (amountRaw !== '' && (isNaN(newAmount) || newAmount <= 0)) {
                 alert('הסכום שהוזן אינו חוקי.');
+                return;
+            }
+            if (newAmount === null && !entry.attachment) {
+                alert('יש להשאיר סכום או קובץ מצורף.');
                 return;
             }
             const newNotes = financeEditNotesInput ? financeEditNotesInput.value.trim() : '';
@@ -9104,6 +9169,7 @@ body.dark-mode .auth-error {
                 let projectExpense = 0;
                 let projectBalance = 0;
                 project.finance.forEach(entry => {
+                    if (typeof entry.amount !== 'number' || isNaN(entry.amount)) return;
                     if (entry.type === 'income') {
                         projectIncome += entry.amount;
                     } else {
@@ -9190,6 +9256,7 @@ body.dark-mode .auth-error {
                 let projectIncome = 0;
                 let projectExpense = 0;
                 entriesForPeriod.forEach(entry => {
+                    if (typeof entry.amount !== 'number' || isNaN(entry.amount)) return;
                     if (entry.type === 'income') {
                         projectIncome += entry.amount;
                     } else {
