@@ -5484,6 +5484,84 @@ body.dark-mode .auth-error {
     color: #ff9800;
 }
 
+.category-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    z-index: 1100;
+    display: flex;
+}
+
+.category-nav-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 10px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: #555;
+}
+
+.category-nav-btn.active {
+    color: #1a4d2e;
+    font-weight: 700;
+}
+
+.category-nav-btn i { font-size: 14px; }
+
+.category-panel { display: none; }
+.category-panel.active { display: block; }
+
+.secondary-panel {
+    display: none;
+    padding: 12px;
+    margin-bottom: 72px;
+}
+
+.secondary-panel.active {
+    display: block;
+}
+
+.additions-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.additions-list { list-style: none; padding: 0; margin: 0; }
+.additions-list li {
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.entry-actions { display:flex; gap:8px; margin-top:8px; }
+
+@media (min-width: 769px) {
+    .category-nav {
+        top: 0;
+        bottom: auto;
+        justify-content: center;
+        gap: 22px;
+        padding: 10px;
+    }
+    .category-nav-btn {
+        max-width: 130px;
+        border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 999px;
+    }
+    .secondary-panel { margin-top: 64px; margin-bottom: 0; }
+    body { padding-top: 62px; }
+}
+
 
 @media (max-width: 768px) {
     .login-modal-content {
@@ -5709,7 +5787,7 @@ body.dark-mode .auth-error {
         </div>
         <div class="mobile-stage-metric-separator" aria-hidden="true"></div>
     </div>
-    <div class="dashboard-section" id="fixedDashboardSection">
+    <div class="dashboard-section category-panel active" id="fixedDashboardSection">
         <button class="dashboard-collapse-btn" id="dashboardCollapseBtn" onclick="toggleMobileDashboardCollapse()" aria-label="הסתר/הצג דשבורד תחתון">
             <i class="fas fa-chevron-down"></i>
         </button>
@@ -5720,6 +5798,37 @@ body.dark-mode .auth-error {
             <span>הוסף מדד</span>
         </div>
     </div>
+    <div class="secondary-panel" id="additionsPanel">
+        <h3>תוספות</h3>
+        <div class="additions-form-grid">
+            <input id="additionName" type="text" placeholder="שם תוספת (למשל ביסולפיט)">
+            <input id="additionAmount" type="number" step="any" placeholder="כמות">
+            <select id="additionUnit">
+                <option value="גרם">גרם</option>
+                <option value="קילוגרם">קילוגרם</option>
+                <option value="ליטר">ליטר</option>
+                <option value="מיליגרם">מיליגרם</option>
+            </select>
+            <input id="additionTime" type="datetime-local">
+        </div>
+        <button class="download-pdf-btn" onclick="addAdditionEntry()">הוסף תוספת</button>
+        <ul class="additions-list" id="additionsList"></ul>
+    </div>
+    <div class="secondary-panel" id="extrasPanel">
+        <h3>נתונים נוספים</h3>
+        <div class="additions-form-grid">
+            <input id="extraType" type="text" placeholder="סוג פעולה (למשל שפייה)">
+            <input id="extraNotes" type="text" placeholder="הערות">
+            <input id="extraTime" type="datetime-local">
+        </div>
+        <button class="download-pdf-btn" onclick="addExtraEntry()">הוסף רשומה</button>
+        <ul class="additions-list" id="extrasList"></ul>
+    </div>
+    <nav class="category-nav" id="categoryNav">
+        <button class="category-nav-btn active" data-category="metrics" onclick="switchCategory('metrics')"><i class="fas fa-chart-line"></i><span>מדדים</span></button>
+        <button class="category-nav-btn" data-category="additions" onclick="switchCategory('additions')"><i class="fas fa-flask"></i><span>תוספות</span></button>
+        <button class="category-nav-btn" data-category="extras" onclick="switchCategory('extras')"><i class="fas fa-list-check"></i><span>נתונים נוספים</span></button>
+    </nav>
         <div id="addMetricModal" class="modal">
             <div class="modal-content add-metric-modal-content">
                 <span class="close-button" onclick="closeAddMetricModal()">&times;</span>
@@ -5972,6 +6081,11 @@ body.dark-mode .auth-error {
                 </div>
                 <div id="yearlyFinanceProjectsDetails"></div>
                 <div class="yearly-report-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px;">
+                    <select id="receiptTypeFilter" class="project-filter-select">
+                        <option value="all">קבלות: הכל</option>
+                        <option value="expense">קבלות: הוצאות</option>
+                        <option value="income">קבלות: הכנסות</option>
+                    </select>
                     <button class="download-pdf-btn" onclick="downloadYearlyFinancePDF()">הורד כ-PDF</button>
                     <button class="download-pdf-btn" onclick="downloadYearlyReceiptsZip()">הורד קבלות (ZIP)</button>
                     <button class="download-pdf-btn" onclick="openFinanceMediaListModal('yearly')">קבלות/תמונות כללי</button>
@@ -6268,6 +6382,17 @@ body.dark-mode .auth-error {
         const dashboardCollapseBtn = document.getElementById('dashboardCollapseBtn');
         const fixedDashboardStageName = document.getElementById('fixedDashboardStageName');
         const fixedDashboardGrid = document.getElementById('fixedDashboardGrid');
+        const additionsPanel = document.getElementById('additionsPanel');
+        const extrasPanel = document.getElementById('extrasPanel');
+        const additionNameInput = document.getElementById('additionName');
+        const additionAmountInput = document.getElementById('additionAmount');
+        const additionUnitInput = document.getElementById('additionUnit');
+        const additionTimeInput = document.getElementById('additionTime');
+        const additionsList = document.getElementById('additionsList');
+        const extraTypeInput = document.getElementById('extraType');
+        const extraNotesInput = document.getElementById('extraNotes');
+        const extraTimeInput = document.getElementById('extraTime');
+        const extrasList = document.getElementById('extrasList');
         const historyModal = document.getElementById('historyModal');
         const modalTitle = document.getElementById('modalTitle');
         const historyList = document.getElementById('historyList');
@@ -7442,6 +7567,7 @@ body.dark-mode .auth-error {
         function renderAllMainContent() {
             updateProjectDisplay();
             renderStageNavigation();
+            switchCategory(activeCategory);
         }
         function loadDarkModeState() {
             const isDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -7522,7 +7648,165 @@ body.dark-mode .auth-error {
             fixedDashboardSection.style.display = 'flex';
             // Always show stage overview container
             stageOverviewContainer.style.display = 'block';
+            switchCategory(activeCategory);
         }
+
+        let activeCategory = 'metrics';
+
+        function switchCategory(category) {
+            activeCategory = category;
+            const navButtons = document.querySelectorAll('.category-nav-btn');
+            navButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.category === category));
+
+            fixedDashboardSection.classList.toggle('active', category === 'metrics');
+            additionsPanel.classList.toggle('active', category === 'additions');
+            extrasPanel.classList.toggle('active', category === 'extras');
+
+            if (category === 'additions') renderAdditionsPanel();
+            if (category === 'extras') renderExtrasPanel();
+        }
+
+        function formatLocalDateTimeForInput(date = new Date()) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+        function parseDisplayTimestampToInputValue(ts) {
+            const parsed = parseHebrewLocaleTimestamp(ts);
+            if (!parsed || Number.isNaN(parsed.getTime())) return formatLocalDateTimeForInput(new Date());
+            return formatLocalDateTimeForInput(parsed);
+        }
+
+        function addAdditionEntry() {
+            const name = additionNameInput.value.trim();
+            const amount = parseFloat(additionAmountInput.value);
+            const unit = additionUnitInput.value;
+            const when = additionTimeInput.value ? new Date(additionTimeInput.value) : new Date();
+            if (!name || Number.isNaN(amount)) {
+                alert('יש להזין שם תוספת וכמות תקינה.');
+                return;
+            }
+            if (!projects[currentProjectId].additions[name]) projects[currentProjectId].additions[name] = [];
+            projects[currentProjectId].additions[name].push({
+                amount,
+                unit,
+                timestamp: when.toLocaleString('he-IL')
+            });
+            saveAllProjects();
+            additionNameInput.value = '';
+            additionAmountInput.value = '';
+            additionTimeInput.value = '';
+            renderAdditionsPanel();
+        }
+
+        function renderAdditionsPanel() {
+            if (!additionsList) return;
+            additionsList.innerHTML = '';
+            const additions = projects[currentProjectId]?.additions || {};
+            const names = Object.keys(additions);
+            if (!names.length) {
+                additionsList.innerHTML = '<li>עדיין לא נוספו תוספות.</li>';
+                return;
+            }
+            names.forEach((name) => {
+                const entries = additions[name] || [];
+                const total = entries.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
+                const unit = entries[entries.length - 1]?.unit || '';
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>${name}</strong><div>סה"כ: ${total} ${unit}</div>`;
+                entries.slice().reverse().forEach((entry, idxRev) => {
+                    const idx = entries.length - 1 - idxRev;
+                    const row = document.createElement('div');
+                    row.innerHTML = `${entry.amount} ${entry.unit} • ${entry.timestamp}`;
+                    const actions = document.createElement('div');
+                    actions.className = 'entry-actions';
+                    actions.innerHTML = `<button class="history-upload-btn" onclick="editAdditionEntry('${name.replace(/'/g, "\'")}', ${idx})">ערוך</button><button class="undo-button" onclick="removeAdditionEntry('${name.replace(/'/g, "\'")}', ${idx})">מחק</button>`;
+                    row.appendChild(actions);
+                    li.appendChild(row);
+                });
+                additionsList.appendChild(li);
+            });
+        }
+
+        function editAdditionEntry(name, index) {
+            const entry = projects[currentProjectId]?.additions?.[name]?.[index];
+            if (!entry) return;
+            const amount = prompt('כמות חדשה', entry.amount);
+            if (amount === null) return;
+            const time = prompt('תאריך ושעה (לדוגמה: 1.1.2025, 10:30:00)', entry.timestamp);
+            if (time === null) return;
+            const parsedAmount = parseFloat(amount);
+            if (Number.isNaN(parsedAmount)) return;
+            entry.amount = parsedAmount;
+            entry.timestamp = time;
+            saveAllProjects();
+            renderAdditionsPanel();
+        }
+
+        function removeAdditionEntry(name, index) {
+            const arr = projects[currentProjectId]?.additions?.[name];
+            if (!arr) return;
+            arr.splice(index, 1);
+            if (!arr.length) delete projects[currentProjectId].additions[name];
+            saveAllProjects();
+            renderAdditionsPanel();
+        }
+
+        function addExtraEntry() {
+            const type = extraTypeInput.value.trim();
+            const notes = extraNotesInput.value.trim();
+            const when = extraTimeInput.value ? new Date(extraTimeInput.value) : new Date();
+            if (!type) {
+                alert('יש להזין סוג פעולה.');
+                return;
+            }
+            projects[currentProjectId].extras.push({ type, notes, timestamp: when.toLocaleString('he-IL') });
+            saveAllProjects();
+            extraTypeInput.value = '';
+            extraNotesInput.value = '';
+            extraTimeInput.value = '';
+            renderExtrasPanel();
+        }
+
+        function renderExtrasPanel() {
+            extrasList.innerHTML = '';
+            const entries = projects[currentProjectId]?.extras || [];
+            if (!entries.length) {
+                extrasList.innerHTML = '<li>אין עדיין נתונים נוספים.</li>';
+                return;
+            }
+            entries.slice().reverse().forEach((entry, revIndex) => {
+                const realIndex = entries.length - 1 - revIndex;
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>${entry.type}</strong><div>${entry.notes || '-'}</div><div>${entry.timestamp}</div><div class="entry-actions"><button class="history-upload-btn" onclick="editExtraEntry(${realIndex})">ערוך</button><button class="undo-button" onclick="removeExtraEntry(${realIndex})">מחק</button></div>`;
+                extrasList.appendChild(li);
+            });
+        }
+
+        function editExtraEntry(index) {
+            const entry = projects[currentProjectId]?.extras?.[index];
+            if (!entry) return;
+            const nextType = prompt('סוג פעולה', entry.type);
+            if (nextType === null || !nextType.trim()) return;
+            const nextNotes = prompt('הערות', entry.notes || '');
+            if (nextNotes === null) return;
+            const nextTime = prompt('תאריך ושעה', entry.timestamp);
+            if (nextTime === null) return;
+            entry.type = nextType.trim();
+            entry.notes = nextNotes.trim();
+            entry.timestamp = nextTime;
+            saveAllProjects();
+            renderExtrasPanel();
+        }
+
+        function removeExtraEntry(index) {
+            const entries = projects[currentProjectId]?.extras;
+            if (!entries) return;
+            entries.splice(index, 1);
+            saveAllProjects();
+            renderExtrasPanel();
+        }
+
         function createNewProjectData(name) {
             const newProject = {
                 name: name,
@@ -7532,7 +7816,9 @@ body.dark-mode .auth-error {
                 },
                 stages: {},
                 finance: [],
-                generalImages: []
+                generalImages: [],
+                additions: {},
+                extras: []
             };
             for(const metricId in stagesConfig.wineDetails.metrics) {
                 newProject.wineDetails[metricId] = [];
@@ -7584,6 +7870,12 @@ body.dark-mode .auth-error {
                 }
                 if (!project.generalImages) {
                     project.generalImages = [];
+                }
+                if (!project.additions) {
+                    project.additions = {};
+                }
+                if (!project.extras) {
+                    project.extras = [];
                 }
                 if (!project.stages) {
                     project.stages = {};
@@ -8395,6 +8687,7 @@ body.dark-mode .auth-error {
                         <div class="history-entry-actions">
                             ${imagePreviewHtml}
                             ${uploadMetricImageButton}
+                            <button class="history-upload-btn" onclick="editHistoryEntry('${sectionId}', '${metricId}', ${originalIndex})">ערוך</button>
                             <button class="undo-button" onclick="undoUpdate('${sectionId}', '${metricId}', ${originalIndex})">בטל</button>
                         </div>
                     `;
@@ -8605,6 +8898,45 @@ body.dark-mode .auth-error {
             updateDashboardForCurrentStage();
             renderPreviousStageOverview();
         }
+
+        function editHistoryEntry(sectionId, metricId, indexToEdit) {
+            let metricDataArray;
+            if (sectionId === 'wineDetails') {
+                const predefinedMetricConfig = stagesConfig.wineDetails.metrics[metricId];
+                if (predefinedMetricConfig) {
+                    metricDataArray = projects[currentProjectId].wineDetails[metricId];
+                } else {
+                    const customProp = projects[currentProjectId].wineDetails.customProperties.find(prop => prop.id === metricId);
+                    metricDataArray = customProp?.history;
+                }
+            } else {
+                metricDataArray = projects[currentProjectId].stages?.[sectionId]?.[metricId];
+            }
+            const entry = metricDataArray?.[indexToEdit];
+            if (!entry) return;
+
+            const nextValueRaw = prompt('ערך חדש', entry.value);
+            if (nextValueRaw === null) return;
+            const nextTime = prompt('תאריך ושעה', entry.timestamp);
+            if (nextTime === null) return;
+
+            const numericCandidate = parseFloat(nextValueRaw);
+            entry.value = Number.isNaN(numericCandidate) || nextValueRaw.trim() === '' ? nextValueRaw : numericCandidate;
+            entry.timestamp = nextTime;
+            saveAllProjects();
+
+            if (sectionId === 'wineDetails') {
+                updateProjectDetailsCard();
+            } else {
+                updateDashboardForCurrentStage();
+                renderPreviousStageOverview();
+            }
+            const metricDisplayName = (sectionId === 'wineDetails' && !stagesConfig.wineDetails.metrics[metricId])
+                ? projects[currentProjectId].wineDetails.customProperties.find(prop => prop.id === metricId)?.name || metricId
+                : (stagesConfig[sectionId]?.metrics?.[metricId]?.name || stagesConfig[sectionId]?.customMetrics?.[metricId]?.name || metricId);
+            openHistoryModal(sectionId, metricId, metricDisplayName);
+        }
+
         async function undoUpdate(sectionId, metricId, indexToRemove) {
             const confirmed = await showConfirmation(
                 'האם אתה בטוח שברצונך לבטל את העדכון הזה?',
@@ -9298,16 +9630,19 @@ body.dark-mode .auth-error {
         function collectReceiptAttachmentsForReport() {
             const selectedYear = yearSelect.value;
             const selectedMonth = monthSelect?.value || 'all';
+            const receiptTypeFilter = document.getElementById('receiptTypeFilter')?.value || 'all';
             const attachments = [];
             Object.keys(projects).forEach(projectId => {
                 const project = projects[projectId];
                 const periodEntries = getFinanceEntriesForYearAndMonth(project, selectedYear, selectedMonth);
                 periodEntries.forEach(entry => {
+                    if (receiptTypeFilter !== 'all' && entry.type !== receiptTypeFilter) return;
                     if (entry.attachment?.url) {
                         attachments.push({
                             projectName: project.name,
                             timestamp: entry.timestamp,
                             name: entry.attachment.name || 'receipt',
+                            type: entry.type || 'expense',
                             url: entry.attachment.url
                         });
                     }
@@ -9378,23 +9713,40 @@ body.dark-mode .auth-error {
             URL.revokeObjectURL(url);
         }
 
-        function shareYearlyReceipts(channel) {
+        async function shareYearlyReceipts(channel) {
             const attachments = collectReceiptAttachmentsForReport();
             if (!attachments.length) {
                 alert('לא נמצאו קבלות לתקופה שנבחרה.');
                 return;
             }
-            const lines = attachments.map((item, index) => `${index + 1}. ${item.projectName} | ${item.timestamp}
-${item.url}`);
-            const body = encodeURIComponent(`קבלות/חשבוניות לתקופה שנבחרה:
+            let downloadLink = '';
+            try {
+                if (window.JSZip) {
+                    const zip = new JSZip();
+                    for (let i = 0; i < attachments.length; i += 1) {
+                        const file = attachments[i];
+                        const blob = await fetchAttachmentBlob(file.url);
+                        if (!blob) continue;
+                        const safeName = (file.name || `receipt_${i + 1}`).replace(/[^\w.\-]/g, '_');
+                        zip.file(`${String(i + 1).padStart(3, '0')}_${safeName}`, blob);
+                    }
+                    const zipBlob = await zip.generateAsync({ type: 'blob' });
+                    downloadLink = URL.createObjectURL(zipBlob);
+                }
+            } catch (error) {
+                console.warn('Could not build ZIP for share', error);
+            }
 
-${lines.join('\n\n')}`);
+            const message = `קבלות לתקופה שנבחרה.\nהורד את כל הקבצים: ${downloadLink || 'לא נוצר קישור הורדה אוטומטי'}`;
             if (channel === 'email') {
-                window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('קבלות ודוח כספי')}&body=${body}`, '_blank');
+                window.location.href = `mailto:?subject=${encodeURIComponent('קבלות ודוח כספי')}&body=${encodeURIComponent(message)}`;
                 return;
             }
             if (channel === 'whatsapp') {
-                window.open(`https://wa.me/?text=${body}`, '_blank');
+                window.open(`whatsapp://send?text=${encodeURIComponent(message)}`, '_blank');
+                setTimeout(() => {
+                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                }, 400);
             }
         }
 
