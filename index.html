@@ -3058,6 +3058,7 @@ body.dark-mode .finance-yearly-project-section .project-balance.negative {
 .yearly-receipts-list {
     margin-top: 8px;
     text-align: right;
+    overflow-wrap: anywhere;
 }
 .yearly-receipts-list ul {
     margin: 6px 0 0;
@@ -3065,6 +3066,36 @@ body.dark-mode .finance-yearly-project-section .project-balance.negative {
 }
 .yearly-receipts-list li {
     margin-bottom: 4px;
+}
+
+.yearly-receipts-list a {
+    word-break: break-word;
+}
+
+.finance-yearly-modal-content,
+.global-finance-modal-content {
+    overflow-x: hidden;
+}
+
+.media-preview-content {
+    max-width: 92vw;
+    width: 780px;
+}
+
+.media-preview-body {
+    min-height: 300px;
+    max-height: 70vh;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.media-preview-body img,
+.media-preview-body iframe {
+    max-width: 100%;
+    max-height: 65vh;
+    border: none;
 }
 
 .reminders-modal-content {
@@ -5938,6 +5969,13 @@ body.dark-mode .auth-error {
             <ul id="financeMediaList" class="history-list"></ul>
         </div>
     </div>
+    <div id="mediaPreviewModal" class="modal">
+        <div class="modal-content media-preview-content">
+            <span class="close-button" onclick="closeMediaPreviewModal()">&times;</span>
+            <h3 id="mediaPreviewTitle">תצוגת קובץ</h3>
+            <div id="mediaPreviewBody" class="media-preview-body"></div>
+        </div>
+    </div>
     <div id="inboxModal" class="reminders-modal">
         <div class="reminders-modal-content">
             <span class="close-button" onclick="closeInboxModal()">&times;</span>
@@ -6085,9 +6123,10 @@ body.dark-mode .auth-error {
                 metrics: {
                     'brix': { name: 'בריקס', type: 'number', step: 0.1, precision: 1, placeholder: '22.5' },
                     'ph': { name: 'pH', type: 'number', step: 0.01, precision: 2, placeholder: '3.5' },
-                    'ta': { name: 'חומצה כוללת', type: 'number', step: 0.01, precision: 2, placeholder: '6.8' },
                     'grapeTemp': { name: 'טמפרטורת ענבים', type: 'number', step: 0.1, precision: 1, placeholder: '25.0' },
+                    'ta': { name: 'חומצה כוללת', type: 'number', step: 0.01, precision: 2, placeholder: '6.8' },
                 },
+                metricOrder: ['brix', 'ph', 'grapeTemp', 'ta'],
                 summaryMetrics: ['brix', 'ph', 'ta'],
                 customMetrics: {}
             },
@@ -7903,7 +7942,9 @@ body.dark-mode .auth-error {
             currentStageInputSection.innerHTML = '';
             
             // Render predefined metrics
-            for (const metricId in stageConfig.metrics) {
+            const orderedMetricIds = getOrderedStageMetricIds(currentStageId);
+            const predefinedMetricIds = orderedMetricIds.filter((metricId) => Boolean(stageConfig.metrics?.[metricId]));
+            predefinedMetricIds.forEach((metricId) => {
                 const metric = stageConfig.metrics[metricId];
                 const inputGroup = document.createElement('div');
                 inputGroup.className = 'input-group';
@@ -7954,10 +7995,11 @@ body.dark-mode .auth-error {
                         });
                     }
                 }
-            }
-            
+            });
+
             // Render custom metrics with the same styling
-            for (const metricId in stageConfig.customMetrics) {
+            const customMetricIds = orderedMetricIds.filter((metricId) => Boolean(stageConfig.customMetrics?.[metricId]));
+            customMetricIds.forEach((metricId) => {
                 const metric = stageConfig.customMetrics[metricId];
                 const inputGroup = document.createElement('div');
                 inputGroup.className = 'input-group';
@@ -7984,7 +8026,7 @@ body.dark-mode .auth-error {
                         });
                     }
                 }
-            }
+            });
             updateDashboardForCurrentStage();
             renderPreviousStageOverview();
             
@@ -8197,14 +8239,19 @@ body.dark-mode .auth-error {
 
         function openMetricImagePreview(url) {
             if (!url) return;
-            window.open(url, '_blank');
+            openMediaPreview(url, 'תצוגת תמונה');
         }
 
         function getOrderedStageMetricIds(stageId) {
             const stageConfig = stagesConfig[stageId] || {};
             const predefinedIds = Object.keys(stageConfig.metrics || {});
             const customIds = Object.keys(stageConfig.customMetrics || {});
-            return [...predefinedIds, ...customIds];
+            const explicitOrder = Array.isArray(stageConfig.metricOrder) ? stageConfig.metricOrder : [];
+            const orderedPredefined = [
+                ...explicitOrder.filter(id => predefinedIds.includes(id)),
+                ...predefinedIds.filter(id => !explicitOrder.includes(id))
+            ];
+            return [...orderedPredefined, ...customIds];
         }
 
 
@@ -8666,6 +8713,63 @@ body.dark-mode .auth-error {
 
         async function openFinanceCameraCapture() {
             if (!financeAttachmentInput) return;
+
+            if (navigator.mediaDevices?.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    const video = document.createElement('video');
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    video.style.width = '100%';
+                    video.style.borderRadius = '8px';
+                    video.srcObject = stream;
+
+                    const modal = document.createElement('div');
+                    modal.className = 'modal';
+                    modal.style.display = 'flex';
+                    modal.innerHTML = `
+                        <div class="modal-content" style="max-width: 420px;">
+                            <h3>צילום קבלה</h3>
+                            <div id="financeCameraContainer"></div>
+                            <div class="image-upload-buttons" style="margin-top:10px;">
+                                <button type="button" id="financeCameraCaptureBtn" class="image-upload-btn"><i class="fas fa-camera"></i> צלם</button>
+                                <button type="button" id="financeCameraCancelBtn" class="camera-btn">ביטול</button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+                    modal.querySelector('#financeCameraContainer')?.appendChild(video);
+
+                    const closeCamera = () => {
+                        stream.getTracks().forEach(track => track.stop());
+                        if (modal.parentNode) modal.parentNode.removeChild(modal);
+                    };
+
+                    modal.querySelector('#financeCameraCaptureBtn')?.addEventListener('click', () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth || 1280;
+                        canvas.height = video.videoHeight || 720;
+                        const ctx = canvas.getContext('2d');
+                        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob((blob) => {
+                            if (!blob) return;
+                            const file = new File([blob], `receipt_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                            pendingFinanceAttachmentFile = file;
+                            if (financeAttachmentPreview) {
+                                financeAttachmentPreview.style.display = 'block';
+                                financeAttachmentPreview.textContent = `נבחר קובץ: ${file.name}`;
+                            }
+                            closeCamera();
+                        }, 'image/jpeg', 0.92);
+                    });
+
+                    modal.querySelector('#financeCameraCancelBtn')?.addEventListener('click', closeCamera);
+                    return;
+                } catch (error) {
+                    console.warn('Camera modal failed, fallback to input capture:', error);
+                }
+            }
+
             const capturedFile = await pickImageWithCameraPreference();
             if (capturedFile) {
                 pendingFinanceAttachmentFile = capturedFile;
@@ -8676,9 +8780,36 @@ body.dark-mode .auth-error {
                 return;
             }
             financeAttachmentInput.value = '';
-            financeAttachmentInput.setAttribute('accept', 'image/*');
-            financeAttachmentInput.setAttribute('capture', 'environment');
+            financeAttachmentInput.accept = 'image/*';
+            financeAttachmentInput.capture = 'environment';
             financeAttachmentInput.click();
+        }
+
+        function openMediaPreview(url, title = 'תצוגת קובץ') {
+            if (!url) return;
+            const modal = document.getElementById('mediaPreviewModal');
+            const titleEl = document.getElementById('mediaPreviewTitle');
+            const bodyEl = document.getElementById('mediaPreviewBody');
+            if (!modal || !titleEl || !bodyEl) {
+                window.open(url, '_blank');
+                return;
+            }
+            titleEl.textContent = title;
+            bodyEl.innerHTML = '';
+            const lowerUrl = String(url).toLowerCase();
+            if (lowerUrl.includes('.pdf') || lowerUrl.includes('application/pdf')) {
+                bodyEl.innerHTML = `<iframe src="${url}" title="${title}"></iframe>`;
+            } else {
+                bodyEl.innerHTML = `<img src="${url}" alt="${title}">`;
+            }
+            modal.style.display = 'flex';
+        }
+
+        function closeMediaPreviewModal() {
+            const modal = document.getElementById('mediaPreviewModal');
+            const bodyEl = document.getElementById('mediaPreviewBody');
+            if (bodyEl) bodyEl.innerHTML = '';
+            if (modal) modal.style.display = 'none';
         }
 
         function renderGeneralImagesList() {
@@ -8694,7 +8825,7 @@ body.dark-mode .auth-error {
                 li.innerHTML = `
                     <span>${image.name || `תמונה ${idx + 1}`}</span>
                     <div class="finance-attachment-actions">
-                        <button type="button" onclick="window.open('${image.url}','_blank')">פתח</button>
+                        <button type="button" onclick="openMediaPreview('${image.url}', 'תמונה כללית')">פתח</button>
                         <button type="button" onclick="deleteGeneralProjectImage(${idx})">מחק</button>
                     </div>
                 `;
@@ -8709,29 +8840,48 @@ body.dark-mode .auth-error {
                 alert('ניתן להעלות תמונה בלבד באזור התמונות הכלליות.');
                 return;
             }
-            const api = window.firebaseAccess;
-            if (!api?.uploadFileToStorage || !api?.buildFinanceAttachmentPath) {
-                alert('שירות אחסון התמונות לא זמין.');
-                return;
-            }
+            const timestamp = new Date().toLocaleString('he-IL');
+            const createdAt = Date.now();
+            let savedItem = null;
             try {
-                const path = api.buildFinanceAttachmentPath(currentProjectId, `general_${Date.now()}`, file.name);
+                const api = window.firebaseAccess;
+                if (!api?.uploadFileToStorage || !api?.buildFinanceAttachmentPath) {
+                    throw new Error('STORAGE_API_MISSING');
+                }
+                const path = api.buildFinanceAttachmentPath(currentProjectId, `general_${createdAt}`, file.name);
                 const result = await api.uploadFileToStorage(path, file, { section: 'general-images', projectId: currentProjectId });
-                projects[currentProjectId].generalImages.push({
+                savedItem = {
                     name: file.name,
                     type: file.type,
                     url: result.downloadUrl,
                     path: result.storagePath,
-                    timestamp: new Date().toLocaleString('he-IL'),
-                    createdAt: Date.now()
-                });
-                saveAllProjects();
-                renderGeneralImagesList();
-                if (generalImageUploadInput) generalImageUploadInput.value = '';
+                    timestamp,
+                    createdAt
+                };
             } catch (error) {
-                console.error('General image upload failed:', error);
-                alert('העלאת התמונה הכללית נכשלה.');
+                console.error('General image upload to cloud failed:', error);
+                try {
+                    const localUrl = await fileToDataUrl(file);
+                    savedItem = {
+                        name: file.name,
+                        type: file.type,
+                        url: localUrl,
+                        path: null,
+                        storedLocally: true,
+                        timestamp,
+                        createdAt
+                    };
+                    alert('שמירת התמונה בענן נכשלה, אך נשמרה מקומית בהצלחה.');
+                } catch (localError) {
+                    console.error('General image local save failed:', localError);
+                    alert('שמירת התמונה נכשלה גם בענן וגם מקומית.');
+                    return;
+                }
             }
+            projects[currentProjectId].generalImages.push(savedItem);
+            saveAllProjects();
+            renderGeneralImagesList();
+            if (generalImageUploadInput) generalImageUploadInput.value = '';
         }
 
         async function deleteGeneralProjectImage(index) {
@@ -8791,7 +8941,7 @@ body.dark-mode .auth-error {
                             path: null,
                             storedLocally: true
                         };
-                        alert('שמירת הקבלה ב-Firebase נכשלה, הקובץ נשמר מקומית במכשיר זה.');
+                        alert('שמירת הקבלה בענן נכשלה, אך הקובץ נשמר מקומית בהצלחה.');
                     } catch (localError) {
                         console.error('Local attachment fallback failed:', localError);
                         attachment = null;
@@ -8830,7 +8980,7 @@ body.dark-mode .auth-error {
                         <span class="timestamp" style="font-size:0.8em; color:var(--light-text-color);">${entry.timestamp}</span>
                     </div>
                     <div class="finance-item-actions">
-                        ${entry.attachment ? `<button type="button" onclick="window.open('${entry.attachment.url}','_blank')">צפה</button>` : ''}
+                        ${entry.attachment ? `<button type="button" onclick="openMediaPreview('${entry.attachment.url}', 'קבלה/חשבונית')">צפה</button>` : ''}
                         <button onclick="editFinanceEntry(${entry.id})">ערוך</button>
                         <button class="delete" onclick="deleteFinanceEntry(${entry.id})">מחק</button>
                     </div>
@@ -9053,7 +9203,7 @@ body.dark-mode .auth-error {
                 const receiptEntries = entriesForPeriod.filter(entry => entry.attachment?.url);
                 const attachmentCount = receiptEntries.length;
                 const receiptsListHtml = attachmentCount
-                    ? `<div class="yearly-receipts-list"><strong>קבלות בתקופה:</strong><ul>${receiptEntries.map((entry) => `<li><a href="${entry.attachment.url}" target="_blank" rel="noopener">${entry.attachment.name || 'receipt'}</a> • ${entry.timestamp}</li>`).join('')}</ul></div>`
+                    ? `<div class="yearly-receipts-list"><strong>קבלות בתקופה:</strong><ul>${receiptEntries.map((entry) => `<li><button type="button" class="history-upload-btn" onclick="openMediaPreview('${entry.attachment.url}', 'קבלה מהדוח השנתי')">${entry.attachment.name || 'receipt'}</button> • ${entry.timestamp}</li>`).join('')}</ul></div>`
                     : '<p>קבלות בתקופה: <strong>אין</strong></p>';
                 const projectSection = document.createElement('div');
                 projectSection.className = 'finance-yearly-project-section';
@@ -9110,6 +9260,19 @@ body.dark-mode .auth-error {
             return attachments;
         }
 
+        async function fetchAttachmentBlob(url) {
+            if (!url) return null;
+            if (String(url).startsWith('data:')) {
+                const response = await fetch(url);
+                return response.blob();
+            }
+            const response = await fetch(url, { mode: 'cors' });
+            if (!response.ok) {
+                throw new Error(`HTTP_${response.status}`);
+            }
+            return response.blob();
+        }
+
         async function downloadYearlyReceiptsZip() {
             const attachments = collectReceiptAttachmentsForReport();
             if (!attachments.length) {
@@ -9125,14 +9288,17 @@ body.dark-mode .auth-error {
             for (let i = 0; i < sortedAttachments.length; i += 1) {
                 const file = sortedAttachments[i];
                 try {
-                    const response = await fetch(file.url);
-                    const blob = await response.blob();
+                    const blob = await fetchAttachmentBlob(file.url);
                     const safeName = (file.name || `receipt_${i + 1}`).replace(/[^\w.\-]/g, '_');
                     const sequence = String(i + 1).padStart(3, '0');
                     zip.file(`${sequence}_${safeName}`, blob);
                 } catch (error) {
                     console.warn('Skipping file during ZIP build:', error);
                 }
+            }
+            if (!Object.keys(zip.files).length) {
+                alert('לא ניתן היה לאסוף קבצים להורדה (ייתכן בעיית הרשאות או קבצים לא זמינים).');
+                return;
             }
             const zipBlob = await zip.generateAsync({ type: 'blob' });
             const url = URL.createObjectURL(zipBlob);
@@ -9157,7 +9323,7 @@ ${item.url}`);
 
 ${lines.join('\n\n')}`);
             if (channel === 'email') {
-                window.location.href = `mailto:?subject=${encodeURIComponent('קבלות ודוח כספי')}&body=${body}`;
+                window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('קבלות ודוח כספי')}&body=${body}`, '_blank');
                 return;
             }
             if (channel === 'whatsapp') {
@@ -9193,7 +9359,7 @@ ${lines.join('\n\n')}`);
                             <span class="timestamp">${item.projectName || ''} | ${item.timestamp || ''}</span>
                         </div>
                         <div class="history-entry-actions">
-                            <button class="history-upload-btn" onclick="window.open('${item.url}','_blank')">פתח</button>
+                            <button class="history-upload-btn" onclick="openMediaPreview('${item.url}', 'קובץ מצורף')">פתח</button>
                         </div>
                     `;
                     listEl.appendChild(li);
@@ -10720,8 +10886,12 @@ ${lines.join('\n\n')}`);
             currentUser = user;
         }
 
+        let syncUpdateBannerCooldownUntil = 0;
         function showSyncUpdateBanner(message) {
             if (!message) return;
+            const now = Date.now();
+            if (now < syncUpdateBannerCooldownUntil) return;
+            syncUpdateBannerCooldownUntil = now + 2600;
             const banner = document.createElement('div');
             banner.className = 'app-notification success';
             banner.innerHTML = `<i class="fas fa-check-circle"></i><span>${message}</span>`;
