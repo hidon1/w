@@ -5915,7 +5915,7 @@ body.dark-mode .history-row {
         </button>
         <h2 id="fixedDashboardStageName"></h2>
         <div class="dashboard-grid" id="fixedDashboardGrid"></div>
-        <div class="add-data-cube" onclick="openAddMetricModal()">
+        <div class="add-data-cube" id="categoryAddCube" onclick="openAddMetricModal()">
             <i class="fas fa-plus"></i>
             <span>הוסף מדד</span>
         </div>
@@ -5923,8 +5923,9 @@ body.dark-mode .history-row {
     <div class="secondary-panel category-panel" id="additionsPanel">
         <h3>דשבורד תוספות</h3>
         <div class="secondary-input-card">
-            <h4>ביסולפיט</h4>
+            <h4>הזנת תוספת</h4>
             <div class="secondary-input-row">
+                <input id="additionType" type="text" placeholder="שם התוספת (למשל ביסולפיט)">
                 <input id="additionAmount" type="number" step="any" placeholder="הכנס כמות">
                 <select id="additionUnit">
                     <option value="גרם">גרם</option>
@@ -6520,8 +6521,10 @@ body.dark-mode .history-row {
         const dashboardCollapseBtn = document.getElementById('dashboardCollapseBtn');
         const fixedDashboardStageName = document.getElementById('fixedDashboardStageName');
         const fixedDashboardGrid = document.getElementById('fixedDashboardGrid');
+        const categoryAddCube = document.getElementById('categoryAddCube');
         const additionsPanel = document.getElementById('additionsPanel');
         const extrasPanel = document.getElementById('extrasPanel');
+        const additionTypeInput = document.getElementById('additionType');
         const additionAmountInput = document.getElementById('additionAmount');
         const additionUnitInput = document.getElementById('additionUnit');
         const additionTimeInput = document.getElementById('additionTime');
@@ -7805,20 +7808,18 @@ body.dark-mode .history-row {
             navButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.category === category));
 
             const isMetrics = category === 'metrics';
-            fixedDashboardSection.classList.toggle('active', isMetrics);
             additionsPanel.classList.toggle('active', category === 'additions');
             extrasPanel.classList.toggle('active', category === 'extras');
 
-            fixedDashboardSection.style.display = isMetrics ? 'flex' : 'none';
+            fixedDashboardSection.style.display = 'flex';
             currentStageContent.style.display = isMetrics ? 'block' : 'none';
             stageOverviewContainer.style.display = isMetrics ? 'block' : 'none';
             stageNavContainer.style.display = isMetrics ? 'flex' : 'none';
             projectDetailsCard.style.display = isMetrics ? 'block' : 'none';
             document.querySelector('.top-section-wrapper').style.display = isMetrics ? 'block' : 'none';
-            if (isMetrics) {
-                closeSecondaryHistoryModal();
-            }
+            if (isMetrics) closeSecondaryHistoryModal();
 
+            renderActiveCategoryDashboard();
             if (category === 'additions') renderAdditionsPanel();
             if (category === 'extras') renderExtrasPanel();
         }
@@ -7835,10 +7836,14 @@ body.dark-mode .history-row {
         }
 
         async function addAdditionEntry() {
-            const name = 'ביסולפיט';
+            const name = additionTypeInput.value.trim();
             const amount = parseFloat(additionAmountInput.value);
             const unit = additionUnitInput.value;
             const when = additionTimeInput.value ? new Date(additionTimeInput.value) : new Date();
+            if (!name) {
+                alert('יש להזין שם תוספת.');
+                return;
+            }
             if (Number.isNaN(amount)) {
                 alert('יש להזין כמות תקינה.');
                 return;
@@ -7860,10 +7865,12 @@ body.dark-mode .history-row {
             }
             projects[currentProjectId].additions[name].push(newEntry);
             saveAllProjects();
+            additionTypeInput.value = '';
             additionAmountInput.value = '';
             additionTimeInput.value = '';
             if (additionStoryUploadInput) additionStoryUploadInput.value = '';
             renderAdditionsPanel();
+            if (activeCategory === 'additions') renderActiveCategoryDashboard();
         }
 
         function renderAdditionsPanel() {
@@ -7909,6 +7916,7 @@ body.dark-mode .history-row {
             entries.push({ id: Date.now(), amount, unit, timestamp: new Date().toLocaleString('he-IL') });
             saveAllProjects();
             renderAdditionsPanel();
+            if (activeCategory === 'additions') renderActiveCategoryDashboard();
             renderSecondaryHistoryRows();
         }
 
@@ -7918,6 +7926,7 @@ body.dark-mode .history-row {
             saveAllProjects();
             closeSecondaryHistoryModal();
             renderAdditionsPanel();
+            if (activeCategory === 'additions') renderActiveCategoryDashboard();
         }
 
         function removeAdditionEntry(name, index) {
@@ -7932,6 +7941,7 @@ body.dark-mode .history-row {
                 renderSecondaryHistoryRows();
             }
             renderAdditionsPanel();
+            if (activeCategory === 'additions') renderActiveCategoryDashboard();
         }
 
         async function addExtraEntry() {
@@ -7958,6 +7968,7 @@ body.dark-mode .history-row {
             extraTimeInput.value = '';
             if (extraStoryUploadInput) extraStoryUploadInput.value = '';
             renderExtrasPanel();
+            if (activeCategory === 'extras') renderActiveCategoryDashboard();
         }
 
         function renderExtrasPanel() {
@@ -7991,6 +8002,7 @@ body.dark-mode .history-row {
             entries.splice(index, 1);
             saveAllProjects();
             renderExtrasPanel();
+            if (activeCategory === 'extras') renderActiveCategoryDashboard();
             renderSecondaryHistoryRows();
         }
 
@@ -8022,6 +8034,7 @@ body.dark-mode .history-row {
                 saveAllProjects();
                 renderSecondaryHistoryRows();
                 if (mode === 'addition') renderAdditionsPanel(); else renderExtrasPanel();
+                renderActiveCategoryDashboard();
             }
         }
 
@@ -8088,6 +8101,7 @@ body.dark-mode .history-row {
             }
             saveAllProjects();
             renderAdditionsPanel();
+            if (activeCategory === 'additions') renderActiveCategoryDashboard();
             renderSecondaryHistoryRows();
         }
 
@@ -8098,6 +8112,7 @@ body.dark-mode .history-row {
             if (field === 'notes') entry.notes = value;
             saveAllProjects();
             renderExtrasPanel();
+            if (activeCategory === 'extras') renderActiveCategoryDashboard();
             renderSecondaryHistoryRows();
         }
 
@@ -8895,6 +8910,79 @@ body.dark-mode .history-row {
                 const currentEntries = projects[currentProjectId]?.stages?.[currentStageId]?.[metricId] || [];
                 fixedDashboardGrid.appendChild(createDashboardMetricItem(metricId, metricConfig, currentEntries));
             });
+        }
+
+        function createSecondaryDashboardItem(name, subtitle, meta, onClick) {
+            const dashboardItem = document.createElement('div');
+            dashboardItem.className = 'dashboard-item';
+            dashboardItem.innerHTML = `<h3>${name}</h3><p>${subtitle}</p><p>${meta}</p>`;
+            dashboardItem.onclick = onClick;
+            return dashboardItem;
+        }
+
+        function renderAdditionsToMainDashboard() {
+            fixedDashboardGrid.innerHTML = '';
+            const additions = projects[currentProjectId]?.additions || {};
+            const names = Object.keys(additions);
+            if (!names.length) {
+                fixedDashboardGrid.innerHTML = '<div class="dashboard-item"><h3>תוספות</h3><p>עדיין לא נוספו תוספות.</p></div>';
+                return;
+            }
+            names.forEach((name) => {
+                const entries = additions[name] || [];
+                const total = entries.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
+                const unit = entries[entries.length - 1]?.unit || '';
+                fixedDashboardGrid.appendChild(createSecondaryDashboardItem(
+                    name,
+                    `סה"כ מצטבר: ${total} ${unit}`,
+                    `כמות עדכונים: ${entries.length}`,
+                    () => openSecondaryHistoryModal('addition', name)
+                ));
+            });
+        }
+
+        function renderExtrasToMainDashboard() {
+            fixedDashboardGrid.innerHTML = '';
+            const entries = projects[currentProjectId]?.extras || [];
+            if (!entries.length) {
+                fixedDashboardGrid.innerHTML = '<div class="dashboard-item"><h3>נתונים נוספים</h3><p>אין עדיין נתונים נוספים.</p></div>';
+                return;
+            }
+            const grouped = entries.reduce((acc, entry) => {
+                if (!acc[entry.type]) acc[entry.type] = [];
+                acc[entry.type].push(entry);
+                return acc;
+            }, {});
+            Object.keys(grouped).forEach((type) => {
+                const typeEntries = grouped[type];
+                const latest = typeEntries[typeEntries.length - 1];
+                fixedDashboardGrid.appendChild(createSecondaryDashboardItem(
+                    type,
+                    `עדכונים: ${typeEntries.length}`,
+                    `אחרון: ${latest?.timestamp || '-'}`,
+                    () => openSecondaryHistoryModal('extra', type)
+                ));
+            });
+        }
+
+        function renderActiveCategoryDashboard() {
+            if (!fixedDashboardStageName) return;
+            const addCubeText = categoryAddCube?.querySelector('span');
+            if (activeCategory === 'metrics') {
+                fixedDashboardStageName.textContent = stagesConfig[currentStageId]?.name || '';
+                if (addCubeText) addCubeText.textContent = 'הוסף מדד';
+                updateDashboardForCurrentStage();
+                return;
+            }
+            if (activeCategory === 'additions') {
+                fixedDashboardStageName.textContent = 'דשבורד תוספות';
+                if (addCubeText) addCubeText.textContent = 'הוסף תוספת';
+                renderAdditionsToMainDashboard();
+                return;
+            }
+            fixedDashboardStageName.textContent = 'דשבורד נתונים נוספים';
+            if (addCubeText) addCubeText.textContent = 'הוסף נתון';
+            renderExtrasToMainDashboard();
         }
         /**
          * Determine whether a metric is a custom metric (stage or wine details).
@@ -10833,9 +10921,20 @@ body.dark-mode .history-row {
             }
         }
         function openAddMetricModal() {
-            document.getElementById('addMetricModal').style.display = 'flex';
+            const modal = document.getElementById('addMetricModal');
+            const title = modal?.querySelector('h3');
+            if (title) {
+                title.innerHTML = activeCategory === 'metrics'
+                    ? '<i class="fas fa-chart-line"></i> הוסף מדד חדש לשלב הנוכחי'
+                    : '<i class="fas fa-plus"></i> הוסף מדד חדש לדשבורד';
+            }
+            if (modal) modal.style.display = 'flex';
             const addMetricInput = document.getElementById('addMetricName');
             if (addMetricInput) {
+                addMetricInput.value = '';
+                addMetricInput.placeholder = activeCategory === 'extras'
+                    ? 'למשל: שפייה'
+                    : (activeCategory === 'additions' ? 'למשל: ביסולפיט' : 'למשל: בריקס נוסף');
                 setTimeout(() => addMetricInput.focus(), 50);
             }
         }
@@ -10847,38 +10946,56 @@ body.dark-mode .history-row {
                 return;
             }
             const name = document.getElementById('addMetricName').value.trim();
-            if (name) {
-                // Generate unique metric ID
-                const metricId = `customMetric_${Date.now()}`;
-                
-                // Add to stagesConfig customMetrics
-                if (!stagesConfig[currentStageId].customMetrics) {
-                    stagesConfig[currentStageId].customMetrics = {};
-                }
-                stagesConfig[currentStageId].customMetrics[metricId] = {
-                    name: name,
-                    type: 'text',
-                    placeholder: 'הכנס ערך'
-                };
-                
-                // Initialize data array in project
-                if (!projects[currentProjectId].stages[currentStageId]) {
-                    projects[currentProjectId].stages[currentStageId] = {};
-                }
-                projects[currentProjectId].stages[currentStageId][metricId] = [];
-                
-                // Save to localStorage
-                saveAllProjects();
-                
-                // Clear input and close modal
-                document.getElementById('addMetricName').value = '';
-                closeAddMetricModal();
-                
-                // Re-render the current stage to show the new metric
-                loadCurrentStageContent();
-            } else {
+            if (!name) {
                 alert('אנא הזן שם למדד.');
+                return;
             }
+
+            if (activeCategory === 'additions') {
+                if (!projects[currentProjectId].additions[name]) {
+                    projects[currentProjectId].additions[name] = [];
+                }
+                saveAllProjects();
+                closeAddMetricModal();
+                renderAdditionsPanel();
+                renderActiveCategoryDashboard();
+                return;
+            }
+
+            if (activeCategory === 'extras') {
+                const hasType = (projects[currentProjectId].extras || []).some((entry) => entry.type === name);
+                if (!hasType) {
+                    projects[currentProjectId].extras.push({
+                        id: Date.now(),
+                        type: name,
+                        notes: '',
+                        timestamp: new Date().toLocaleString('he-IL')
+                    });
+                }
+                saveAllProjects();
+                closeAddMetricModal();
+                renderExtrasPanel();
+                renderActiveCategoryDashboard();
+                return;
+            }
+
+            const metricId = `customMetric_${Date.now()}`;
+            if (!stagesConfig[currentStageId].customMetrics) {
+                stagesConfig[currentStageId].customMetrics = {};
+            }
+            stagesConfig[currentStageId].customMetrics[metricId] = {
+                name: name,
+                type: 'text',
+                placeholder: 'הכנס ערך'
+            };
+            if (!projects[currentProjectId].stages[currentStageId]) {
+                projects[currentProjectId].stages[currentStageId] = {};
+            }
+            projects[currentProjectId].stages[currentStageId][metricId] = [];
+            saveAllProjects();
+            document.getElementById('addMetricName').value = '';
+            closeAddMetricModal();
+            loadCurrentStageContent();
         }
         function deleteCustomMetric(stageId, metricId, skipConfirm = false) {
             if (!ensureEditPermission()) {
