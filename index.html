@@ -7750,7 +7750,7 @@ body.dark-mode .history-row {
         function handleDashboardCollapseVisibility() {
             if (!dashboardCollapseBtn || !fixedDashboardSection) return;
             const isMobile = window.innerWidth <= 768;
-            dashboardCollapseBtn.style.display = isMobile ? 'flex' : 'none';
+            dashboardCollapseBtn.style.display = isMobile && activeCategory === 'metrics' ? 'flex' : 'none';
             if (!isMobile) {
                 fixedDashboardSection.classList.remove('collapsed-mobile');
             }
@@ -7824,7 +7824,13 @@ body.dark-mode .history-row {
             stageNavContainer.style.display = isMetrics ? 'flex' : 'none';
             projectDetailsCard.style.display = isMetrics ? 'block' : 'none';
             document.querySelector('.top-section-wrapper').style.display = isMetrics ? 'block' : 'none';
-            if (isMetrics) closeSecondaryHistoryModal();
+            if (isMetrics) {
+                closeSecondaryHistoryModal();
+            }
+            fixedDashboardSection.classList.remove('collapsed-mobile');
+            if (dashboardCollapseBtn) {
+                dashboardCollapseBtn.style.display = isMetrics && window.innerWidth <= 768 ? 'flex' : 'none';
+            }
 
             renderActiveCategoryDashboard();
             if (category === 'additions') renderAdditionsPanel();
@@ -7989,17 +7995,17 @@ body.dark-mode .history-row {
             if (!extrasDashboard) return;
             extrasDashboard.innerHTML = '';
             const entries = projects[currentProjectId]?.extras || [];
-            if (!entries.length) {
+            const typeSet = new Set(projects[currentProjectId]?.extraTypes || []);
+            entries.forEach((entry) => {
+                if (entry?.type) typeSet.add(entry.type);
+            });
+            const types = Array.from(typeSet);
+            if (!types.length) {
                 extrasDashboard.innerHTML = '<div class="secondary-dashboard-item">אין עדיין נתונים נוספים.</div>';
                 return;
             }
-            const grouped = entries.reduce((acc, entry) => {
-                if (!acc[entry.type]) acc[entry.type] = [];
-                acc[entry.type].push(entry);
-                return acc;
-            }, {});
-            Object.keys(grouped).forEach((type) => {
-                const typeEntries = grouped[type];
+            types.forEach((type) => {
+                const typeEntries = entries.filter((entry) => entry.type === type);
                 const latest = typeEntries[typeEntries.length - 1];
                 const item = document.createElement('button');
                 item.type = 'button';
@@ -8149,7 +8155,8 @@ body.dark-mode .history-row {
                 finance: [],
                 generalImages: [],
                 additions: {},
-                extras: []
+                extras: [],
+                extraTypes: []
             };
             for(const metricId in stagesConfig.wineDetails.metrics) {
                 newProject.wineDetails[metricId] = [];
@@ -8207,6 +8214,9 @@ body.dark-mode .history-row {
                 }
                 if (!project.extras) {
                     project.extras = [];
+                }
+                if (!project.extraTypes) {
+                    project.extraTypes = [...new Set((project.extras || []).map((item) => item?.type).filter(Boolean))];
                 }
                 if (!project.stages) {
                     project.stages = {};
@@ -9033,17 +9043,18 @@ body.dark-mode .history-row {
         function renderExtrasToMainDashboard() {
             fixedDashboardGrid.innerHTML = '';
             const entries = projects[currentProjectId]?.extras || [];
-            if (!entries.length) {
+            const typeSet = new Set(projects[currentProjectId]?.extraTypes || []);
+            entries.forEach((entry) => {
+                if (entry?.type) typeSet.add(entry.type);
+            });
+            const types = Array.from(typeSet);
+            if (!types.length) {
                 fixedDashboardGrid.innerHTML = '<div class="dashboard-item"><h3>נתונים נוספים</h3><p>אין עדיין נתונים נוספים.</p></div>';
                 return;
             }
-            const grouped = entries.reduce((acc, entry) => {
-                if (!acc[entry.type]) acc[entry.type] = [];
-                acc[entry.type].push(entry);
-                return acc;
-            }, {});
-            Object.keys(grouped).forEach((type) => {
-                fixedDashboardGrid.appendChild(createExtraDashboardCard(type, grouped[type]));
+            types.forEach((type) => {
+                const typeEntries = entries.filter((entry) => entry.type === type);
+                fixedDashboardGrid.appendChild(createExtraDashboardCard(type, typeEntries));
             });
         }
 
@@ -11045,14 +11056,11 @@ body.dark-mode .history-row {
             }
 
             if (activeCategory === 'extras') {
-                const hasType = (projects[currentProjectId].extras || []).some((entry) => entry.type === name);
-                if (!hasType) {
-                    projects[currentProjectId].extras.push({
-                        id: Date.now(),
-                        type: name,
-                        notes: '',
-                        timestamp: new Date().toLocaleString('he-IL')
-                    });
+                if (!projects[currentProjectId].extraTypes) {
+                    projects[currentProjectId].extraTypes = [];
+                }
+                if (!projects[currentProjectId].extraTypes.includes(name)) {
+                    projects[currentProjectId].extraTypes.push(name);
                 }
                 saveAllProjects();
                 closeAddMetricModal();
