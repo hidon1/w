@@ -5589,6 +5589,67 @@ body.dark-mode .auth-error {
     margin-bottom: 8px;
 }
 
+.secondary-input-card {
+    background: linear-gradient(135deg, #ffffff, #f7faf8);
+    border: 1px solid rgba(26, 77, 46, 0.18);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+.secondary-input-card h4 {
+    margin: 0 0 10px;
+    color: #1a4d2e;
+}
+
+.secondary-input-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.secondary-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+}
+
+.secondary-dashboard-item {
+    background: linear-gradient(135deg, #fff, #f5f8f7);
+    border: 1px solid rgba(26, 77, 46, 0.2);
+    border-radius: 14px;
+    padding: 12px;
+    cursor: pointer;
+}
+
+.secondary-dashboard-item h4 {
+    margin: 0 0 6px;
+}
+
+.secondary-history-modal-content {
+    max-width: 760px;
+}
+
+.secondary-history-rows {
+    max-height: 55vh;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.secondary-edit-row {
+    border: 1px solid rgba(26, 77, 46, 0.2);
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: rgba(26, 77, 46, 0.04);
+}
+
+.secondary-history-total {
+    margin-top: 12px;
+    font-weight: 700;
+}
+
 body.dark-mode .secondary-panel {
     background: linear-gradient(135deg, #21282b, #2a3337);
     border-color: rgba(255,255,255,0.12);
@@ -5861,35 +5922,37 @@ body.dark-mode .history-row {
     </div>
     <div class="secondary-panel category-panel" id="additionsPanel">
         <h3>דשבורד תוספות</h3>
-        <div class="additions-form-grid">
-            <input id="additionName" type="text" placeholder="שם תוספת (למשל ביסולפיט)">
-            <input id="additionAmount" type="number" step="any" placeholder="כמות">
-            <select id="additionUnit">
-                <option value="גרם">גרם</option>
-                <option value="קילוגרם">קילוגרם</option>
-                <option value="ליטר">ליטר</option>
-                <option value="מיליגרם">מיליגרם</option>
-            </select>
-            <input id="additionTime" type="datetime-local">
+        <div class="secondary-input-card">
+            <h4>ביסולפיט</h4>
+            <div class="secondary-input-row">
+                <input id="additionAmount" type="number" step="any" placeholder="הכנס כמות">
+                <select id="additionUnit">
+                    <option value="גרם">גרם</option>
+                    <option value="קילוגרם">קילוגרם</option>
+                    <option value="ליטר">ליטר</option>
+                    <option value="מיליגרם">מיליגרם</option>
+                </select>
+                <button class="history-upload-btn" onclick="addAdditionEntry()">עדכן</button>
+            </div>
+            <div class="secondary-input-row">
+                <input id="additionTime" type="datetime-local">
+                <input id="additionStoryUpload" type="file" accept="image/*">
+            </div>
         </div>
-        <div class="additions-form-grid" style="margin-top:-4px;">
-            <input id="additionStoryUpload" type="file" accept="image/*">
-        </div>
-        <button class="download-pdf-btn" onclick="addAdditionEntry()">הוסף תוספת</button>
-        <ul class="additions-list" id="additionsList"></ul>
+        <div class="secondary-dashboard-grid" id="additionsDashboard"></div>
     </div>
     <div class="secondary-panel category-panel" id="extrasPanel">
         <h3>דשבורד נתונים נוספים</h3>
         <div class="additions-form-grid">
-            <input id="extraType" type="text" placeholder="סוג פעולה (למשל שפייה)">
-            <input id="extraNotes" type="text" placeholder="הערות">
+            <input id="extraType" type="text" placeholder="שם נתון (למשל שפייה)">
             <input id="extraTime" type="datetime-local">
+            <input id="extraNotes" type="text" placeholder="הערות">
         </div>
         <div class="additions-form-grid" style="margin-top:-4px;">
             <input id="extraStoryUpload" type="file" accept="image/*">
+            <button class="download-pdf-btn" onclick="addExtraEntry()">הוסף מדד/רשומה</button>
         </div>
-        <button class="download-pdf-btn" onclick="addExtraEntry()">הוסף רשומה</button>
-        <ul class="additions-list" id="extrasList"></ul>
+        <div class="secondary-dashboard-grid" id="extrasDashboard"></div>
     </div>
     <nav class="category-nav" id="categoryNav">
         <button class="category-nav-btn active" data-category="metrics" onclick="switchCategory('metrics')"><i class="fas fa-chart-line"></i><span>מדדים</span></button>
@@ -5943,7 +6006,7 @@ body.dark-mode .history-row {
                 </div>
             </div>
         </div>
-        <div id="historyModal" class="modal">
+    <div id="historyModal" class="modal">
             <div class="modal-content">
                 <span class="close-button" onclick="closeHistoryModal()">&times;</span>
                 <h3 id="modalTitle"></h3>
@@ -5955,6 +6018,14 @@ body.dark-mode .history-row {
                 <svg class="modal-graph-svg" id="modalGraphSvg"></svg>
             </div>
             <ul id="historyList" class="history-list"></ul>
+        </div>
+    </div>
+    <div id="secondaryHistoryModal" class="modal">
+        <div class="modal-content secondary-history-modal-content">
+            <span class="close-button" onclick="closeSecondaryHistoryModal()">&times;</span>
+            <h3 id="secondaryHistoryTitle"></h3>
+            <div id="secondaryHistoryRows" class="secondary-history-rows"></div>
+            <div id="secondaryHistoryTotal" class="secondary-history-total"></div>
         </div>
     </div>
     <div id="projectManagementModal" class="modal">
@@ -6451,17 +6522,20 @@ body.dark-mode .history-row {
         const fixedDashboardGrid = document.getElementById('fixedDashboardGrid');
         const additionsPanel = document.getElementById('additionsPanel');
         const extrasPanel = document.getElementById('extrasPanel');
-        const additionNameInput = document.getElementById('additionName');
         const additionAmountInput = document.getElementById('additionAmount');
         const additionUnitInput = document.getElementById('additionUnit');
         const additionTimeInput = document.getElementById('additionTime');
-        const additionsList = document.getElementById('additionsList');
+        const additionsDashboard = document.getElementById('additionsDashboard');
         const additionStoryUploadInput = document.getElementById('additionStoryUpload');
         const extraTypeInput = document.getElementById('extraType');
         const extraNotesInput = document.getElementById('extraNotes');
         const extraTimeInput = document.getElementById('extraTime');
-        const extrasList = document.getElementById('extrasList');
+        const extrasDashboard = document.getElementById('extrasDashboard');
         const extraStoryUploadInput = document.getElementById('extraStoryUpload');
+        const secondaryHistoryModal = document.getElementById('secondaryHistoryModal');
+        const secondaryHistoryTitle = document.getElementById('secondaryHistoryTitle');
+        const secondaryHistoryRows = document.getElementById('secondaryHistoryRows');
+        const secondaryHistoryTotal = document.getElementById('secondaryHistoryTotal');
         const historyModal = document.getElementById('historyModal');
         const modalTitle = document.getElementById('modalTitle');
         const historyList = document.getElementById('historyList');
@@ -7072,6 +7146,7 @@ body.dark-mode .history-row {
         }
         function closeProjectSelectionModal() {
             projectSelectionModal.style.display = 'none';
+            closeSecondaryHistoryModal();
             showMainContent();
         }
         function renderComparisonProjectList() {
@@ -7709,6 +7784,7 @@ body.dark-mode .history-row {
             timelineModal.style.display = 'none';
             datePickerModal.style.display = 'none';
             projectSelectionModal.style.display = 'none';
+            closeSecondaryHistoryModal();
             document.querySelector('.container').style.display = 'block';
             document.querySelector('.top-section-wrapper').style.display = 'block';
             currentStageContent.style.display = 'block';
@@ -7721,6 +7797,7 @@ body.dark-mode .history-row {
         }
 
         let activeCategory = 'metrics';
+        let secondaryHistoryState = { mode: null, key: null };
 
         function switchCategory(category) {
             activeCategory = category;
@@ -7735,6 +7812,12 @@ body.dark-mode .history-row {
             fixedDashboardSection.style.display = isMetrics ? 'flex' : 'none';
             currentStageContent.style.display = isMetrics ? 'block' : 'none';
             stageOverviewContainer.style.display = isMetrics ? 'block' : 'none';
+            stageNavContainer.style.display = isMetrics ? 'flex' : 'none';
+            projectDetailsCard.style.display = isMetrics ? 'block' : 'none';
+            document.querySelector('.top-section-wrapper').style.display = isMetrics ? 'block' : 'none';
+            if (isMetrics) {
+                closeSecondaryHistoryModal();
+            }
 
             if (category === 'additions') renderAdditionsPanel();
             if (category === 'extras') renderExtrasPanel();
@@ -7752,12 +7835,12 @@ body.dark-mode .history-row {
         }
 
         async function addAdditionEntry() {
-            const name = additionNameInput.value.trim();
+            const name = 'ביסולפיט';
             const amount = parseFloat(additionAmountInput.value);
             const unit = additionUnitInput.value;
             const when = additionTimeInput.value ? new Date(additionTimeInput.value) : new Date();
-            if (!name || Number.isNaN(amount)) {
-                alert('יש להזין שם תוספת וכמות תקינה.');
+            if (Number.isNaN(amount)) {
+                alert('יש להזין כמות תקינה.');
                 return;
             }
             if (!projects[currentProjectId].additions[name]) projects[currentProjectId].additions[name] = [];
@@ -7777,7 +7860,6 @@ body.dark-mode .history-row {
             }
             projects[currentProjectId].additions[name].push(newEntry);
             saveAllProjects();
-            additionNameInput.value = '';
             additionAmountInput.value = '';
             additionTimeInput.value = '';
             if (additionStoryUploadInput) additionStoryUploadInput.value = '';
@@ -7785,47 +7867,24 @@ body.dark-mode .history-row {
         }
 
         function renderAdditionsPanel() {
-            if (!additionsList) return;
-            additionsList.innerHTML = '';
+            if (!additionsDashboard) return;
+            additionsDashboard.innerHTML = '';
             const additions = projects[currentProjectId]?.additions || {};
             const names = Object.keys(additions);
             if (!names.length) {
-                additionsList.innerHTML = '<li>עדיין לא נוספו תוספות.</li>';
+                additionsDashboard.innerHTML = '<div class="secondary-dashboard-item">עדיין לא נוספו תוספות.</div>';
                 return;
             }
             names.forEach((name) => {
                 const entries = additions[name] || [];
                 const total = entries.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
                 const unit = entries[entries.length - 1]?.unit || '';
-                const latest = entries[entries.length - 1];
-                const safeName = name.replace(/'/g, "\\'");
-                const nameKey = encodeURIComponent(name);
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <strong>${name}</strong>
-                    <div class="addition-summary">
-                        <span>סה"כ מצטבר: ${total} ${unit}</span>
-                        <span>עדכון אחרון: ${latest?.timestamp || '-'}</span>
-                    </div>
-                    <div class="addition-quick-update">
-                        <input type="number" step="any" id="additionIncrement_${nameKey}" placeholder="כמות להוספה">
-                        <button class="history-upload-btn" onclick="appendAdditionAmount('${safeName}', '${nameKey}')">עדכן</button>
-                    </div>
-                    <div class="entry-actions">
-                        <button class="history-upload-btn" onclick="toggleAdditionHistory('${nameKey}')">הצג זמנים</button>
-                        <button class="undo-button" onclick="removeAdditionGroup('${safeName}')">מחק תוספת</button>
-                    </div>
-                    <div class="addition-history" id="additionHistory_${nameKey}" hidden></div>
-                `;
-                const historyContainer = li.querySelector(`#additionHistory_${nameKey}`) || li.querySelector('.addition-history');
-                entries.slice().reverse().forEach((entry, idxRev) => {
-                    const idx = entries.length - 1 - idxRev;
-                    const row = document.createElement('div');
-                    row.className = 'history-row';
-                    row.innerHTML = `<div>${entry.amount} ${entry.unit} • ${entry.timestamp}</div>${entry.imageUrl ? `<button class="history-upload-btn" onclick="openMediaPreview('${entry.imageUrl}', 'תמונת תוספת')">פתח תמונה</button>` : ''}<div class="entry-actions"><button class="history-upload-btn" onclick="editAdditionEntry('${safeName}', ${idx})">ערוך</button><button class="undo-button" onclick="removeAdditionEntry('${safeName}', ${idx})">מחק</button></div>`;
-                    historyContainer.appendChild(row);
-                });
-                additionsList.appendChild(li);
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'secondary-dashboard-item';
+                item.innerHTML = `<h4>${name}</h4><div>סה"כ מצטבר: ${total} ${unit}</div><div>כמות עדכונים: ${entries.length}</div>`;
+                item.onclick = () => openSecondaryHistoryModal('addition', name);
+                additionsDashboard.appendChild(item);
             });
         }
 
@@ -7843,42 +7902,21 @@ body.dark-mode .history-row {
             }
         }
 
-        function appendAdditionAmount(name, nameKey) {
-            const input = document.getElementById(`additionIncrement_${nameKey}`);
-            const amount = parseFloat(input?.value);
+        function appendAdditionAmount(name, amount) {
             const entries = projects[currentProjectId]?.additions?.[name];
             if (!entries || Number.isNaN(amount)) return;
             const unit = entries[entries.length - 1]?.unit || additionUnitInput.value;
             entries.push({ id: Date.now(), amount, unit, timestamp: new Date().toLocaleString('he-IL') });
             saveAllProjects();
             renderAdditionsPanel();
-        }
-
-        function toggleAdditionHistory(nameKey) {
-            const el = document.getElementById(`additionHistory_${nameKey}`);
-            if (!el) return;
-            el.hidden = !el.hidden;
+            renderSecondaryHistoryRows();
         }
 
         function removeAdditionGroup(name) {
             if (!projects[currentProjectId]?.additions?.[name]) return;
             delete projects[currentProjectId].additions[name];
             saveAllProjects();
-            renderAdditionsPanel();
-        }
-
-        function editAdditionEntry(name, index) {
-            const entry = projects[currentProjectId]?.additions?.[name]?.[index];
-            if (!entry) return;
-            const amount = prompt('כמות חדשה', entry.amount);
-            if (amount === null) return;
-            const time = prompt('תאריך ושעה (לדוגמה: 1.1.2025, 10:30:00)', entry.timestamp);
-            if (time === null) return;
-            const parsedAmount = parseFloat(amount);
-            if (Number.isNaN(parsedAmount)) return;
-            entry.amount = parsedAmount;
-            entry.timestamp = time;
-            saveAllProjects();
+            closeSecondaryHistoryModal();
             renderAdditionsPanel();
         }
 
@@ -7888,6 +7926,11 @@ body.dark-mode .history-row {
             arr.splice(index, 1);
             if (!arr.length) delete projects[currentProjectId].additions[name];
             saveAllProjects();
+            if (!projects[currentProjectId]?.additions?.[name]) {
+                closeSecondaryHistoryModal();
+            } else {
+                renderSecondaryHistoryRows();
+            }
             renderAdditionsPanel();
         }
 
@@ -7896,7 +7939,7 @@ body.dark-mode .history-row {
             const notes = extraNotesInput.value.trim();
             const when = extraTimeInput.value ? new Date(extraTimeInput.value) : new Date();
             if (!type) {
-                alert('יש להזין סוג פעולה.');
+                alert('יש להזין שם נתון.');
                 return;
             }
             const newEntry = { id: Date.now(), type, notes, timestamp: when.toLocaleString('he-IL') };
@@ -7918,34 +7961,28 @@ body.dark-mode .history-row {
         }
 
         function renderExtrasPanel() {
-            extrasList.innerHTML = '';
+            if (!extrasDashboard) return;
+            extrasDashboard.innerHTML = '';
             const entries = projects[currentProjectId]?.extras || [];
             if (!entries.length) {
-                extrasList.innerHTML = '<li>אין עדיין נתונים נוספים.</li>';
+                extrasDashboard.innerHTML = '<div class="secondary-dashboard-item">אין עדיין נתונים נוספים.</div>';
                 return;
             }
-            entries.slice().reverse().forEach((entry, revIndex) => {
-                const realIndex = entries.length - 1 - revIndex;
-                const li = document.createElement('li');
-                li.innerHTML = `<strong>${entry.type}</strong><div>${entry.notes || '-'}</div><div>${entry.timestamp}</div>${entry.imageUrl ? `<button class="history-upload-btn" onclick="openMediaPreview('${entry.imageUrl}', 'תמונת נתון נוסף')">פתח תמונה</button>` : ''}<div class="entry-actions"><button class="history-upload-btn" onclick="editExtraEntry(${realIndex})">ערוך</button><button class="undo-button" onclick="removeExtraEntry(${realIndex})">מחק</button></div>`;
-                extrasList.appendChild(li);
+            const grouped = entries.reduce((acc, entry) => {
+                if (!acc[entry.type]) acc[entry.type] = [];
+                acc[entry.type].push(entry);
+                return acc;
+            }, {});
+            Object.keys(grouped).forEach((type) => {
+                const typeEntries = grouped[type];
+                const latest = typeEntries[typeEntries.length - 1];
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'secondary-dashboard-item';
+                item.innerHTML = `<h4>${type}</h4><div>עדכונים: ${typeEntries.length}</div><div>אחרון: ${latest?.timestamp || '-'}</div>`;
+                item.onclick = () => openSecondaryHistoryModal('extra', type);
+                extrasDashboard.appendChild(item);
             });
-        }
-
-        function editExtraEntry(index) {
-            const entry = projects[currentProjectId]?.extras?.[index];
-            if (!entry) return;
-            const nextType = prompt('סוג פעולה', entry.type);
-            if (nextType === null || !nextType.trim()) return;
-            const nextNotes = prompt('הערות', entry.notes || '');
-            if (nextNotes === null) return;
-            const nextTime = prompt('תאריך ושעה', entry.timestamp);
-            if (nextTime === null) return;
-            entry.type = nextType.trim();
-            entry.notes = nextNotes.trim();
-            entry.timestamp = nextTime;
-            saveAllProjects();
-            renderExtrasPanel();
         }
 
         function removeExtraEntry(index) {
@@ -7954,6 +7991,114 @@ body.dark-mode .history-row {
             entries.splice(index, 1);
             saveAllProjects();
             renderExtrasPanel();
+            renderSecondaryHistoryRows();
+        }
+
+        function openSecondaryHistoryModal(mode, key) {
+            secondaryHistoryState = { mode, key };
+            secondaryHistoryTitle.textContent = mode === 'addition' ? `היסטוריית תוספת: ${key}` : `היסטוריית נתון: ${key}`;
+            renderSecondaryHistoryRows();
+            secondaryHistoryModal.style.display = 'flex';
+        }
+
+        function closeSecondaryHistoryModal() {
+            secondaryHistoryModal.style.display = 'none';
+            secondaryHistoryRows.innerHTML = '';
+            secondaryHistoryTotal.textContent = '';
+            secondaryHistoryState = { mode: null, key: null };
+        }
+
+        async function updateSecondaryEntryImage(mode, key, index, input) {
+            const file = input?.files?.[0];
+            if (!file) return;
+            const entry = mode === 'addition'
+                ? projects[currentProjectId]?.additions?.[key]?.[index]
+                : (projects[currentProjectId]?.extras || []).filter((item) => item.type === key)[index];
+            if (!entry) return;
+            const uploaded = await uploadSecondaryStoryImage(file, `${mode}_${entry.id || Date.now()}`);
+            if (uploaded) {
+                entry.imageUrl = uploaded.downloadUrl;
+                entry.imagePath = uploaded.storagePath;
+                saveAllProjects();
+                renderSecondaryHistoryRows();
+                if (mode === 'addition') renderAdditionsPanel(); else renderExtrasPanel();
+            }
+        }
+
+        function renderSecondaryHistoryRows() {
+            const { mode, key } = secondaryHistoryState;
+            if (!mode || !key || !secondaryHistoryRows) return;
+            secondaryHistoryRows.innerHTML = '';
+            if (mode === 'addition') {
+                const safeKey = encodeURIComponent(key);
+                const entries = projects[currentProjectId]?.additions?.[key] || [];
+                let total = 0;
+                entries.forEach((entry, index) => {
+                    total += Number(entry.amount) || 0;
+                    const row = document.createElement('div');
+                    row.className = 'secondary-edit-row';
+                    row.innerHTML = `
+                        <div class="secondary-input-row">
+                            <input type="number" step="any" value="${entry.amount ?? ''}" onchange="editAdditionInline(decodeURIComponent('${safeKey}'), ${index}, 'amount', this.value)">
+                            <input type="datetime-local" value="${parseDisplayTimestampToInputValue(entry.timestamp)}" onchange="editAdditionInline(decodeURIComponent('${safeKey}'), ${index}, 'timestamp', this.value)">
+                            <input type="file" accept="image/*" onchange="updateSecondaryEntryImage('addition', decodeURIComponent('${safeKey}'), ${index}, this)">
+                        </div>
+                        <div class="secondary-input-row">
+                            <button class="undo-button" onclick="removeAdditionEntry(decodeURIComponent('${safeKey}'), ${index})">מחק שורה</button>
+                            ${entry.imageUrl ? `<button class="history-upload-btn" onclick="openMediaPreview('${entry.imageUrl}', 'תמונת תוספת')">פתח תמונה</button>` : ''}
+                        </div>
+                    `;
+                    secondaryHistoryRows.appendChild(row);
+                });
+                const unit = entries[entries.length - 1]?.unit || '';
+                secondaryHistoryTotal.textContent = `תוצאה מצטברת: ${total} ${unit}`;
+            } else {
+                const safeKey = encodeURIComponent(key);
+                const entries = (projects[currentProjectId]?.extras || []).filter((item) => item.type === key);
+                entries.forEach((entry) => {
+                    const realIndex = (projects[currentProjectId]?.extras || []).findIndex((item) => item.id === entry.id);
+                    const row = document.createElement('div');
+                    row.className = 'secondary-edit-row';
+                    row.innerHTML = `
+                        <div class="secondary-input-row">
+                            <input type="datetime-local" value="${parseDisplayTimestampToInputValue(entry.timestamp)}" onchange="editExtraInline(${realIndex}, 'timestamp', this.value)">
+                            <input type="text" value="${(entry.notes || '').replace(/"/g, '&quot;')}" placeholder="הערות" onchange="editExtraInline(${realIndex}, 'notes', this.value)">
+                            <input type="file" accept="image/*" onchange="updateSecondaryEntryImage('extra', decodeURIComponent('${safeKey}'), ${entries.indexOf(entry)}, this)">
+                        </div>
+                        <div class="secondary-input-row">
+                            <button class="undo-button" onclick="removeExtraEntry(${realIndex})">מחק שורה</button>
+                            ${entry.imageUrl ? `<button class="history-upload-btn" onclick="openMediaPreview('${entry.imageUrl}', 'תמונת נתון נוסף')">פתח תמונה</button>` : ''}
+                        </div>
+                    `;
+                    secondaryHistoryRows.appendChild(row);
+                });
+                secondaryHistoryTotal.textContent = `סה"כ רשומות: ${entries.length}`;
+            }
+        }
+
+        function editAdditionInline(name, index, field, value) {
+            const entry = projects[currentProjectId]?.additions?.[name]?.[index];
+            if (!entry) return;
+            if (field === 'amount') {
+                const parsed = parseFloat(value);
+                if (Number.isNaN(parsed)) return;
+                entry.amount = parsed;
+            } else if (field === 'timestamp') {
+                entry.timestamp = value ? new Date(value).toLocaleString('he-IL') : entry.timestamp;
+            }
+            saveAllProjects();
+            renderAdditionsPanel();
+            renderSecondaryHistoryRows();
+        }
+
+        function editExtraInline(index, field, value) {
+            const entry = projects[currentProjectId]?.extras?.[index];
+            if (!entry) return;
+            if (field === 'timestamp') entry.timestamp = value ? new Date(value).toLocaleString('he-IL') : entry.timestamp;
+            if (field === 'notes') entry.notes = value;
+            saveAllProjects();
+            renderExtrasPanel();
+            renderSecondaryHistoryRows();
         }
 
         function createNewProjectData(name) {
@@ -10634,6 +10779,9 @@ body.dark-mode .history-row {
         window.onclick = function(event) {
             if (event.target === historyModal) {
                 closeHistoryModal();
+            }
+            if (event.target === secondaryHistoryModal) {
+                closeSecondaryHistoryModal();
             }
             if (event.target === projectManagementModal) {
                 closeProjectManagementModal();
