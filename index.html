@@ -5563,6 +5563,18 @@ body.dark-mode .auth-error {
     font-size: 0.92rem;
 }
 
+#additionsDashboard, #extrasDashboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+    padding-top: 20px;
+    margin-bottom: 15px;
+}
+
+#additionsDashboard .input-group, #extrasDashboard .input-group {
+    flex: 1 1 280px;
+}
+
 .dashboard-item-form {
     display: grid;
     gap: 8px;
@@ -5953,14 +5965,10 @@ body.dark-mode .history-row {
         </div>
     </div>
     <div class="secondary-panel category-panel" id="additionsPanel">
-        <h3>דשבורד תוספות</h3>
-        <p class="secondary-panel-note">עדכון הכמויות מתבצע מהקוביות בדשבורד העליון. להוספת תוספת חדשה השתמשו בכפתור הצהוב.</p>
-        <div class="secondary-dashboard-grid" id="additionsDashboard" style="display:none;"></div>
+        <div id="additionsDashboard"></div>
     </div>
     <div class="secondary-panel category-panel" id="extrasPanel">
-        <h3>דשבורד נתונים נוספים</h3>
-        <p class="secondary-panel-note">עדכון נתונים נוספים מתבצע מהקוביות בדשבורד העליון. להוספת נתון חדש השתמשו בכפתור הצהוב.</p>
-        <div class="secondary-dashboard-grid" id="extrasDashboard" style="display:none;"></div>
+        <div id="extrasDashboard"></div>
     </div>
     <nav class="category-nav" id="categoryNav">
         <button class="category-nav-btn active" data-category="metrics" onclick="switchCategory('metrics')"><i class="fas fa-chart-line"></i><span>מדדים</span></button>
@@ -7824,6 +7832,7 @@ body.dark-mode .history-row {
             stageNavContainer.style.display = isMetrics ? 'flex' : 'none';
             projectDetailsCard.style.display = isMetrics ? 'block' : 'none';
             document.querySelector('.top-section-wrapper').style.display = isMetrics ? 'block' : 'none';
+            if (currentStageContent.parentElement) currentStageContent.parentElement.style.display = isMetrics ? 'block' : 'none';
             if (isMetrics) {
                 closeSecondaryHistoryModal();
             }
@@ -7896,19 +7905,41 @@ body.dark-mode .history-row {
             const additions = projects[currentProjectId]?.additions || {};
             const names = Object.keys(additions);
             if (!names.length) {
-                additionsDashboard.innerHTML = '<div class="secondary-dashboard-item">עדיין לא נוספו תוספות.</div>';
+                additionsDashboard.innerHTML = '<p style="text-align:center;color:var(--light-text-color)">עדיין לא נוספו תוספות.</p>';
                 return;
             }
             names.forEach((name) => {
                 const entries = additions[name] || [];
-                const total = entries.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
-                const unit = entries[entries.length - 1]?.unit || '';
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'secondary-dashboard-item';
-                item.innerHTML = `<h4>${name}</h4><div>סה"כ מצטבר: ${total} ${unit}</div><div>כמות עדכונים: ${entries.length}</div>`;
-                item.onclick = () => openSecondaryHistoryModal('addition', name);
-                additionsDashboard.appendChild(item);
+                const lastUnit = entries[entries.length - 1]?.unit || 'גרם';
+                const card = document.createElement('div');
+                card.className = 'input-group';
+                const label = document.createElement('label');
+                label.textContent = name;
+                const amountInput = document.createElement('input');
+                amountInput.type = 'number';
+                amountInput.step = 'any';
+                amountInput.placeholder = 'הכנס כמות';
+                amountInput.inputMode = 'decimal';
+                amountInput.setAttribute('aria-label', `כמות עבור ${name}`);
+                const unitSelect = document.createElement('select');
+                unitSelect.setAttribute('aria-label', `יחידת מידה עבור ${name}`);
+                ['גרם', 'קילוגרם', 'ליטר', 'מיליגרם'].forEach((u) => {
+                    const opt = document.createElement('option');
+                    opt.value = u;
+                    opt.textContent = u;
+                    if (u === lastUnit) opt.selected = true;
+                    unitSelect.appendChild(opt);
+                });
+                const updateBtn = document.createElement('button');
+                updateBtn.type = 'button';
+                updateBtn.setAttribute('aria-label', `עדכן ${name}`);
+                updateBtn.textContent = 'עדכן';
+                updateBtn.addEventListener('click', () => addAdditionEntry(name, { amountInput, unitInput: unitSelect }));
+                card.appendChild(label);
+                card.appendChild(amountInput);
+                card.appendChild(unitSelect);
+                card.appendChild(updateBtn);
+                additionsDashboard.appendChild(card);
             });
         }
 
@@ -8001,18 +8032,27 @@ body.dark-mode .history-row {
             });
             const types = Array.from(typeSet);
             if (!types.length) {
-                extrasDashboard.innerHTML = '<div class="secondary-dashboard-item">אין עדיין נתונים נוספים.</div>';
+                extrasDashboard.innerHTML = '<p style="text-align:center;color:var(--light-text-color)">אין עדיין נתונים נוספים.</p>';
                 return;
             }
             types.forEach((type) => {
-                const typeEntries = entries.filter((entry) => entry.type === type);
-                const latest = typeEntries[typeEntries.length - 1];
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'secondary-dashboard-item';
-                item.innerHTML = `<h4>${type}</h4><div>עדכונים: ${typeEntries.length}</div><div>אחרון: ${latest?.timestamp || '-'}</div>`;
-                item.onclick = () => openSecondaryHistoryModal('extra', type);
-                extrasDashboard.appendChild(item);
+                const card = document.createElement('div');
+                card.className = 'input-group';
+                const label = document.createElement('label');
+                label.textContent = type;
+                const notesInput = document.createElement('input');
+                notesInput.type = 'text';
+                notesInput.placeholder = 'הערות';
+                notesInput.setAttribute('aria-label', `הערות עבור ${type}`);
+                const updateBtn = document.createElement('button');
+                updateBtn.type = 'button';
+                updateBtn.setAttribute('aria-label', `עדכן ${type}`);
+                updateBtn.textContent = 'עדכן';
+                updateBtn.addEventListener('click', () => addExtraEntry(type, { notesInput }));
+                card.appendChild(label);
+                card.appendChild(notesInput);
+                card.appendChild(updateBtn);
+                extrasDashboard.appendChild(card);
             });
         }
 
@@ -8590,7 +8630,7 @@ body.dark-mode .history-row {
                 loadCurrentStageContent();
                 return;
             }
-            fixedDashboardStageName.textContent = `${stageConfig.longName}`;
+            if (activeCategory === 'metrics') fixedDashboardStageName.textContent = `${stageConfig.longName}`;
             currentStageInputSection.innerHTML = '';
             
             // Render predefined metrics
@@ -8679,7 +8719,7 @@ body.dark-mode .history-row {
                     }
                 }
             });
-            updateDashboardForCurrentStage();
+            renderActiveCategoryDashboard();
             renderPreviousStageOverview();
             
             // Add autosave listeners for current stage inputs
@@ -8961,68 +9001,19 @@ body.dark-mode .history-row {
                 <h3>${name}</h3>
                 <p>סה"כ מצטבר: ${total} ${unit}</p>
                 <p>כמות עדכונים: ${entries.length}</p>
-                <div class="dashboard-item-form">
-                    <div class="form-row">
-                        <input type="number" step="any" placeholder="הכנס כמות">
-                        <select>
-                            <option value="גרם">גרם</option>
-                            <option value="קילוגרם">קילוגרם</option>
-                            <option value="ליטר">ליטר</option>
-                            <option value="מיליגרם">מיליגרם</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
-                        <button type="button" class="secondary-action-btn">עדכן</button>
-                        <button type="button" class="history-upload-btn">היסטוריה</button>
-                    </div>
-                </div>
             `;
-            const amountInput = dashboardItem.querySelector('input[type="number"]');
-            const unitSelect = dashboardItem.querySelector('select');
-            const updateBtn = dashboardItem.querySelector('.secondary-action-btn');
-            const historyBtn = dashboardItem.querySelector('.history-upload-btn');
-            unitSelect.value = unit;
-            updateBtn.addEventListener('click', (event) => {
-                event.stopPropagation();
-                addAdditionEntry(name, { amountInput, unitInput: unitSelect });
-            });
-            historyBtn.addEventListener('click', (event) => {
-                event.stopPropagation();
-                openSecondaryHistoryModal('addition', name);
-            });
+            dashboardItem.onclick = () => openSecondaryHistoryModal('addition', name);
             return dashboardItem;
         }
 
         function createExtraDashboardCard(type, entries) {
-            const latest = entries[entries.length - 1];
             const dashboardItem = document.createElement('div');
             dashboardItem.className = 'dashboard-item';
             dashboardItem.innerHTML = `
                 <h3>${type}</h3>
-                <p>עדכונים: ${entries.length}</p>
-                <p>אחרון: ${latest?.timestamp || '-'}</p>
-                <p>הערות: ${latest?.notes || '-'}</p>
-                <div class="dashboard-item-form">
-                    <div class="form-row">
-                        <input type="text" placeholder="הערות">
-                        <button type="button" class="secondary-action-btn">עדכן</button>
-                    </div>
-                    <div class="form-row">
-                        <button type="button" class="history-upload-btn">היסטוריה</button>
-                    </div>
-                </div>
+                <p>כמות עדכונים: ${entries.length}</p>
             `;
-            const notesInput = dashboardItem.querySelector('input[type="text"]');
-            const updateBtn = dashboardItem.querySelector('.secondary-action-btn');
-            const historyBtn = dashboardItem.querySelector('.history-upload-btn');
-            updateBtn.addEventListener('click', (event) => {
-                event.stopPropagation();
-                addExtraEntry(type, { notesInput });
-            });
-            historyBtn.addEventListener('click', (event) => {
-                event.stopPropagation();
-                openSecondaryHistoryModal('extra', type);
-            });
+            dashboardItem.onclick = () => openSecondaryHistoryModal('extra', type);
             return dashboardItem;
         }
 
