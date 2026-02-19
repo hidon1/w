@@ -3029,6 +3029,18 @@ body.dark-mode .finance-yearly-project-section .project-balance.negative {
     align-items: center;
 }
 
+.yearly-receipts-list {
+    margin-top: 8px;
+    text-align: right;
+}
+.yearly-receipts-list ul {
+    margin: 6px 0 0;
+    padding-right: 18px;
+}
+.yearly-receipts-list li {
+    margin-bottom: 4px;
+}
+
 .reminders-modal-content {
     background: linear-gradient(135deg, var(--card-background), #f9f9f9);
     margin: auto;
@@ -4125,11 +4137,11 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
 .add-metric-modal-content {
     background: linear-gradient(135deg, var(--card-background), #f9f9f9);
     margin: auto;
-    padding: 40px;
+    padding: 24px;
     border-radius: var(--border-radius);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    width: 80%;
-    max-width: 500px;
+    width: min(92%, 360px);
+    max-width: 360px;
     animation: slideInModal 0.4s ease-out;
     position: relative;
     display: flex;
@@ -5502,7 +5514,7 @@ body.dark-mode .auth-error {
             <li><a href="#" onclick="closeSidebar(); showMainContent();">ראשי</a></li>
             <li><button onclick="openProjectManagementModal();">ניהול פרויקטים</button></li>
             <li><button onclick="openFinanceModal();">ניהול כספים</button></li>
-            <li><button onclick="openCurrentProjectFinanceReportModal();">דוח כספי</button></li>
+            <li><button onclick="openCurrentProjectFinanceReportModal();">דוח כספי לפרויקט נוכחי</button></li>
             <li><button onclick="openGlobalFinanceReportModal();">דוח כספי כולל</button></li>
             <li><button onclick="openFinanceYearlyModal();">דוח כספי לפי שנה</button></li>
             <li><button onclick="openInboxModal();">תיבת דואר <span id="inboxBadge" class="inbox-badge" style="display:none;">0</span></button></li>
@@ -5522,7 +5534,7 @@ body.dark-mode .auth-error {
                 </div>
                 <button id="loginBtn">התחבר / הירשם</button>
                 <button id="logoutBtn" class="logout-btn" style="display:none;">התנתק</button>
-                <button id="switchBackBtn" class="switch-back-btn" style="display:none;">
+                <button id="switchBackBtn" class="switch-back-btn" style="display:none;" onclick="switchBackToOwner(); closeSidebar(); showMainContent();">
                     <i class="fas fa-user"></i>
                     חזור לחשבון שלי
                 </button>
@@ -6757,6 +6769,8 @@ body.dark-mode .auth-error {
             updateProjectDetailsCard();
             showNotification('חזרת לחשבון שלך.', 'success');
         }
+        window.switchBackToOwner = switchBackToOwner;
+
         function populateYearSelects() {
             const currentYear = new Date().getFullYear();
             for (let year = 2020; year <= 2100; year++) {
@@ -8134,23 +8148,7 @@ body.dark-mode .auth-error {
                 openHistoryModal(stageId, metricId, metricDisplayName);
             } catch (error) {
                 console.error('Metric image upload failed:', error);
-                try {
-                    const localImageUrl = await fileToDataUrl(file);
-                    if (!localImageUrl) throw new Error('EMPTY_IMAGE_DATA');
-                    const targetEntry = entries[entryIndex];
-                    targetEntry.imageUrl = localImageUrl;
-                    targetEntry.imagePath = null;
-                    saveAllProjects();
-                    updateDashboardForCurrentStage();
-                    const metricDisplayName = stagesConfig[stageId]?.metrics?.[metricId]?.name
-                        || stagesConfig[stageId]?.customMetrics?.[metricId]?.name
-                        || 'מדד';
-                    openHistoryModal(stageId, metricId, metricDisplayName);
-                    alert('הועלתה תמונה מקומית (ללא אחסון ענן).');
-                } catch (fallbackError) {
-                    console.error('Metric local image fallback failed:', fallbackError);
-                    alert('העלאת תמונת המדידה נכשלה.');
-                }
+                alert('העלאת תמונת המדידה ל-Firebase נכשלה. ודא חיבור והרשאות Storage ונסה שוב.');
             }
         }
 
@@ -8213,6 +8211,14 @@ body.dark-mode .auth-error {
             window.open(url, '_blank');
         }
 
+        function getOrderedStageMetricIds(stageId) {
+            const stageConfig = stagesConfig[stageId] || {};
+            const predefinedIds = Object.keys(stageConfig.metrics || {});
+            const customIds = Object.keys(stageConfig.customMetrics || {});
+            return [...predefinedIds, ...customIds];
+        }
+
+
         function createDashboardMetricItem(metricId, metricConfig, currentEntries) {
             let displayValue = '--';
             const latestEntry = currentEntries && currentEntries.length > 0 ? currentEntries[currentEntries.length - 1] : null;
@@ -8240,20 +8246,14 @@ body.dark-mode .auth-error {
 
         function updateDashboardForCurrentStage() {
             fixedDashboardGrid.innerHTML = '';
-            const stageMetrics = stagesConfig[currentStageId].metrics;
-            const customMetrics = stagesConfig[currentStageId].customMetrics;
-
-            for (const metricId in stageMetrics) {
-                const metricConfig = stageMetrics[metricId];
-                const currentEntries = projects[currentProjectId].stages[currentStageId][metricId];
+            const stageConfig = stagesConfig[currentStageId] || {};
+            const metricOrder = getOrderedStageMetricIds(currentStageId);
+            metricOrder.forEach((metricId) => {
+                const metricConfig = stageConfig.metrics?.[metricId] || stageConfig.customMetrics?.[metricId];
+                if (!metricConfig) return;
+                const currentEntries = projects[currentProjectId]?.stages?.[currentStageId]?.[metricId] || [];
                 fixedDashboardGrid.appendChild(createDashboardMetricItem(metricId, metricConfig, currentEntries));
-            }
-
-            for (const metricId in customMetrics) {
-                const metricConfig = customMetrics[metricId];
-                const currentEntries = projects[currentProjectId].stages[currentStageId][metricId];
-                fixedDashboardGrid.appendChild(createDashboardMetricItem(metricId, metricConfig, currentEntries));
-            }
+            });
         }
         /**
          * Determine whether a metric is a custom metric (stage or wine details).
@@ -8675,8 +8675,17 @@ body.dark-mode .auth-error {
             financeAttachmentInput.click();
         }
 
-        function openFinanceCameraCapture() {
+        async function openFinanceCameraCapture() {
             if (!financeAttachmentInput) return;
+            const capturedFile = await pickImageWithCameraPreference();
+            if (capturedFile) {
+                pendingFinanceAttachmentFile = capturedFile;
+                if (financeAttachmentPreview) {
+                    financeAttachmentPreview.style.display = 'block';
+                    financeAttachmentPreview.textContent = `נבחר קובץ: ${capturedFile.name}`;
+                }
+                return;
+            }
             financeAttachmentInput.value = '';
             financeAttachmentInput.setAttribute('accept', 'image/*');
             financeAttachmentInput.setAttribute('capture', 'environment');
@@ -8783,19 +8792,8 @@ body.dark-mode .auth-error {
                     };
                 } catch (error) {
                     console.error('Finance attachment upload failed:', error);
-                    try {
-                        const localAttachmentUrl = await fileToDataUrl(pendingFinanceAttachmentFile);
-                        attachment = {
-                            type: pendingFinanceAttachmentFile.type,
-                            name: pendingFinanceAttachmentFile.name,
-                            url: localAttachmentUrl,
-                            path: null
-                        };
-                        alert('שמירת הקבלה בוצעה מקומית (ללא אחסון ענן).');
-                    } catch (fallbackError) {
-                        console.error('Finance attachment local fallback failed:', fallbackError);
-                        alert('שמירת הקבלה נכשלה. התנועה תישמר ללא קובץ מצורף.');
-                    }
+                    attachment = null;
+                    alert('שמירת הקבלה ל-Firebase נכשלה. התנועה תישמר ללא קובץ מצורף.');
                 }
             }
             projects[currentProjectId].finance.push({ id: entryId, type, amount, notes, timestamp, attachment });
@@ -9115,7 +9113,11 @@ body.dark-mode .auth-error {
                 yearlyTotalIncome += projectIncome;
                 yearlyTotalExpense += projectExpense;
                 yearlyBalance += projectBalance;
-                const attachmentCount = entriesForPeriod.filter(entry => entry.attachment?.url).length;
+                const receiptEntries = entriesForPeriod.filter(entry => entry.attachment?.url);
+                const attachmentCount = receiptEntries.length;
+                const receiptsListHtml = attachmentCount
+                    ? `<div class="yearly-receipts-list"><strong>קבלות בתקופה:</strong><ul>${receiptEntries.map((entry) => `<li><a href="${entry.attachment.url}" target="_blank" rel="noopener">${entry.attachment.name || 'receipt'}</a> • ${entry.timestamp}</li>`).join('')}</ul></div>`
+                    : '<p>קבלות בתקופה: <strong>אין</strong></p>';
                 const projectSection = document.createElement('div');
                 projectSection.className = 'finance-yearly-project-section';
                 projectSection.innerHTML = `
@@ -9124,6 +9126,7 @@ body.dark-mode .auth-error {
                     <p>הוצאות: <span style="color:#F44336;">${projectExpense.toFixed(2)}</span> ₪</p>
                     <p>יתרה: <span class="project-balance ${projectBalance >= 0 ? 'positive' : 'negative'}">${projectBalance.toFixed(2)}</span> ₪</p>
                     <p>קבלות/קבצים בתקופה: <strong>${attachmentCount}</strong></p>
+                    ${receiptsListHtml}
                 `;
                 yearlyFinanceProjectsDetails.appendChild(projectSection);
             });
@@ -10044,6 +10047,10 @@ ${lines.join('\n\n')}`);
         }
         function openAddMetricModal() {
             document.getElementById('addMetricModal').style.display = 'flex';
+            const addMetricInput = document.getElementById('addMetricName');
+            if (addMetricInput) {
+                setTimeout(() => addMetricInput.focus(), 50);
+            }
         }
         function closeAddMetricModal() {
             document.getElementById('addMetricModal').style.display = 'none';
@@ -10809,7 +10816,15 @@ ${lines.join('\n\n')}`);
         }
 
         function showSyncUpdateBanner(message) {
-            // Intentionally no-op to avoid interrupting banner on every update.
+            if (!message) return;
+            const banner = document.createElement('div');
+            banner.className = 'app-notification success';
+            banner.innerHTML = `<i class="fas fa-check-circle"></i><span>${message}</span>`;
+            document.body.appendChild(banner);
+            setTimeout(() => {
+                banner.classList.add('fade-out');
+                setTimeout(() => banner.remove(), 300);
+            }, 2000);
         }
 
         function refreshProjectsAndMetricsUI() {
@@ -11463,6 +11478,26 @@ ${lines.join('\n\n')}`);
                     showAuthError(errorMessage);
                 }
             });
+
+            const addMetricNameInput = document.getElementById('addMetricName');
+            addMetricNameInput?.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addNewMetric();
+                }
+            });
+
+            const cameraButton = document.querySelector('.camera-btn');
+            cameraButton?.addEventListener('click', async () => {
+                if (!navigator.mediaDevices?.getUserMedia) return;
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    stream.getTracks().forEach(track => track.stop());
+                } catch (error) {
+                    console.warn('Camera permission preflight failed:', error);
+                }
+            }, { once: true });
+
 
             // Close modal on background click
             const authModal = document.getElementById('authModal');
