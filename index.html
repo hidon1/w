@@ -926,6 +926,13 @@ body.dark-mode .stage-nav-button:hover {
     justify-content: center;
 }
 
+
+.dashboard-section[data-category="additions"],
+.dashboard-section[data-category="extras"] {
+    background: linear-gradient(140deg, #134029, #2b7b4b);
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+
 .dashboard-section h2 {
     text-align: center;
     color: var(--accent-color);
@@ -5572,7 +5579,46 @@ body.dark-mode .auth-error {
 }
 
 #additionsDashboard .input-group, #extrasDashboard .input-group {
-    flex: 1 1 280px;
+    flex: 1 1 240px;
+    max-width: 320px;
+}
+
+.secondary-banner-shell {
+    background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(244,249,246,0.95));
+    border: 1px solid rgba(26, 77, 46, 0.18);
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(20, 51, 35, 0.14);
+    padding: 12px;
+}
+
+.secondary-history-actions button,
+.secondary-input-row .undo-button,
+.secondary-input-row .history-upload-btn,
+.yearly-report-actions .download-pdf-btn,
+.year-selector button {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #1a4d2e, #2f7a4b);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(26, 77, 46, 0.25);
+}
+
+.secondary-input-row .undo-button {
+    background: linear-gradient(135deg, #8b1f2d, #c23a4a);
+}
+
+.secondary-input-row .history-upload-btn {
+    background: linear-gradient(135deg, #1d5a8c, #2d8fd9);
+}
+
+.year-selector,
+.yearly-report-actions {
+    background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(246,250,247,0.94));
+    border: 1px solid rgba(26, 77, 46, 0.16);
+    border-radius: 16px;
+    padding: 12px;
 }
 
 .dashboard-item-form {
@@ -5768,6 +5814,15 @@ body.dark-mode .secondary-panel {
     border-color: rgba(255,255,255,0.12);
 }
 
+
+body.dark-mode .secondary-banner-shell,
+body.dark-mode .year-selector,
+body.dark-mode .yearly-report-actions {
+    background: linear-gradient(145deg, rgba(35,43,47,0.96), rgba(28,35,39,0.95));
+    border-color: rgba(255,255,255,0.14);
+}
+
+
 body.dark-mode .additions-list li,
 body.dark-mode .history-row {
     background: rgba(255,255,255,0.06);
@@ -5814,6 +5869,18 @@ body.dark-mode .history-row {
     #additionsPanel .input-group button,
     #extrasPanel .input-group button {
         border-radius: 12px;
+    }
+
+    #additionsDashboard .input-group,
+    #extrasDashboard .input-group {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+
+    .dashboard-item {
+        flex: 0 0 96px;
+        min-width: 96px;
+        max-width: 96px;
     }
 }
 
@@ -6049,16 +6116,16 @@ body.dark-mode .history-row {
         </button>
         <h2 id="fixedDashboardStageName"></h2>
         <div class="dashboard-grid" id="fixedDashboardGrid"></div>
-        <div class="add-data-cube" id="categoryAddCube" onclick="openAddMetricModal()">
+    <div class="add-data-cube" id="categoryAddCube" onclick="handleCategoryAddAction()">
             <i class="fas fa-plus"></i>
             <span>הוסף מדד</span>
         </div>
     </div>
     <div class="secondary-panel category-panel" id="additionsPanel">
-        <div id="additionsDashboard"></div>
+        <div id="additionsDashboard" class="secondary-banner-shell"></div>
     </div>
     <div class="secondary-panel category-panel" id="extrasPanel">
-        <div id="extrasDashboard"></div>
+        <div id="extrasDashboard" class="secondary-banner-shell"></div>
     </div>
     <nav class="category-nav" id="categoryNav">
         <button class="category-nav-btn active" data-category="metrics" onclick="switchCategory('metrics')"><i class="fas fa-chart-line"></i><span>מדדים</span></button>
@@ -6315,7 +6382,7 @@ body.dark-mode .history-row {
         <div class="modal-content finance-yearly-modal-content">
             <span class="close-button" onclick="closeFinanceYearlyModal()">&times;</span>
             <h3>דוח כספי לפי שנה</h3>
-            <div class="year-selector">
+            <div class="year-selector secondary-banner-shell">
                 <label for="yearSelect">בחר שנה:</label>
                 <select id="yearSelect"></select>
                 <label for="monthSelect">בחר חודש:</label>
@@ -6343,7 +6410,7 @@ body.dark-mode .history-row {
                     <div class="total-balance">יתרה נוכחית: <span id="yearlyTotalBalance">0</span></div>
                 </div>
                 <div id="yearlyFinanceProjectsDetails"></div>
-                <div class="yearly-report-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px;">
+                <div class="yearly-report-actions secondary-banner-shell" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px;">
                     <select id="receiptTypeFilter" class="project-filter-select">
                         <option value="all">קבלות: הכל</option>
                         <option value="expense">קבלות: הוצאות</option>
@@ -7960,6 +8027,18 @@ body.dark-mode .history-row {
             if (category === 'extras') renderExtrasPanel();
         }
 
+
+        function ensureSecondaryCollections(project) {
+            if (!project) return;
+            if (!project.additions || typeof project.additions !== 'object') project.additions = {};
+            if (!Array.isArray(project.extras)) project.extras = [];
+            if (!Array.isArray(project.extraTypes)) project.extraTypes = [];
+        }
+
+        function handleCategoryAddAction() {
+            openAddMetricModal();
+        }
+
         function formatLocalDateTimeForInput(date = new Date()) {
             const pad = (n) => String(n).padStart(2, '0');
             return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -7972,6 +8051,7 @@ body.dark-mode .history-row {
         }
 
         async function addAdditionEntry(nameOverride = null, controls = {}) {
+            ensureSecondaryCollections(projects[currentProjectId]);
             const name = (nameOverride || additionTypeInput?.value || '').trim();
             const amountSource = controls.amountInput?.value ?? additionAmountInput?.value;
             const amount = parseFloat(amountSource);
@@ -8015,6 +8095,7 @@ body.dark-mode .history-row {
 
         function renderAdditionsPanel() {
             if (!additionsDashboard) return;
+            ensureSecondaryCollections(projects[currentProjectId]);
             additionsDashboard.innerHTML = '';
             const additions = projects[currentProjectId]?.additions || {};
             const names = Object.keys(additions);
@@ -8107,6 +8188,7 @@ body.dark-mode .history-row {
         }
 
         async function addExtraEntry(typeOverride = null, controls = {}) {
+            ensureSecondaryCollections(projects[currentProjectId]);
             const type = (typeOverride || extraTypeInput?.value || '').trim();
             const notes = (controls.notesInput?.value ?? extraNotesInput?.value ?? '').trim();
             const rawTime = controls.timeInput?.value ?? extraTimeInput?.value;
@@ -8138,6 +8220,7 @@ body.dark-mode .history-row {
 
         function renderExtrasPanel() {
             if (!extrasDashboard) return;
+            ensureSecondaryCollections(projects[currentProjectId]);
             extrasDashboard.innerHTML = '';
             const entries = projects[currentProjectId]?.extras || [];
             const typeSet = new Set(projects[currentProjectId]?.extraTypes || []);
@@ -9257,6 +9340,7 @@ body.dark-mode .history-row {
         function renderActiveCategoryDashboard() {
             if (!fixedDashboardStageName) return;
             const addCubeText = categoryAddCube?.querySelector('span');
+            fixedDashboardSection?.setAttribute('data-category', activeCategory);
             if (activeCategory === 'metrics') {
                 fixedDashboardStageName.textContent = stagesConfig[currentStageId]?.name || '';
                 if (addCubeText) addCubeText.textContent = 'הוסף מדד';
@@ -11237,6 +11321,7 @@ body.dark-mode .history-row {
             if (!ensureEditPermission()) {
                 return;
             }
+            ensureSecondaryCollections(projects[currentProjectId]);
             const name = document.getElementById('addMetricName').value.trim();
             if (!name) {
                 alert('אנא הזן שם למדד.');
