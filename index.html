@@ -2970,6 +2970,9 @@ body.dark-mode .year-selector select {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 15px;
     transition: border-color var(--animation-speed);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
 }
 
 body.dark-mode .finance-yearly-report-summary {
@@ -2977,8 +2980,12 @@ body.dark-mode .finance-yearly-report-summary {
 }
 
 .finance-yearly-report-summary div {
-    padding: 5px 0;
+    padding: 10px 12px;
     font-weight: 700;
+    border-radius: 14px;
+    border: 1px solid rgba(26, 77, 46, 0.14);
+    background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(246,250,247,0.92));
+    box-shadow: 0 8px 18px rgba(20, 51, 35, 0.12);
 }
 
 .finance-yearly-report-summary .total-income {
@@ -3003,6 +3010,11 @@ body.dark-mode .finance-yearly-report-summary .total-expense {
 
 body.dark-mode .finance-yearly-report-summary .total-balance {
     color: var(--dark-primary-color);
+}
+
+body.dark-mode .finance-yearly-report-summary div {
+    background: linear-gradient(145deg, rgba(35,43,47,0.96), rgba(28,35,39,0.95));
+    border-color: rgba(255,255,255,0.14);
 }
 
 .finance-yearly-project-section {
@@ -5660,6 +5672,21 @@ body.dark-mode .auth-error {
     padding: 12px;
 }
 
+#receiptTypeFilter {
+    border-radius: 12px;
+    border: 1px solid rgba(26, 77, 46, 0.22);
+    padding: 10px 12px;
+    min-width: 155px;
+    font-weight: 700;
+    background: #fff;
+}
+
+body.dark-mode #receiptTypeFilter {
+    background: #243036;
+    border-color: rgba(255,255,255,0.18);
+    color: #fff;
+}
+
 .dashboard-item-form {
     display: grid;
     gap: 8px;
@@ -6416,7 +6443,7 @@ body.dark-mode .history-row {
                 <div class="total-balance">יתרה כוללת: <span id="globalTotalBalance">0</span></div>
             </div>
             <div class="yearly-report-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:12px;">
-                <button class="download-pdf-btn" onclick="openFinanceMediaListModal('global')">קבלות/תמונות כללי</button>
+                <button class="download-pdf-btn" onclick="openFinanceMediaListModal('global')">קבלות/תמונות</button>
             </div>
             <div id="globalFinanceProjectsDetails"></div>
             <button class="download-pdf-btn" onclick="downloadGlobalFinancePDF()">הורד כ-PDF</button>
@@ -6462,10 +6489,9 @@ body.dark-mode .history-row {
                     </select>
                     <button class="download-pdf-btn" onclick="downloadYearlyFinancePDF()">הורד כ-PDF</button>
                     <button class="download-pdf-btn" onclick="downloadYearlyReceiptsZip()">הורד קבלות (ZIP)</button>
-                    <button class="download-pdf-btn" onclick="openFinanceMediaListModal('yearly')">קבלות/תמונות כללי</button>
+                    <button class="download-pdf-btn" onclick="openFinanceMediaListModal('yearly')">קבלות/תמונות</button>
                     <button class="download-pdf-btn" onclick="shareYearlyReceipts('email')">שלח במייל</button>
                     <button class="download-pdf-btn" onclick="shareYearlyReceipts('whatsapp')">שלח ב-WhatsApp</button>
-                    <button class="download-pdf-btn" onclick="downloadFirebaseStorageRulesTemplate()">הורד כללי Firebase Storage</button>
                 </div>
             </div>
         </div>
@@ -10530,46 +10556,6 @@ body.dark-mode .history-row {
             return `${selectedYear} חודש ${HEBREW_MONTH_NAMES[selectedMonth] || selectedMonth}`;
         }
 
-        function getFirebaseStorageRulesTemplate() {
-            return `rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(accountId) {
-      return isSignedIn() && request.auth.uid == accountId;
-    }
-
-    function hasCollaboratorPermission(accountId) {
-      return isSignedIn() &&
-        exists(/databases/(default)/documents/accounts/$(accountId)/permissions/$(request.auth.uid));
-    }
-
-    function canAccessAccount(accountId) {
-      return isOwner(accountId) || hasCollaboratorPermission(accountId);
-    }
-
-    match /accounts/{accountId}/projects/{projectId}/finance/{entryId}/{fileName} {
-      allow read, write: if canAccessAccount(accountId);
-    }
-
-    match /accounts/{accountId}/projects/{projectId}/metrics/{stageId}/{metricId}/{metricEntryId}/{fileName} {
-      allow read, write: if canAccessAccount(accountId);
-    }
-
-    match /accounts/{accountId}/exports/{fileName} {
-      allow read, write: if canAccessAccount(accountId);
-    }
-
-    match /{allPaths=**} {
-      allow read, write: if false;
-    }
-  }
-}`;
-        }
-
         async function buildYearlyReceiptsZipBlob(attachments) {
             if (!window.JSZip) {
                 throw new Error('ZIP_LIBRARY_UNAVAILABLE');
@@ -10593,7 +10579,6 @@ service firebase.storage {
                 throw new Error('NO_DOWNLOADABLE_FILES');
             }
 
-            zip.file('FIREBASE_STORAGE_RULES.txt', getFirebaseStorageRulesTemplate());
             zip.file('PERIOD.txt', `קבצים להורדה ${getSelectedPeriodLabel()}`);
             return zip.generateAsync({ type: 'blob' });
         }
@@ -10638,17 +10623,12 @@ service firebase.storage {
             if (!window.firebaseAccess?.uploadFileToStorage || !accountUid) {
                 return '';
             }
-            const storagePath = `accounts/${accountUid}/exports/yearly_${yearSelect?.value || 'all'}_${monthSelect?.value || 'all'}_${Date.now()}.zip`;
+            const storagePath = `public/exports/${accountUid}/yearly_${yearSelect?.value || 'all'}_${monthSelect?.value || 'all'}_${Date.now()}.zip`;
             const uploadResult = await window.firebaseAccess.uploadFileToStorage(storagePath, new File([zipBlob], buildYearlyZipFileName(), { type: 'application/zip' }), {
                 reportType: 'yearly_finance_receipts',
                 period: getSelectedPeriodLabel()
             });
             return uploadResult?.downloadUrl || '';
-        }
-
-        function downloadFirebaseStorageRulesTemplate() {
-            const rulesBlob = new Blob([getFirebaseStorageRulesTemplate()], { type: 'text/plain;charset=utf-8' });
-            downloadBlob(rulesBlob, 'firebase_storage_rules.txt');
         }
 
         async function shareYearlyReceipts(channel) {
@@ -10667,7 +10647,7 @@ service firebase.storage {
             }
 
             const periodLabel = getSelectedPeriodLabel();
-            const message = `קבצים להורדה ${periodLabel}.\nקישור להורדה: ${downloadLink || 'לא נוצר קישור הורדה אוטומטי, נסה/י להוריד ישירות מהמערכת.'}\n\nהערה: קובץ ה-ZIP כולל גם FIREBASE_STORAGE_RULES.txt עם כללי הרשאה מלאים ל-Firebase Storage.`;
+            const message = `קבצים להורדה ${periodLabel}.\nקישור להורדה: ${downloadLink || 'לא נוצר קישור הורדה אוטומטי, נסה/י להוריד ישירות מהמערכת.'}`;
             if (channel === 'email') {
                 const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
                 const body = encodeURIComponent(message);
