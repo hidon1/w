@@ -5555,6 +5555,8 @@ body.dark-mode .auth-error {
     background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(247,249,251,0.95));
     border: 1px solid rgba(26, 77, 46, 0.12);
     border-radius: 16px;
+    width: min(100%, 1220px);
+    margin-inline: auto;
 }
 
 .secondary-panel h3 {
@@ -5568,16 +5570,40 @@ body.dark-mode .auth-error {
 }
 
 #additionsDashboard, #extrasDashboard {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 25px;
-    padding-top: 20px;
-    margin-bottom: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    padding-top: 10px;
+    margin: 0 auto;
+    width: min(100%, 1180px);
 }
 
 #additionsDashboard .input-group, #extrasDashboard .input-group {
-    flex: 1 1 240px;
-    max-width: 320px;
+    margin-bottom: 0;
+    padding: 10px;
+    border-radius: 12px;
+    min-height: 0;
+}
+
+#additionsDashboard .input-group label,
+#extrasDashboard .input-group label {
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+}
+
+#additionsDashboard .input-group input,
+#additionsDashboard .input-group select,
+#extrasDashboard .input-group input,
+#extrasDashboard .input-group select {
+    padding: 7px 8px;
+    font-size: 0.95rem;
+}
+
+#additionsDashboard .input-group button,
+#extrasDashboard .input-group button {
+    margin-top: 6px;
+    padding: 8px 10px;
+    font-size: 0.95rem;
 }
 
 .secondary-banner-shell {
@@ -5870,8 +5896,13 @@ body.dark-mode .history-row {
 
     #additionsDashboard .input-group,
     #extrasDashboard .input-group {
-        flex: 1 1 100%;
-        max-width: 100%;
+        width: 100%;
+    }
+
+    #additionsDashboard,
+    #extrasDashboard {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
     }
 
     .dashboard-item {
@@ -6105,7 +6136,7 @@ body.dark-mode .history-row {
             <h4>נתונים משלבים קודמים</h4>
             <div class="step-cards-grid" id="stepCardsGrid"></div>
         </div>
-        <div class="mobile-stage-metric-separator" aria-hidden="true"></div>
+        <div id="mobileStageMetricSeparator" class="mobile-stage-metric-separator" aria-hidden="true"></div>
     </div>
     <div class="dashboard-section category-panel active" id="fixedDashboardSection">
         <button class="dashboard-collapse-btn" id="dashboardCollapseBtn" onclick="toggleMobileDashboardCollapse()" aria-label="הסתר/הצג דשבורד תחתון">
@@ -6704,6 +6735,7 @@ body.dark-mode .history-row {
         const stageOverviewContainer = document.getElementById('stageOverviewContainer');
         const stepCardsGrid = document.getElementById('stepCardsGrid');
         const currentStageContent = document.getElementById('currentStageContent');
+        const mobileStageMetricSeparator = document.getElementById('mobileStageMetricSeparator');
         const currentStageInputSection = document.getElementById('currentStageInputSection');
         const fixedDashboardSection = document.getElementById('fixedDashboardSection');
         const dashboardCollapseBtn = document.getElementById('dashboardCollapseBtn');
@@ -8008,6 +8040,10 @@ body.dark-mode .history-row {
             currentStageContent.style.display = isMetrics ? 'block' : 'none';
             stageOverviewContainer.style.display = isMetrics ? 'block' : 'none';
             stageNavContainer.style.display = isMetrics ? 'flex' : 'none';
+            if (mobileStageMetricSeparator) {
+                const showSeparator = isMetrics && window.innerWidth <= 768;
+                mobileStageMetricSeparator.style.display = showSeparator ? 'block' : 'none';
+            }
             projectDetailsCard.style.display = 'block';
             document.querySelector('.top-section-wrapper').style.display = 'block';
             if (currentStageContent.parentElement) currentStageContent.parentElement.style.display = 'block';
@@ -10395,7 +10431,8 @@ body.dark-mode .history-row {
                             timestamp: entry.timestamp,
                             name: entry.attachment.name || 'receipt',
                             type: entry.type || 'expense',
-                            url: entry.attachment.url
+                            url: entry.attachment.url,
+                            path: entry.attachment.path || ''
                         });
                     }
                 });
@@ -10407,24 +10444,44 @@ body.dark-mode .history-row {
                         projectName: project.name,
                         timestamp: item.timestamp || '',
                         name: item.name || 'general_image',
-                        url: item.url
+                        url: item.url,
+                        path: item.path || ''
                     });
                 });
             });
             return attachments;
         }
 
-        async function fetchAttachmentBlob(url) {
-            if (!url) return null;
-            if (String(url).startsWith('data:')) {
+        async function fetchAttachmentBlob(url, path = '') {
+            if (!url && !path) return null;
+            const readBlob = async (targetUrl) => {
+                const response = await fetch(targetUrl, { mode: 'cors' });
+                if (!response.ok) {
+                    throw new Error(`HTTP_${response.status}`);
+                }
+                return response.blob();
+            };
+
+            if (url && String(url).startsWith('data:')) {
                 const response = await fetch(url);
                 return response.blob();
             }
-            const response = await fetch(url, { mode: 'cors' });
-            if (!response.ok) {
-                throw new Error(`HTTP_${response.status}`);
+
+            try {
+                if (url) {
+                    return await readBlob(url);
+                }
+            } catch (error) {
+                if (!path) throw error;
+                console.warn('Primary attachment fetch failed, trying refreshed URL from Storage path.', error);
             }
-            return response.blob();
+
+            if (path) {
+                const refreshedUrl = await getDownloadURL(storageRef(storage, path));
+                return await readBlob(refreshedUrl);
+            }
+
+            throw new Error('ATTACHMENT_URL_MISSING');
         }
 
         async function downloadYearlyReceiptsZip() {
@@ -10442,7 +10499,7 @@ body.dark-mode .history-row {
             for (let i = 0; i < sortedAttachments.length; i += 1) {
                 const file = sortedAttachments[i];
                 try {
-                    const blob = await fetchAttachmentBlob(file.url);
+                    const blob = await fetchAttachmentBlob(file.url, file.path);
                     const safeName = (file.name || `receipt_${i + 1}`).replace(/[^\w.\-]/g, '_');
                     const sequence = String(i + 1).padStart(3, '0');
                     zip.file(`${sequence}_${safeName}`, blob);
@@ -10477,7 +10534,7 @@ body.dark-mode .history-row {
                     const zip = new JSZip();
                     for (let i = 0; i < attachments.length; i += 1) {
                         const file = attachments[i];
-                        const blob = await fetchAttachmentBlob(file.url);
+                        const blob = await fetchAttachmentBlob(file.url, file.path);
                         if (!blob) continue;
                         const safeName = (file.name || `receipt_${i + 1}`).replace(/[^\w.\-]/g, '_');
                         zip.file(`${String(i + 1).padStart(3, '0')}_${safeName}`, blob);
@@ -10491,7 +10548,10 @@ body.dark-mode .history-row {
 
             const message = `קבלות לתקופה שנבחרה.\nהורד את כל הקבצים: ${downloadLink || 'לא נוצר קישור הורדה אוטומטי'}`;
             if (channel === 'email') {
-                window.location.href = `mailto:?subject=${encodeURIComponent('קבלות ודוח כספי')}&body=${encodeURIComponent(message)}`;
+                const subject = encodeURIComponent('קבלות ודוח כספי');
+                const body = encodeURIComponent(message);
+                const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+                window.open(gmailComposeUrl, '_blank', 'noopener,noreferrer');
                 return;
             }
             if (channel === 'whatsapp') {
