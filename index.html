@@ -4335,6 +4335,9 @@ body.dark-mode .add-metric-modal-content input {
     /* Dashboard: lower height and horizontal layout (button next to cubes) */
     .dashboard-section {
         flex-direction: row;
+        width: min(100%, 900px);
+        left: 50%;
+        transform: translateX(-50%);
         padding: 8px 15px;
         justify-content: space-between;
         align-items: center;
@@ -4349,6 +4352,7 @@ body.dark-mode .add-metric-modal-content input {
     .dashboard-grid {
         flex: 1;
         justify-content: flex-start;
+        max-width: 100%;
     }
     
     .add-data-cube {
