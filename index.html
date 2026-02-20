@@ -944,7 +944,7 @@ body.dark-mode .stage-nav-button:hover {
     justify-content: center;
     gap: 10px;
     width: 100%;
-    max-width: 1000px;
+    max-width: none;
 }
 
 .dashboard-item {
@@ -1001,7 +1001,8 @@ body.dark-mode .dashboard-item h3 {
 
 .input-section {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 220px));
+    justify-content: center;
     gap: 25px;
     margin-bottom: 15px;
     padding-top: 20px;
@@ -4324,7 +4325,8 @@ body.dark-mode .add-metric-modal-content input {
     
     /* Input section: 4 data cubes per row instead of 2 */
     .input-section {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(220px, 220px));
+        justify-content: center;
         gap: 15px;
     }
     
@@ -4335,9 +4337,9 @@ body.dark-mode .add-metric-modal-content input {
     /* Dashboard: lower height and horizontal layout (button next to cubes) */
     .dashboard-section {
         flex-direction: row;
-        width: min(100%, 900px);
-        left: 50%;
-        transform: translateX(-50%);
+        width: 100%;
+        left: 0;
+        transform: none;
         padding: 8px 15px;
         justify-content: space-between;
         align-items: center;
@@ -4470,16 +4472,16 @@ body.dark-mode .add-user-section {
 .stage-overview-container::before {
     content: '';
     display: block;
-    width: 100%;
+    width: calc(100% - 20px);
     height: 4px;
     border-radius: 999px;
     background: linear-gradient(90deg, rgba(176, 37, 75, 0.25), rgba(101, 22, 47, 0.75), rgba(176, 37, 75, 0.25));
-    margin-bottom: 14px;
+    margin: 0 auto 14px;
 }
 
 .mobile-stage-metric-separator {
     display: none;
-    width: calc(100% - 36px);
+    width: calc(100% - 48px);
     height: 4px;
     margin: 10px auto 14px;
     border-radius: 999px;
