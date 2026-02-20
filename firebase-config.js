@@ -34,6 +34,7 @@ import {
   getStorage,
   ref as storageRef,
   uploadBytes,
+  getBlob,
   getDownloadURL,
   deleteObject
 } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js';
@@ -69,6 +70,7 @@ export {
   storage,
   storageRef,
   uploadBytes,
+  getBlob,
   getDownloadURL,
   deleteObject,
   googleProvider,
