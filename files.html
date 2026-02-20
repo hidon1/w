@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול קבצים - מערכת ניטור יין</title>
+    <link rel="icon" href="image_00b206.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Playfair+Display:wght@400;700&family=Noto+Sans+Hebrew:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+/* ===== CSS Variables (same as index.html) ===== */
+:root {
+    --primary-color: #65162f;
+    --secondary-color: #7f1d3a;
+    --accent-color: #D4AF37;
+    --background-color: #FAF7F2;
+    --background-color-mid: #F5EEE6;
+    --background-color-end: #E8DFD5;
+    --card-background: #ffffff;
+    --text-color: #2C2C2C;
+    --light-text-color: #5A5A5A;
+    --border-color: #E8DFD5;
+    --shadow: 0 4px 20px rgba(123, 31, 61, 0.08);
+    --border-radius: 16px;
+    --animation-speed: 0.4s;
+    --top-section-background: linear-gradient(135deg, #FFF8E1, #F5F5DC);
+    --top-section-border: #D4C6B1;
+    --dark-background-color: #1A1A1D;
+    --dark-background-color-mid: #0F0F11;
+    --dark-background-color-end: #000000;
+    --dark-card-background: #2A2A2E;
+    --dark-text-color: #E8DFD5;
+    --dark-light-text-color: #B8AFA0;
+    --dark-border-color: #3A3A40;
+    --dark-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+    --dark-primary-color: #a12c4a;
+    --dark-secondary-color: #9D2449;
+    --dark-accent-color: #E5C158;
+    --font-size-base: 16px;
+}
+
+* { box-sizing: border-box; }
+
+button { font-family: 'Noto Sans Hebrew', 'Heebo', sans-serif; cursor: pointer; border: none; outline: none; touch-action: manipulation; }
+input, textarea, select { font-family: 'Noto Sans Hebrew', 'Heebo', sans-serif; outline: none; }
+button:focus, input:focus, textarea:focus, select:focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+body.dark-mode button:focus, body.dark-mode input:focus, body.dark-mode textarea:focus, body.dark-mode select:focus { outline-color: var(--dark-primary-color); }
+
+body {
+    font-family: 'Noto Sans Hebrew', 'Heebo', sans-serif;
+    font-weight: 400;
+    font-size: var(--font-size-base);
+    margin: 0;
+    padding: 0;
+    padding-bottom: 60px;
+    background: linear-gradient(135deg, var(--background-color) 0%, var(--background-color-mid) 50%, var(--background-color-end) 100%);
+    background-attachment: fixed;
+    color: var(--text-color);
+    direction: rtl;
+    line-height: 1.6;
+    overflow-x: hidden;
+    transition: all var(--animation-speed);
+}
+
+body.preload * { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; transition-delay: 0s !important; }
+
+body.dark-mode {
+    background: linear-gradient(135deg, var(--dark-background-color) 0%, var(--dark-background-color-mid) 50%, var(--dark-background-color-end) 100%);
+    background-attachment: fixed;
+    color: var(--dark-text-color);
+}
+
+/* ===== Top Section ===== */
+.top-section-wrapper {
+    background: var(--top-section-background);
+    padding: 16px 25px 12px;
+    border-bottom-left-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    border-bottom: 1px solid var(--top-section-border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+body.dark-mode .top-section-wrapper {
+    background: linear-gradient(135deg, var(--dark-card-background), #2a2a2a);
+    border-color: var(--dark-border-color);
+}
+
+.back-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: calc(var(--font-size-base) * 0.95);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    border: 1px solid var(--primary-color);
+    white-space: nowrap;
+}
+
+.back-link:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+body.dark-mode .back-link { color: var(--dark-primary-color); border-color: var(--dark-primary-color); }
+body.dark-mode .back-link:hover { background: var(--dark-primary-color); color: white; }
+
+.top-section-wrapper h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: calc(var(--font-size-base) * 1.5);
+    color: var(--primary-color);
+    margin: 0;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    flex: 1;
+}
+
+body.dark-mode .top-section-wrapper h1 { color: var(--dark-primary-color); }
+
+.theme-toggle-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--light-text-color);
+    font-size: calc(var(--font-size-base) * 0.85);
+    margin-right: auto;
+}
+
+body.dark-mode .theme-toggle-top { color: var(--dark-light-text-color); }
+
+.switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
+body.dark-mode .slider { background-color: #555; }
+.slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--primary-color); }
+body.dark-mode input:checked + .slider { background-color: var(--dark-primary-color); }
+input:checked + .slider:before { transform: translateX(20px); }
+
+/* ===== Main Container ===== */
+.main-container {
+    max-width: 1000px;
+    margin: 24px auto;
+    padding: 0 16px;
+}
+
+/* ===== Auth Notice ===== */
+.auth-notice {
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 40px 30px;
+    text-align: center;
+    color: var(--light-text-color);
+}
+
+body.dark-mode .auth-notice { background: var(--dark-card-background); color: var(--dark-light-text-color); box-shadow: var(--dark-shadow); }
+
+.auth-notice i { font-size: 48px; color: var(--primary-color); margin-bottom: 16px; display: block; }
+body.dark-mode .auth-notice i { color: var(--dark-primary-color); }
+.auth-notice h2 { font-family: 'Playfair Display', serif; color: var(--primary-color); margin-bottom: 12px; }
+body.dark-mode .auth-notice h2 { color: var(--dark-primary-color); }
+
+/* ===== Filters Section ===== */
+.filters-section {
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+body.dark-mode .filters-section { background: var(--dark-card-background); box-shadow: var(--dark-shadow); }
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 160px;
+    flex: 1;
+}
+
+.filter-group label {
+    font-size: calc(var(--font-size-base) * 0.85);
+    font-weight: 700;
+    color: var(--secondary-color);
+    display: block;
+}
+
+body.dark-mode .filter-group label { color: var(--dark-light-text-color); }
+
+.filter-group select {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--background-color);
+    color: var(--text-color);
+    font-size: calc(var(--font-size-base) * 0.9);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    min-height: 44px;
+}
+
+body.dark-mode .filter-group select {
+    border-color: var(--dark-border-color);
+    background: var(--dark-background-color);
+    color: var(--dark-text-color);
+}
+
+.filter-group select:focus { border-color: var(--primary-color); }
+body.dark-mode .filter-group select:focus { border-color: var(--dark-primary-color); }
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: calc(var(--font-size-base) * 0.9);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(123,31,61,0.3); }
+body.dark-mode .btn-primary { background: linear-gradient(135deg, var(--dark-primary-color), var(--dark-secondary-color)); }
+
+.btn-secondary {
+    background: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: calc(var(--font-size-base) * 0.9);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-secondary:hover { background: var(--border-color); }
+body.dark-mode .btn-secondary { background: var(--dark-background-color); color: var(--dark-text-color); border-color: var(--dark-border-color); }
+body.dark-mode .btn-secondary:hover { background: var(--dark-border-color); }
+
+/* ===== Files Grid ===== */
+.files-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+/* ===== File Card ===== */
+.file-card {
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+.file-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(123,31,61,0.15); }
+
+body.dark-mode .file-card {
+    background: var(--dark-card-background);
+    box-shadow: var(--dark-shadow);
+    border-color: var(--dark-border-color);
+}
+
+.file-card-icon {
+    font-size: 32px;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, rgba(101,22,47,0.1), rgba(127,29,58,0.05));
+    border-radius: 12px;
+}
+
+body.dark-mode .file-card-icon { color: var(--dark-primary-color); background: rgba(161,44,74,0.15); }
+
+.file-card-info { flex: 1; }
+
+.file-card-name {
+    font-weight: 700;
+    font-size: calc(var(--font-size-base) * 0.95);
+    color: var(--text-color);
+    margin-bottom: 6px;
+    word-break: break-word;
+    line-height: 1.3;
+}
+
+body.dark-mode .file-card-name { color: var(--dark-text-color); }
+
+.file-card-meta {
+    font-size: calc(var(--font-size-base) * 0.8);
+    color: var(--light-text-color);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+body.dark-mode .file-card-meta { color: var(--dark-light-text-color); }
+
+.file-card-meta span { display: flex; align-items: center; gap: 6px; }
+
+.file-card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-download {
+    flex: 1;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: calc(var(--font-size-base) * 0.82);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+}
+
+.btn-download:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(123,31,61,0.3); }
+body.dark-mode .btn-download { background: linear-gradient(135deg, var(--dark-primary-color), var(--dark-secondary-color)); }
+
+.btn-share {
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent-color), #c9a227);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: calc(var(--font-size-base) * 0.82);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+}
+
+.btn-share:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(212,175,55,0.4); }
+body.dark-mode .btn-share { background: linear-gradient(135deg, var(--dark-accent-color), #c9a227); }
+
+/* ===== Empty State ===== */
+.empty-state {
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 60px 30px;
+    text-align: center;
+    color: var(--light-text-color);
+    grid-column: 1 / -1;
+}
+
+body.dark-mode .empty-state { background: var(--dark-card-background); color: var(--dark-light-text-color); box-shadow: var(--dark-shadow); }
+.empty-state i { font-size: 52px; color: var(--border-color); margin-bottom: 16px; display: block; }
+body.dark-mode .empty-state i { color: var(--dark-border-color); }
+.empty-state p { font-size: calc(var(--font-size-base) * 1.05); margin: 0; }
+
+/* ===== Loading Spinner ===== */
+.loading-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+    color: var(--light-text-color);
+}
+
+body.dark-mode .loading-state { color: var(--dark-light-text-color); }
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+body.dark-mode .spinner { border-color: var(--dark-border-color); border-top-color: var(--dark-primary-color); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== Toast Notifications ===== */
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+    width: min(400px, 90vw);
+}
+
+.toast {
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: calc(var(--font-size-base) * 0.9);
+    font-weight: 700;
+    text-align: center;
+    animation: toastIn 0.3s ease-out;
+    pointer-events: auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+@keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); } }
+
+.toast.success { background: linear-gradient(135deg, #2e7d32, #388e3c); color: white; }
+.toast.error { background: linear-gradient(135deg, #c62828, #d32f2f); color: white; }
+.toast.info { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; }
+
+/* ===== Modal ===== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    padding: 20px;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
+.modal.open { display: flex; }
+
+.modal-content {
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    padding: 28px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+body.dark-mode .modal-content { background: var(--dark-card-background); color: var(--dark-text-color); }
+
+.modal-content h3 {
+    font-family: 'Playfair Display', serif;
+    color: var(--primary-color);
+    font-size: calc(var(--font-size-base) * 1.3);
+    margin: 0 0 20px 0;
+    padding-left: 36px;
+}
+
+body.dark-mode .modal-content h3 { color: var(--dark-primary-color); }
+
+.modal-close-btn {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--light-text-color);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover { background: var(--border-color); color: var(--text-color); }
+body.dark-mode .modal-close-btn { color: var(--dark-light-text-color); }
+body.dark-mode .modal-close-btn:hover { background: var(--dark-border-color); color: var(--dark-text-color); }
+
+/* ===== Upload Modal ===== */
+.upload-drop-zone {
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--light-text-color);
+    margin-bottom: 16px;
+}
+
+.upload-drop-zone:hover, .upload-drop-zone.drag-over {
+    border-color: var(--primary-color);
+    background: rgba(101,22,47,0.05);
+    color: var(--primary-color);
+}
+
+body.dark-mode .upload-drop-zone { border-color: var(--dark-border-color); color: var(--dark-light-text-color); }
+body.dark-mode .upload-drop-zone:hover, body.dark-mode .upload-drop-zone.drag-over {
+    border-color: var(--dark-primary-color);
+    background: rgba(161,44,74,0.1);
+    color: var(--dark-primary-color);
+}
+
+.upload-drop-zone i { font-size: 40px; margin-bottom: 12px; display: block; }
+.upload-drop-zone p { margin: 0; font-size: calc(var(--font-size-base) * 0.9); }
+
+#fileUploadInput { display: none; }
+
+.upload-progress {
+    display: none;
+    margin-top: 12px;
+}
+
+.progress-bar-container {
+    background: var(--border-color);
+    border-radius: 8px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+body.dark-mode .progress-bar-container { background: var(--dark-border-color); }
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: 8px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+body.dark-mode .progress-bar { background: linear-gradient(135deg, var(--dark-primary-color), var(--dark-secondary-color)); }
+
+.progress-text {
+    font-size: calc(var(--font-size-base) * 0.82);
+    color: var(--light-text-color);
+    text-align: center;
+}
+
+body.dark-mode .progress-text { color: var(--dark-light-text-color); }
+
+/* ===== Share Modal ===== */
+.share-url-container {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.share-url-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--background-color);
+    color: var(--text-color);
+    font-size: calc(var(--font-size-base) * 0.85);
+    direction: ltr;
+}
+
+body.dark-mode .share-url-input { border-color: var(--dark-border-color); background: var(--dark-background-color); color: var(--dark-text-color); }
+
+.share-loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--light-text-color);
+}
+
+body.dark-mode .share-loading { color: var(--dark-light-text-color); }
+
+.share-loading .spinner { margin: 0 auto 12px; }
+
+/* ===== View-only notice ===== */
+.view-only-notice {
+    background: #fff5f5;
+    border: 1px solid rgba(139,0,0,0.15);
+    color: #8b0000;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: calc(var(--font-size-base) * 0.88);
+    margin-bottom: 16px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+body.dark-mode .view-only-notice { background: rgba(139,0,0,0.15); color: #ff8a8a; border-color: rgba(255,100,100,0.2); }
+
+/* ===== Upload FAB ===== */
+.upload-fab {
+    position: fixed;
+    bottom: 28px;
+    left: 28px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 14px 22px;
+    font-size: calc(var(--font-size-base) * 0.92);
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(101,22,47,0.4);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 100;
+}
+
+.upload-fab:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(101,22,47,0.5); }
+body.dark-mode .upload-fab { background: linear-gradient(135deg, var(--dark-primary-color), var(--dark-secondary-color)); box-shadow: 0 6px 20px rgba(161,44,74,0.4); }
+
+.upload-fab.hidden { display: none; }
+
+/* ===== Responsive ===== */
+@media (max-width: 600px) {
+    .top-section-wrapper { gap: 10px; }
+    .top-section-wrapper h1 { font-size: calc(var(--font-size-base) * 1.2); }
+    .files-grid { grid-template-columns: 1fr; }
+    .filters-section { flex-direction: column; }
+    .filter-group { min-width: unset; }
+    .upload-fab { bottom: 16px; left: 16px; padding: 12px 16px; font-size: calc(var(--font-size-base) * 0.85); }
+    .btn-download, .btn-share { font-size: calc(var(--font-size-base) * 0.78); }
+}
+
+@media (max-width: 380px) {
+    :root { --font-size-base: 15px; }
+}
+    </style>
+</head>
+<body class="preload">
+
+<!-- Top Navigation -->
+<div class="top-section-wrapper">
+    <a href="index.html" class="back-link">
+        <i class="fas fa-arrow-right"></i>
+        חזרה למערכת
+    </a>
+    <h1>ניהול קבצים</h1>
+    <div class="theme-toggle-top">
+        מצב כהה:
+        <label class="switch">
+            <input type="checkbox" id="darkModeToggle">
+            <span class="slider"></span>
+        </label>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-container">
+
+    <!-- Auth Notice (shown when not logged in) -->
+    <div id="authNotice" class="auth-notice" style="display:none;">
+        <i class="fas fa-lock"></i>
+        <h2>נדרשת התחברות</h2>
+        <p>יש להתחבר למערכת כדי לצפות ולנהל קבצים.</p>
+        <br>
+        <a href="index.html" class="btn-primary" style="text-decoration:none; margin: 0 auto;">
+            <i class="fas fa-sign-in-alt"></i>
+            עבור להתחברות
+        </a>
+    </div>
+
+    <!-- View-only notice -->
+    <div id="viewOnlyNotice" class="view-only-notice">
+        <i class="fas fa-eye"></i>
+        מצב צפייה בלבד - אין אפשרות להעלות קבצים
+    </div>
+
+    <!-- Filters Section -->
+    <div id="filtersSection" class="filters-section" style="display:none;">
+        <div class="filter-group">
+            <label for="projectSelect"><i class="fas fa-wine-bottle"></i> פרויקט</label>
+            <select id="projectSelect">
+                <option value="">-- בחר פרויקט --</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="monthSelect"><i class="fas fa-calendar-alt"></i> חודש</label>
+            <select id="monthSelect">
+                <option value="">כל החודשים</option>
+                <option value="1">ינואר</option>
+                <option value="2">פברואר</option>
+                <option value="3">מרץ</option>
+                <option value="4">אפריל</option>
+                <option value="5">מאי</option>
+                <option value="6">יוני</option>
+                <option value="7">יולי</option>
+                <option value="8">אוגוסט</option>
+                <option value="9">ספטמבר</option>
+                <option value="10">אוקטובר</option>
+                <option value="11">נובמבר</option>
+                <option value="12">דצמבר</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="yearSelect"><i class="fas fa-calendar"></i> שנה</label>
+            <select id="yearSelect">
+                <option value="">כל השנים</option>
+            </select>
+        </div>
+        <button class="btn-secondary" id="refreshBtn" onclick="refreshFiles()">
+            <i class="fas fa-sync-alt"></i>
+            רענן
+        </button>
+    </div>
+
+    <!-- Files Grid -->
+    <div id="filesGrid" class="files-grid" style="display:none;"></div>
+
+</div>
+
+<!-- Upload FAB -->
+<button class="upload-fab hidden" id="uploadFab" onclick="openUploadModal()">
+    <i class="fas fa-cloud-upload-alt"></i>
+    העלה קובץ
+</button>
+
+<!-- Upload Modal -->
+<div id="uploadModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close-btn" onclick="closeUploadModal()">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3>העלאת קובץ</h3>
+        <div
+            class="upload-drop-zone"
+            id="dropZone"
+            onclick="document.getElementById('fileUploadInput').click()"
+            ondragover="handleDragOver(event)"
+            ondragleave="handleDragLeave(event)"
+            ondrop="handleDrop(event)"
+        >
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>לחץ לבחירת קובץ<br><small>או גרור קובץ לכאן</small></p>
+        </div>
+        <input type="file" id="fileUploadInput" onchange="handleFileSelected(event)" multiple>
+        <div id="selectedFilesPreview" style="margin-bottom:12px; display:none;">
+            <div id="selectedFilesList" style="font-size:calc(var(--font-size-base)*0.85); color:var(--light-text-color);"></div>
+        </div>
+        <div class="upload-progress" id="uploadProgress">
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="progress-text" id="progressText">מעלה...</div>
+        </div>
+        <button class="btn-primary" id="uploadSubmitBtn" onclick="uploadSelectedFiles()" style="width:100%; margin-top:4px; display:none;">
+            <i class="fas fa-upload"></i>
+            העלה
+        </button>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div id="shareModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close-btn" onclick="closeShareModal()">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3>קישור לשיתוף</h3>
+        <div id="shareContent">
+            <div class="share-loading" id="shareLoading">
+                <div class="spinner"></div>
+                <p>יוצר קישור לשיתוף...</p>
+            </div>
+            <div id="shareResult" style="display:none;">
+                <p style="font-size:calc(var(--font-size-base)*0.9); margin-bottom:8px;">
+                    <i class="fas fa-check-circle" style="color:#2e7d32;"></i>
+                    הקישור נוצר בהצלחה! כל מי שמקבל קישור זה יכול להוריד את הקובץ.
+                </p>
+                <div class="share-url-container">
+                    <input type="text" class="share-url-input" id="shareUrlInput" readonly>
+                    <button class="btn-primary" onclick="copyShareUrl()" style="flex-shrink:0; padding:10px 14px;">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script type="module">
+import {
+    auth,
+    db,
+    storage,
+    storageRef,
+    uploadBytes,
+    getBlob,
+    getDownloadURL,
+    onAuthStateChanged,
+    doc,
+    getDoc
+} from './firebase-config.js';
+
+import {
+    listAll,
+    getMetadata,
+    uploadBytesResumable
+} from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js';
+
+// ===== State =====
+let currentUser = null;
+let dataUid = null;
+let isViewOnly = false;
+let allFiles = [];
+let selectedFiles = [];
+
+// ===== Dark Mode =====
+const darkModeToggle = document.getElementById('darkModeToggle');
+
+function loadDarkModeState() {
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+        darkModeToggle.checked = true;
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
+}
+
+darkModeToggle.addEventListener('change', () => {
+    if (darkModeToggle.checked) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('darkMode', 'true');
+    } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('darkMode', 'false');
+    }
+});
+
+// ===== Toast =====
+function showToast(message, type = 'info', duration = 3500) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'toastOut 0.3s ease-in forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+// ===== Auth =====
+onAuthStateChanged(auth, async (user) => {
+    document.body.classList.remove('preload');
+    if (user) {
+        currentUser = user;
+        dataUid = user.uid;
+        isViewOnly = false;
+        document.getElementById('viewOnlyNotice').style.display = 'none';
+
+        // Check if viewing shared account
+        const sharedUid = sessionStorage.getItem('viewingUid');
+        if (sharedUid && sharedUid !== user.uid) {
+            try {
+                const permDoc = await getDoc(doc(db, 'accounts', sharedUid, 'permissions', user.uid));
+                if (permDoc.exists()) {
+                    dataUid = sharedUid;
+                    const permData = permDoc.data();
+                    if (permData.access === 'view') {
+                        isViewOnly = true;
+                        document.getElementById('viewOnlyNotice').style.display = 'flex';
+                    }
+                }
+            } catch (e) {
+                // Fallback to own account
+            }
+        }
+
+        document.getElementById('authNotice').style.display = 'none';
+        document.getElementById('filtersSection').style.display = 'flex';
+        document.getElementById('filesGrid').style.display = 'grid';
+        if (!isViewOnly) {
+            document.getElementById('uploadFab').classList.remove('hidden');
+        }
+        await loadProjects();
+    } else {
+        currentUser = null;
+        document.getElementById('authNotice').style.display = 'block';
+        document.getElementById('filtersSection').style.display = 'none';
+        document.getElementById('filesGrid').style.display = 'none';
+        document.getElementById('uploadFab').classList.add('hidden');
+    }
+});
+
+// ===== Load Projects =====
+async function loadProjects() {
+    const projectSelect = document.getElementById('projectSelect');
+    projectSelect.innerHTML = '<option value="">-- בחר פרויקט --</option>';
+    try {
+        const projectsDoc = await getDoc(doc(db, 'accounts', dataUid, 'data', 'projects'));
+        if (projectsDoc.exists()) {
+            const data = projectsDoc.data();
+            const projects = data.projects || {};
+            const projectIds = Object.keys(projects);
+            if (projectIds.length === 0) {
+                projectSelect.innerHTML = '<option value="">אין פרויקטים</option>';
+                showEmptyState('לא נמצאו פרויקטים');
+                return;
+            }
+            projectIds.forEach(id => {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = projects[id].name || id;
+                projectSelect.appendChild(opt);
+            });
+            // Auto-select first project
+            const savedProject = localStorage.getItem('currentProjectId');
+            if (savedProject && projectIds.includes(savedProject)) {
+                projectSelect.value = savedProject;
+            } else {
+                projectSelect.value = projectIds[0];
+            }
+            await loadProjectFiles(projectSelect.value);
+        } else {
+            projectSelect.innerHTML = '<option value="">אין פרויקטים</option>';
+            showEmptyState('לא נמצאו פרויקטים');
+        }
+    } catch (e) {
+        console.error('Error loading projects:', e);
+        showToast('שגיאה בטעינת פרויקטים', 'error');
+        showEmptyState('שגיאה בטעינת הנתונים');
+    }
+}
+
+document.getElementById('projectSelect').addEventListener('change', async (e) => {
+    if (e.target.value) await loadProjectFiles(e.target.value);
+    else showEmptyState('בחר פרויקט להצגת קבצים');
+});
+
+document.getElementById('monthSelect').addEventListener('change', applyFilters);
+document.getElementById('yearSelect').addEventListener('change', applyFilters);
+
+// ===== Load Files =====
+async function loadProjectFiles(projectId) {
+    if (!projectId || !currentUser) return;
+    const grid = document.getElementById('filesGrid');
+    grid.innerHTML = `
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <span>טוען קבצים...</span>
+        </div>`;
+
+    try {
+        const folderRef = storageRef(storage, `accounts/${dataUid}/projects/${projectId}/`);
+        const result = await listAll(folderRef);
+
+        if (result.items.length === 0) {
+            allFiles = [];
+            showEmptyState('אין קבצים בפרויקט זה');
+            populateYearFilter([]);
+            return;
+        }
+
+        const filesData = await Promise.all(result.items.map(async (item) => {
+            try {
+                const metadata = await getMetadata(item);
+                return {
+                    ref: item,
+                    name: item.name,
+                    path: item.fullPath,
+                    size: metadata.size,
+                    timeCreated: new Date(metadata.timeCreated),
+                    contentType: metadata.contentType || 'application/octet-stream',
+                    projectId
+                };
+            } catch (e) {
+                return {
+                    ref: item,
+                    name: item.name,
+                    path: item.fullPath,
+                    size: 0,
+                    timeCreated: new Date(),
+                    contentType: 'application/octet-stream',
+                    projectId
+                };
+            }
+        }));
+
+        // Sort by date descending
+        filesData.sort((a, b) => b.timeCreated - a.timeCreated);
+        allFiles = filesData;
+
+        populateYearFilter(filesData);
+        applyFilters();
+
+    } catch (e) {
+        console.error('Error loading files:', e);
+        if (e.code === 'storage/object-not-found' || e.code === 'storage/unauthorized') {
+            showEmptyState('אין קבצים בפרויקט זה');
+        } else {
+            showEmptyState('שגיאה בטעינת הקבצים');
+            showToast('שגיאה בטעינת הקבצים', 'error');
+        }
+        allFiles = [];
+        populateYearFilter([]);
+    }
+}
+
+// ===== Filters =====
+function populateYearFilter(files) {
+    const yearSelect = document.getElementById('yearSelect');
+    const currentYear = yearSelect.value;
+    yearSelect.innerHTML = '<option value="">כל השנים</option>';
+    const years = new Set(files.map(f => f.timeCreated.getFullYear()));
+    [...years].sort((a, b) => b - a).forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        yearSelect.appendChild(opt);
+    });
+    if (currentYear) yearSelect.value = currentYear;
+}
+
+function applyFilters() {
+    const month = document.getElementById('monthSelect').value;
+    const year = document.getElementById('yearSelect').value;
+    let filtered = allFiles;
+
+    if (month) filtered = filtered.filter(f => f.timeCreated.getMonth() + 1 === parseInt(month));
+    if (year) filtered = filtered.filter(f => f.timeCreated.getFullYear() === parseInt(year));
+
+    renderFiles(filtered);
+}
+
+// ===== Render Files =====
+function renderFiles(files) {
+    const grid = document.getElementById('filesGrid');
+
+    if (files.length === 0) {
+        showEmptyState('לא נמצאו קבצים התואמים את הסינון');
+        return;
+    }
+
+    grid.innerHTML = '';
+    files.forEach(file => {
+        const card = document.createElement('div');
+        card.className = 'file-card';
+
+        const top = document.createElement('div');
+        top.style.cssText = 'display:flex; align-items:center; gap:14px;';
+
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'file-card-icon';
+        iconDiv.innerHTML = `<i class="${getFileIcon(file.contentType, file.name)}"></i>`;
+
+        const info = document.createElement('div');
+        info.className = 'file-card-info';
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'file-card-name';
+        nameDiv.textContent = file.name;
+
+        const meta = document.createElement('div');
+        meta.className = 'file-card-meta';
+        meta.innerHTML = `
+            <span><i class="fas fa-calendar-alt"></i> ${formatDate(file.timeCreated)}</span>
+            <span><i class="fas fa-weight-hanging"></i> ${formatFileSize(file.size)}</span>`;
+
+        info.appendChild(nameDiv);
+        info.appendChild(meta);
+        top.appendChild(iconDiv);
+        top.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'file-card-actions';
+
+        const dlBtn = document.createElement('button');
+        dlBtn.className = 'btn-download';
+        dlBtn.innerHTML = '<i class="fas fa-download"></i> הורד';
+        dlBtn.addEventListener('click', () => downloadFile(file.path, file.name));
+
+        actions.appendChild(dlBtn);
+
+        if (!isViewOnly) {
+            const shareBtn = document.createElement('button');
+            shareBtn.className = 'btn-share';
+            shareBtn.innerHTML = '<i class="fas fa-share-alt"></i> שתף';
+            shareBtn.addEventListener('click', () => openShareModal(file.path, file.name, file.projectId));
+            actions.appendChild(shareBtn);
+        }
+
+        card.appendChild(top);
+        card.appendChild(actions);
+        grid.appendChild(card);
+    });
+}
+
+function showEmptyState(message) {
+    const grid = document.getElementById('filesGrid');
+    grid.innerHTML = `
+        <div class="empty-state">
+            <i class="fas fa-folder-open"></i>
+            <p>${escapeHtml(message)}</p>
+        </div>`;
+}
+
+// ===== Download =====
+async function downloadFile(filePath, fileName) {
+    try {
+        showToast('מתחיל הורדה...', 'info', 2000);
+        const fileRef = storageRef(storage, filePath);
+        const url = await getDownloadURL(fileRef);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } catch (e) {
+        console.error('Download error:', e);
+        showToast('שגיאה בהורדת הקובץ', 'error');
+    }
+}
+
+// ===== Share =====
+let currentSharePath = null;
+let currentShareName = null;
+let currentShareProjectId = null;
+
+async function openShareModal(filePath, fileName, projectId) {
+    currentSharePath = filePath;
+    currentShareName = fileName;
+    currentShareProjectId = projectId;
+
+    document.getElementById('shareLoading').style.display = 'block';
+    document.getElementById('shareResult').style.display = 'none';
+    document.getElementById('shareModal').classList.add('open');
+
+    await createShareableLink(filePath, fileName, projectId);
+};
+
+window.closeShareModal = function() {
+    document.getElementById('shareModal').classList.remove('open');
+};
+
+async function createShareableLink(filePath, fileName, projectId) {
+    try {
+        const sourceRef = storageRef(storage, filePath);
+        const blob = await getBlob(sourceRef);
+        const sharedPath = `shared/${dataUid}/${projectId}/${fileName}`;
+        const sharedRef = storageRef(storage, sharedPath);
+        await uploadBytes(sharedRef, blob, { contentType: blob.type });
+        const url = await getDownloadURL(sharedRef);
+
+        document.getElementById('shareLoading').style.display = 'none';
+        document.getElementById('shareResult').style.display = 'block';
+        document.getElementById('shareUrlInput').value = url;
+    } catch (e) {
+        console.error('Share error:', e);
+        document.getElementById('shareLoading').style.display = 'none';
+        document.getElementById('shareResult').style.display = 'block';
+        document.getElementById('shareResult').innerHTML = `
+            <p style="color:#c62828;">
+                <i class="fas fa-exclamation-circle"></i>
+                שגיאה ביצירת קישור שיתוף. בדוק את הגדרות האחסון.
+            </p>`;
+    }
+}
+
+window.copyShareUrl = function() {
+    const input = document.getElementById('shareUrlInput');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        showToast('הקישור הועתק ללוח!', 'success');
+    }).catch(() => {
+        document.execCommand('copy');
+        showToast('הקישור הועתק ללוח!', 'success');
+    });
+};
+
+// ===== Upload =====
+window.openUploadModal = function() {
+    if (isViewOnly) return;
+    selectedFiles = [];
+    document.getElementById('selectedFilesPreview').style.display = 'none';
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadSubmitBtn').style.display = 'none';
+    document.getElementById('progressBar').style.width = '0%';
+    document.getElementById('fileUploadInput').value = '';
+    document.getElementById('uploadModal').classList.add('open');
+};
+
+window.closeUploadModal = function() {
+    document.getElementById('uploadModal').classList.remove('open');
+};
+
+window.handleDragOver = function(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.add('drag-over');
+};
+
+window.handleDragLeave = function() {
+    document.getElementById('dropZone').classList.remove('drag-over');
+};
+
+window.handleDrop = function(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('drag-over');
+    const files = [...e.dataTransfer.files];
+    if (files.length > 0) setSelectedFiles(files);
+};
+
+window.handleFileSelected = function(e) {
+    const files = [...e.target.files];
+    if (files.length > 0) setSelectedFiles(files);
+};
+
+function setSelectedFiles(files) {
+    selectedFiles = files;
+    const preview = document.getElementById('selectedFilesPreview');
+    const list = document.getElementById('selectedFilesList');
+    list.innerHTML = files.map(f =>
+        `<div style="padding:4px 0; border-bottom:1px solid var(--border-color);">
+            <i class="${getFileIcon(f.type, f.name)}" style="margin-left:6px;"></i>
+            ${escapeHtml(f.name)} <span style="color:var(--light-text-color);">(${formatFileSize(f.size)})</span>
+        </div>`
+    ).join('');
+    preview.style.display = 'block';
+    document.getElementById('uploadSubmitBtn').style.display = 'flex';
+}
+
+window.uploadSelectedFiles = async function() {
+    const projectId = document.getElementById('projectSelect').value;
+    if (!projectId) { showToast('בחר פרויקט תחילה', 'error'); return; }
+    if (selectedFiles.length === 0) { showToast('לא נבחרו קבצים', 'error'); return; }
+
+    const submitBtn = document.getElementById('uploadSubmitBtn');
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+
+    submitBtn.disabled = true;
+    progressDiv.style.display = 'block';
+
+    let uploaded = 0;
+    for (const file of selectedFiles) {
+        progressText.textContent = `מעלה: ${file.name}`;
+        await new Promise((resolve) => {
+            const fileRef = storageRef(storage, `accounts/${dataUid}/projects/${projectId}/${file.name}`);
+            const uploadTask = uploadBytesResumable(fileRef, file);
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const fileProgress = snapshot.bytesTransferred / snapshot.totalBytes;
+                    const totalProgress = ((uploaded + fileProgress) / selectedFiles.length) * 100;
+                    progressBar.style.width = `${totalProgress.toFixed(1)}%`;
+                    progressText.textContent = `מעלה: ${file.name} (${Math.round(fileProgress * 100)}%)`;
+                },
+                (error) => {
+                    console.error('Upload error:', error);
+                    showToast(`שגיאה בהעלאת ${file.name}`, 'error');
+                    resolve();
+                },
+                () => {
+                    uploaded++;
+                    progressBar.style.width = `${(uploaded / selectedFiles.length) * 100}%`;
+                    resolve();
+                }
+            );
+        });
+    }
+
+    progressText.textContent = 'הושלם!';
+    submitBtn.disabled = false;
+    showToast(`${uploaded} קבצים הועלו בהצלחה`, 'success');
+    setTimeout(() => {
+        closeUploadModal();
+        loadProjectFiles(projectId);
+    }, 800);
+};
+
+// ===== Refresh =====
+window.refreshFiles = async function() {
+    const projectId = document.getElementById('projectSelect').value;
+    if (projectId) await loadProjectFiles(projectId);
+};
+
+// ===== Helpers =====
+function getFileIcon(contentType, name) {
+    if (!contentType) contentType = '';
+    const ext = (name || '').split('.').pop().toLowerCase();
+    if (contentType.startsWith('image/') || ['jpg','jpeg','png','gif','webp','svg'].includes(ext)) return 'fas fa-file-image';
+    if (contentType.startsWith('video/') || ['mp4','avi','mov','mkv'].includes(ext)) return 'fas fa-file-video';
+    if (contentType.startsWith('audio/') || ['mp3','wav','ogg','flac'].includes(ext)) return 'fas fa-file-audio';
+    if (contentType === 'application/pdf' || ext === 'pdf') return 'fas fa-file-pdf';
+    if (['application/zip','application/x-rar-compressed','application/x-7z-compressed'].includes(contentType) || ['zip','rar','7z','tar','gz'].includes(ext)) return 'fas fa-file-archive';
+    if (contentType.includes('spreadsheet') || ['xls','xlsx','csv'].includes(ext)) return 'fas fa-file-excel';
+    if (contentType.includes('word') || ['doc','docx'].includes(ext)) return 'fas fa-file-word';
+    if (contentType.includes('presentation') || ['ppt','pptx'].includes(ext)) return 'fas fa-file-powerpoint';
+    if (contentType.startsWith('text/') || ['txt','md','json','xml','html','css','js'].includes(ext)) return 'fas fa-file-alt';
+    return 'fas fa-file';
+}
+
+function formatDate(date) {
+    return date.toLocaleDateString('he-IL', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '—';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// ===== Close modals on backdrop click =====
+document.getElementById('uploadModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('uploadModal')) closeUploadModal();
+});
+document.getElementById('shareModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('shareModal')) closeShareModal();
+});
+
+// ===== Init =====
+loadDarkModeState();
+</script>
+</body>
+</html>
