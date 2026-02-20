@@ -10500,33 +10500,46 @@ body.dark-mode .history-row {
             return attachments;
         }
 
+        function extractStoragePathFromFirebaseUrl(url) {
+            if (!url || typeof url !== 'string') return '';
+            try {
+                const parsed = new URL(url);
+                if (!parsed.hostname.includes('firebasestorage.googleapis.com')) return '';
+                const marker = '/o/';
+                const markerIndex = parsed.pathname.indexOf(marker);
+                if (markerIndex === -1) return '';
+                const encodedPath = parsed.pathname.slice(markerIndex + marker.length);
+                return decodeURIComponent(encodedPath || '');
+            } catch (error) {
+                return '';
+            }
+        }
+
         async function fetchAttachmentBlob(url, path = '') {
             if (!url && !path) return null;
-            const readBlob = async (targetUrl) => {
-                const response = await fetch(targetUrl, { mode: 'cors' });
-                if (!response.ok) {
-                    throw new Error(`HTTP_${response.status}`);
-                }
-                return response.blob();
-            };
 
             if (url && String(url).startsWith('data:')) {
                 const response = await fetch(url);
                 return response.blob();
             }
 
-            try {
-                if (url) {
-                    return await readBlob(url);
+            const resolvedPath = path || extractStoragePathFromFirebaseUrl(url);
+            const firebaseAccess = window.firebaseAccess || {};
+
+            if (resolvedPath && typeof firebaseAccess.getStorageBlobByPath === 'function') {
+                try {
+                    return await firebaseAccess.getStorageBlobByPath(resolvedPath);
+                } catch (error) {
+                    console.warn('Storage SDK blob fetch failed, falling back to URL fetch.', error);
                 }
-            } catch (error) {
-                if (!path) throw error;
-                console.warn('Primary attachment fetch failed, trying refreshed URL from Storage path.', error);
             }
 
-            if (path) {
-                const refreshedUrl = await getDownloadURL(storageRef(storage, path));
-                return await readBlob(refreshedUrl);
+            if (url) {
+                const response = await fetch(url, { mode: 'cors' });
+                if (!response.ok) {
+                    throw new Error(`HTTP_${response.status}`);
+                }
+                return response.blob();
             }
 
             throw new Error('ATTACHMENT_URL_MISSING');
@@ -12004,6 +12017,7 @@ body.dark-mode .history-row {
             storage,
             storageRef,
             uploadBytes,
+            getBlob,
             getDownloadURL,
             deleteObject
         } from './firebase-config.js';
@@ -12227,6 +12241,10 @@ body.dark-mode .history-row {
             loadOwnerProjects,
             uploadFileToStorage,
             deleteFileFromStorage,
+            getStorageBlobByPath: async (path) => {
+                if (!path) throw new Error('STORAGE_PATH_REQUIRED');
+                return getBlob(storageRef(storage, path));
+            },
             buildFinanceAttachmentPath,
             buildMetricAttachmentPath,
             reloadOwnAccountData: () => loadAllDataFromFirebase(),
