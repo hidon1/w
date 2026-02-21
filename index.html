@@ -10697,6 +10697,9 @@ body.dark-mode .history-row {
             for (let i = 0; i < attachments.length; i += 1) {
                 const item = attachments[i];
                 try {
+                    if (i > 0) {
+                        await new Promise((resolve) => setTimeout(resolve, 500));
+                    }
                     await triggerSingleAttachmentDownload(item, i);
                     startedDownloads += 1;
                 } catch (error) {
