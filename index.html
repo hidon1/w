@@ -6894,6 +6894,7 @@ body.dark-mode .history-row {
         
         const ALLOWED_ATTACHMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
         let pendingFinanceAttachmentFile = null;
+        let pendingFinanceAttachmentUploaded = null;
         let pendingFinanceAttachmentPreviewUrl = '';
 // Image upload variables
         let selectedReminderImage = null;
@@ -9943,6 +9944,7 @@ body.dark-mode .history-row {
 
         function clearPendingFinanceAttachment() {
             pendingFinanceAttachmentFile = null;
+            pendingFinanceAttachmentUploaded = null;
             if (pendingFinanceAttachmentPreviewUrl) {
                 URL.revokeObjectURL(pendingFinanceAttachmentPreviewUrl);
                 pendingFinanceAttachmentPreviewUrl = '';
@@ -9965,11 +9967,7 @@ body.dark-mode .history-row {
                 clearPendingFinanceAttachment();
                 return;
             }
-            pendingFinanceAttachmentFile = file;
-            if (financeAttachmentPreview) {
-                financeAttachmentPreview.style.display = 'block';
-                financeAttachmentPreview.textContent = `נבחר קובץ: ${file.name}`;
-            }
+            setPendingFinanceAttachment(file);
         }
 
         function openFinanceAttachmentPicker() {
@@ -9984,29 +9982,78 @@ body.dark-mode .history-row {
         function setPendingFinanceAttachment(file) {
             if (!file) return;
             pendingFinanceAttachmentFile = file;
+            pendingFinanceAttachmentUploaded = null;
             if (financeAttachmentPreview) {
                 financeAttachmentPreview.style.display = 'block';
                 financeAttachmentPreview.textContent = `נבחר קובץ: ${file.name}`;
             }
         }
 
-        async function openFinanceCameraCapture() {
-            // צילום קבלה: ניסיון לפתוח את המצלמה ישירות דרך capture
-            const capturedFile = await openCameraFilePickerFallback();
-            if (capturedFile) {
-                setPendingFinanceAttachment(capturedFile);
-                return;
+        async function preUploadPendingFinanceAttachment() {
+            if (!pendingFinanceAttachmentFile || pendingFinanceAttachmentUploaded) return pendingFinanceAttachmentUploaded;
+
+            const api = window.firebaseAccess;
+            const file = pendingFinanceAttachmentFile;
+            const draftId = `draft_${Date.now()}`;
+
+            if (financeAttachmentPreview) {
+                financeAttachmentPreview.style.display = 'block';
+                financeAttachmentPreview.textContent = `מעלה לשרת: ${file.name}...`;
             }
 
-            // fallback אחרון: מצלמה מתוך הדפדפן (אם נתמך)
+            if (api?.uploadFileToStorage && api?.buildFinanceAttachmentPath) {
+                try {
+                    const storagePath = api.buildFinanceAttachmentPath(currentProjectId, draftId, file.name);
+                    const uploadResult = await api.uploadFileToStorage(storagePath, file, {
+                        section: 'finance',
+                        projectId: currentProjectId,
+                        entryId: String(draftId),
+                        uploadMode: 'draft'
+                    });
+                    pendingFinanceAttachmentUploaded = {
+                        type: file.type,
+                        name: file.name,
+                        url: uploadResult.downloadUrl,
+                        path: uploadResult.storagePath
+                    };
+                    if (financeAttachmentPreview) financeAttachmentPreview.textContent = `הועלה ומוכן לשמירה: ${file.name}`;
+                    return pendingFinanceAttachmentUploaded;
+                } catch (error) {
+                    console.warn('Draft finance attachment upload failed, using local fallback.', error);
+                }
+            }
+
+            const localUrl = await fileToDataUrl(file);
+            pendingFinanceAttachmentUploaded = {
+                type: file.type,
+                name: file.name,
+                url: localUrl,
+                path: null,
+                storedLocally: true
+            };
+            if (financeAttachmentPreview) financeAttachmentPreview.textContent = `מוכן לשמירה (מקומי): ${file.name}`;
+            return pendingFinanceAttachmentUploaded;
+        }
+
+        async function openFinanceCameraCapture() {
+            // צילום קבלה: ננסה קודם מצלמה ישירה כדי לא לפתוח "מצלמה או קבצים"
             try {
                 const streamedCapture = await openCameraCaptureModal({ title: 'צילום קבלה' });
                 if (streamedCapture) {
                     setPendingFinanceAttachment(streamedCapture);
+                    await preUploadPendingFinanceAttachment();
                     return;
                 }
             } catch (error) {
                 console.warn('Finance camera capture failed:', error);
+            }
+
+            // fallback למכשירים שבהם אין תמיכה ב-stream
+            const capturedFile = await openCameraFilePickerFallback();
+            if (capturedFile) {
+                setPendingFinanceAttachment(capturedFile);
+                await preUploadPendingFinanceAttachment();
+                return;
             }
 
             alert('לא הצלחנו לפתוח את המצלמה. בדקו הרשאת מצלמה במכשיר ונסו שוב.');
@@ -10174,39 +10221,11 @@ body.dark-mode .history-row {
             let attachment = null;
             if (pendingFinanceAttachmentFile) {
                 try {
-                    const api = window.firebaseAccess;
-                    if (!api?.uploadFileToStorage || !api?.buildFinanceAttachmentPath) {
-                        throw new Error('STORAGE_API_MISSING');
-                    }
-                    const storagePath = api.buildFinanceAttachmentPath(currentProjectId, entryId, pendingFinanceAttachmentFile.name);
-                    const uploadResult = await api.uploadFileToStorage(storagePath, pendingFinanceAttachmentFile, {
-                        section: 'finance',
-                        projectId: currentProjectId,
-                        entryId: String(entryId)
-                    });
-                    attachment = {
-                        type: pendingFinanceAttachmentFile.type,
-                        name: pendingFinanceAttachmentFile.name,
-                        url: uploadResult.downloadUrl,
-                        path: uploadResult.storagePath
-                    };
+                    attachment = await preUploadPendingFinanceAttachment();
                 } catch (error) {
                     console.error('Finance attachment upload failed:', error);
-                    try {
-                        const localUrl = await fileToDataUrl(pendingFinanceAttachmentFile);
-                        attachment = {
-                            type: pendingFinanceAttachmentFile.type,
-                            name: pendingFinanceAttachmentFile.name,
-                            url: localUrl,
-                            path: null,
-                            storedLocally: true
-                        };
-                        alert('שמירת הקבלה בענן נכשלה, אך הקובץ נשמר מקומית בהצלחה.');
-                    } catch (localError) {
-                        console.error('Local attachment fallback failed:', localError);
-                        attachment = null;
-                        alert('שמירת הקבלה נכשלה גם בענן וגם מקומית. התנועה תישמר ללא קובץ מצורף.');
-                    }
+                    attachment = null;
+                    alert('שמירת הקבלה נכשלה. התנועה תישמר ללא קובץ מצורף.');
                 }
             }
             projects[currentProjectId].finance.push({ id: entryId, type, amount: parsedAmount, notes, timestamp, attachment, createdAt: Date.now() });
@@ -10672,10 +10691,17 @@ body.dark-mode .history-row {
             const a = document.createElement('a');
             a.href = url;
             a.download = sanitizeDownloadFileName(fileName);
+            a.rel = 'noopener';
+            a.target = '_blank';
             document.body.appendChild(a);
             a.click();
             a.remove();
-            URL.revokeObjectURL(url);
+            setTimeout(() => URL.revokeObjectURL(url), 3000);
+        }
+
+        function isMobileDevice() {
+            const ua = navigator.userAgent || '';
+            return /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
         }
 
         function buildYearlyZipFileName() {
@@ -10718,6 +10744,19 @@ body.dark-mode .history-row {
             const attachments = collectReceiptAttachmentsForReport();
             if (!attachments.length) {
                 alert('לא נמצאו קבלות לתקופה שנבחרה.');
+                return;
+            }
+
+            if (isMobileDevice()) {
+                try {
+                    const zipBlob = await buildYearlyReceiptsZipBlob(attachments);
+                    downloadBlob(zipBlob, buildYearlyZipFileName());
+                    alert('במובייל המערכת מורידה ZIP אחד כדי למנוע חסימה של הורדות מרובות.');
+                } catch (zipError) {
+                    console.warn('Mobile ZIP download failed, trying direct download.', zipError);
+                    const startedDownloads = await downloadAttachmentsDirectly(attachments);
+                    alert(`התחלנו ${startedDownloads} הורדות.`);
+                }
                 return;
             }
 
