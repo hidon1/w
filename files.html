@@ -815,6 +815,16 @@ body.dark-mode .upload-fab { background: linear-gradient(135deg, var(--dark-prim
                         <i class="fas fa-copy"></i>
                     </button>
                 </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+                    <button class="btn-share" onclick="shareViaEmail()" style="padding:10px 14px;">
+                        <i class="fas fa-envelope"></i>
+                        שלח במייל
+                    </button>
+                    <button class="btn-share" onclick="shareViaWhatsApp()" style="padding:10px 14px;">
+                        <i class="fab fa-whatsapp"></i>
+                        שלח בוואטסאפ
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1147,11 +1157,11 @@ async function downloadFile(filePath, fileName) {
         showToast('מתחיל הורדה...', 'info', 2000);
         const fileRef = storageRef(storage, filePath);
         const directUrl = await getDownloadURL(fileRef);
+        const forcedDownloadUrl = withAttachmentDisposition(directUrl, fileName);
         const a = document.createElement('a');
-        a.href = directUrl;
+        a.href = forcedDownloadUrl;
         a.download = fileName;
         a.rel = 'noopener';
-        a.target = '_blank';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1165,7 +1175,6 @@ async function downloadFile(filePath, fileName) {
             a.href = url;
             a.download = fileName;
             a.rel = 'noopener';
-            a.target = '_blank';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1206,10 +1215,11 @@ async function createShareableLink(filePath, fileName, projectId) {
         const sharedRef = storageRef(storage, sharedPath);
         await uploadBytes(sharedRef, blob, { contentType: blob.type });
         const url = await getDownloadURL(sharedRef);
+        const forcedDownloadUrl = withAttachmentDisposition(url, fileName);
 
         document.getElementById('shareLoading').style.display = 'none';
         document.getElementById('shareResult').style.display = 'block';
-        document.getElementById('shareUrlInput').value = url;
+        document.getElementById('shareUrlInput').value = forcedDownloadUrl;
     } catch (e) {
         console.error('Share error:', e);
         document.getElementById('shareLoading').style.display = 'none';
@@ -1232,6 +1242,36 @@ window.copyShareUrl = function() {
         showToast('הקישור הועתק ללוח!', 'success');
     });
 };
+
+window.shareViaEmail = function() {
+    const shareUrl = document.getElementById('shareUrlInput').value;
+    if (!shareUrl) {
+        showToast('לא נמצא קישור לשיתוף', 'error');
+        return;
+    }
+
+    const subject = encodeURIComponent(`קישור להורדת קובץ: ${currentShareName || ''}`);
+    const body = encodeURIComponent(`היי,\n\nאפשר להוריד את הקובץ מהקישור הבא:\n${shareUrl}\n\nהקישור מוריד את הקובץ ישירות למחשב.`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+};
+
+window.shareViaWhatsApp = function() {
+    const shareUrl = document.getElementById('shareUrlInput').value;
+    if (!shareUrl) {
+        showToast('לא נמצא קישור לשיתוף', 'error');
+        return;
+    }
+
+    const text = encodeURIComponent(`אפשר להוריד את הקובץ ישירות מהקישור:\n${shareUrl}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener');
+};
+
+function withAttachmentDisposition(url, fileName) {
+    const urlObject = new URL(url);
+    const safeFileName = encodeURIComponent(fileName || 'file');
+    urlObject.searchParams.set('response-content-disposition', `attachment; filename*=UTF-8''${safeFileName}`);
+    return urlObject.toString();
+}
 
 // ===== Upload =====
 window.openUploadModal = function() {
