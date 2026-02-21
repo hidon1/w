@@ -7551,13 +7551,24 @@ body.dark-mode .history-row {
                     // Show popup notification in app
                     showReminderPopup(reminder.text);
                     
-                    // Show browser notification if enabled
+                    // Show browser/system notification if enabled
                     if (reminder.popup && 'Notification' in window && Notification.permission === 'granted') {
-                        new Notification('תזכורת: ' + reminder.text, {
+                        const notificationOptions = {
                             icon: 'image_00b206.png',
+                            badge: 'image_00b206.png',
                             body: new Date(reminder.datetime).toLocaleString('he-IL'),
-                            requireInteraction: true
-                        });
+                            requireInteraction: true,
+                            vibrate: [300, 150, 300],
+                            tag: `reminder_${reminder.id || Date.now()}`,
+                            renotify: true
+                        };
+                        if (navigator.serviceWorker?.ready) {
+                            navigator.serviceWorker.ready
+                                .then((registration) => registration.showNotification('תזכורת: ' + reminder.text, notificationOptions))
+                                .catch(() => new Notification('תזכורת: ' + reminder.text, notificationOptions));
+                        } else {
+                            new Notification('תזכורת: ' + reminder.text, notificationOptions);
+                        }
                     }
                     
                     inbox.push(reminder);
@@ -9280,6 +9291,29 @@ body.dark-mode .history-row {
             }
         }
 
+
+        function notifyNativeSaveImageToGallery(file) {
+            if (!file) return;
+            try {
+                if (window.Android?.saveImageToGallery) {
+                    window.Android.saveImageToGallery(file.name || `camera_${Date.now()}.jpg`);
+                }
+            } catch (error) {
+                console.warn('Android save-to-gallery bridge failed:', error);
+            }
+
+            try {
+                if (window.ReactNativeWebView?.postMessage) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'save_image_to_gallery',
+                        fileName: file.name || `camera_${Date.now()}.jpg`
+                    }));
+                }
+            } catch (error) {
+                console.warn('ReactNative save-to-gallery bridge failed:', error);
+            }
+        }
+
         function openCameraFilePickerFallback() {
             return new Promise((resolve) => {
                 const picker = document.createElement('input');
@@ -9359,6 +9393,7 @@ body.dark-mode .history-row {
                             return;
                         }
                         const file = new File([blob], `camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        notifyNativeSaveImageToGallery(file);
                         closeModal(file);
                     }, 'image/jpeg', 0.92);
                 });
@@ -10711,25 +10746,55 @@ body.dark-mode .history-row {
             return baseName;
         }
 
+        function forceAttachmentDisposition(url, fileName) {
+            try {
+                const urlObj = new URL(url);
+                const safeFileName = encodeURIComponent(sanitizeDownloadFileName(fileName || 'file'));
+                urlObj.searchParams.set('response-content-disposition', `attachment; filename*=UTF-8''${safeFileName}`);
+                return urlObj.toString();
+            } catch (error) {
+                console.warn('Could not force attachment disposition for URL', error);
+                return url;
+            }
+        }
+
+        async function assertImageBlobLooksValid(blob, fileName = '') {
+            const lowerName = String(fileName || '').toLowerCase();
+            const isImage = blob?.type?.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|heic|heif)$/.test(lowerName);
+            if (!isImage) return;
+            if (!blob || blob.size < 1024) {
+                throw new Error('IMAGE_BLOB_TOO_SMALL');
+            }
+            if (typeof createImageBitmap !== 'function') {
+                return;
+            }
+            const bitmap = await createImageBitmap(blob);
+            const invalid = bitmap.width <= 1 || bitmap.height <= 1;
+            bitmap.close();
+            if (invalid) {
+                throw new Error('IMAGE_DIMENSIONS_INVALID');
+            }
+        }
+
         async function triggerSingleAttachmentDownload(item, index = 0) {
             if (!item) return;
             const fileName = buildDownloadName(item, index);
             const directUrl = await resolveAttachmentDownloadUrl(item);
 
             if (directUrl) {
-                const a = document.createElement('a');
-                a.href = directUrl;
-                a.download = fileName;
-                a.rel = 'noopener';
-                a.target = '_blank';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                return;
+                try {
+                    const blob = await fetchAttachmentBlob(forceAttachmentDisposition(directUrl, fileName), item.path);
+                    await assertImageBlobLooksValid(blob, fileName);
+                    downloadBlob(blob, fileName);
+                    return;
+                } catch (error) {
+                    console.warn('Direct URL blob download failed, trying fallback blob fetch.', error);
+                }
             }
 
             const blob = await fetchAttachmentBlob(item.url, item.path);
             if (!blob) throw new Error('ATTACHMENT_BLOB_MISSING');
+            await assertImageBlobLooksValid(blob, fileName);
             downloadBlob(blob, fileName);
         }
 
@@ -10739,7 +10804,6 @@ body.dark-mode .history-row {
             a.href = url;
             a.download = sanitizeDownloadFileName(fileName);
             a.rel = 'noopener';
-            a.target = '_blank';
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -10858,17 +10922,15 @@ body.dark-mode .history-row {
                 lines.push('');
             }
 
-            lines.push('יש לך במייל קישורים לקבצים:');
-            lines.push('לכל קובץ יש קישור לפתיחה וקישור להורדה.');
+            lines.push('יש לך במייל קישורי הורדה ישירה לקבצים:');
             lines.push('');
             attachments.forEach((item, index) => {
                 const fileName = item.name || `קובץ ${index + 1}`;
                 const projectName = item.projectName || 'ללא פרויקט';
                 const timestamp = item.timestamp || '';
                 const title = `${index + 1}. ${fileName} (${projectName}${timestamp ? ` | ${timestamp}` : ''})`;
-                const fileUrl = item.url || '';
+                const fileUrl = item.url ? forceAttachmentDisposition(item.url, fileName) : '';
                 lines.push(title);
-                lines.push(`פתח: ${fileUrl}`);
                 lines.push(`הורד: ${fileUrl}`);
                 lines.push('');
             });
