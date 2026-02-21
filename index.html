@@ -6415,7 +6415,7 @@ body.dark-mode .history-row {
                             <i class="fas fa-camera"></i> צלם קבלה
                         </button>
                     </div>
-                    <input type="file" id="financeAttachmentUpload" accept="image/*,application/pdf" style="display:none;" onchange="handleFinanceAttachmentSelection()">
+                    <input type="file" id="financeAttachmentUpload" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.pdf,application/pdf" style="display:none;" onchange="handleFinanceAttachmentSelection()">
                     <div id="financeAttachmentPreview" style="font-size:12px; color:var(--light-text-color); margin-top:6px; display:none;"></div>
                 </div>
                 <div class="image-upload-section" style="margin:10px 0;">
@@ -9975,39 +9975,38 @@ body.dark-mode .history-row {
         function openFinanceAttachmentPicker() {
             if (!financeAttachmentInput) return;
             financeAttachmentInput.value = '';
-            financeAttachmentInput.setAttribute('accept', 'image/*,application/pdf');
-            if (window.innerWidth <= 768) {
-                financeAttachmentInput.setAttribute('capture', 'environment');
-            } else {
-                financeAttachmentInput.removeAttribute('capture');
-            }
+            financeAttachmentInput.setAttribute('accept', '.jpg,.jpeg,.png,.webp,.heic,.heif,.pdf,application/pdf');
+            // העלאה רגילה: קבצים בלבד (ללא פתיחה של מצלמה)
+            financeAttachmentInput.removeAttribute('capture');
             financeAttachmentInput.click();
         }
 
-        async function openFinanceCameraCapture() {
-            if (!financeAttachmentInput) return;
-
-            try {
-                const capturedFile = await openCameraCaptureModal({ title: 'צילום קבלה' });
-                if (!capturedFile) return;
-                pendingFinanceAttachmentFile = capturedFile;
-                if (financeAttachmentPreview) {
-                    financeAttachmentPreview.style.display = 'block';
-                    financeAttachmentPreview.textContent = `נבחר קובץ: ${capturedFile.name}`;
-                }
-                return;
-            } catch (error) {
-                console.warn('Finance camera stream failed, fallback to capture input:', error);
+        function setPendingFinanceAttachment(file) {
+            if (!file) return;
+            pendingFinanceAttachmentFile = file;
+            if (financeAttachmentPreview) {
+                financeAttachmentPreview.style.display = 'block';
+                financeAttachmentPreview.textContent = `נבחר קובץ: ${file.name}`;
             }
+        }
 
+        async function openFinanceCameraCapture() {
+            // צילום קבלה: ניסיון לפתוח את המצלמה ישירות דרך capture
             const capturedFile = await openCameraFilePickerFallback();
             if (capturedFile) {
-                pendingFinanceAttachmentFile = capturedFile;
-                if (financeAttachmentPreview) {
-                    financeAttachmentPreview.style.display = 'block';
-                    financeAttachmentPreview.textContent = `נבחר קובץ: ${capturedFile.name}`;
-                }
+                setPendingFinanceAttachment(capturedFile);
                 return;
+            }
+
+            // fallback אחרון: מצלמה מתוך הדפדפן (אם נתמך)
+            try {
+                const streamedCapture = await openCameraCaptureModal({ title: 'צילום קבלה' });
+                if (streamedCapture) {
+                    setPendingFinanceAttachment(streamedCapture);
+                    return;
+                }
+            } catch (error) {
+                console.warn('Finance camera capture failed:', error);
             }
 
             alert('לא הצלחנו לפתוח את המצלמה. בדקו הרשאת מצלמה במכשיר ונסו שוב.');
