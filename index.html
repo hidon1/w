@@ -10777,6 +10777,60 @@ body.dark-mode .history-row {
             return lines.join('\n').trim();
         }
 
+        function buildWhatsappReceiptsMessage(attachments, periodLabel, zipDownloadLink = '') {
+            const lines = [];
+            lines.push(`קבצים להורדה ${periodLabel}`);
+            lines.push('');
+
+            if (zipDownloadLink) {
+                lines.push('קישור מרוכז להורדה:');
+                lines.push(zipDownloadLink);
+                lines.push('');
+            }
+
+            lines.push('קישורים לכל הקבצים:');
+            attachments.forEach((item, index) => {
+                const fileName = item.name || `קובץ ${index + 1}`;
+                lines.push(`${index + 1}. ${fileName}`);
+                lines.push(item.url || '');
+            });
+
+            return lines.join('\n').trim();
+        }
+
+        function openExternalAppLink(deepLink, fallbackUrl = '') {
+            const normalizedDeepLink = typeof deepLink === 'string' ? deepLink.trim() : '';
+            const normalizedFallback = typeof fallbackUrl === 'string' ? fallbackUrl.trim() : '';
+            const targetUrl = normalizedDeepLink || normalizedFallback;
+            if (!targetUrl) return false;
+
+            try {
+                window.location.href = targetUrl;
+            } catch (error) {
+                console.warn('Failed to set location.href for external app link', error);
+            }
+
+            let popupOpened = false;
+            try {
+                const popup = window.open(targetUrl, '_blank');
+                popupOpened = !!popup;
+            } catch (error) {
+                console.warn('Failed to open external app link with window.open', error);
+            }
+
+            if (normalizedFallback && normalizedDeepLink && normalizedFallback !== normalizedDeepLink) {
+                setTimeout(() => {
+                    try {
+                        window.location.href = normalizedFallback;
+                    } catch (error) {
+                        console.warn('Failed to open fallback app link', error);
+                    }
+                }, 500);
+            }
+
+            return popupOpened || !!targetUrl;
+        }
+
         async function shareYearlyReceipts(channel) {
             const attachments = collectReceiptAttachmentsForReport();
             if (!attachments.length) {
@@ -10786,14 +10840,6 @@ body.dark-mode .history-row {
 
             const periodLabel = getSelectedPeriodLabel();
             if (channel === 'email') {
-                const composeWindow = window.open('', '_blank', 'noopener,noreferrer');
-                if (!composeWindow) {
-                    alert('הדפדפן חסם פתיחת חלון מייל. יש לאפשר חלונות קופצים עבור האתר ולנסות שוב.');
-                    return;
-                }
-
-                const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
-
                 let zipDownloadLink = '';
                 try {
                     const zipBlob = await buildYearlyReceiptsZipBlob(attachments);
@@ -10803,9 +10849,13 @@ body.dark-mode .history-row {
                 }
 
                 const bodyMessage = buildEmailReceiptsMessage(attachments, periodLabel, zipDownloadLink);
+                const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
                 const body = encodeURIComponent(bodyMessage);
-                const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
-                composeWindow.location.href = gmailComposeUrl;
+                const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
+                const opened = openExternalAppLink(mailtoUrl);
+                if (!opened) {
+                    alert('לא הצלחנו לפתוח את אפליקציית המייל כרגע. נסה/י שוב בעוד כמה רגעים.');
+                }
                 return;
             }
 
@@ -10822,13 +10872,13 @@ body.dark-mode .history-row {
                 return;
             }
 
-            const message = `קבצים להורדה ${periodLabel}.
-קישור להורדה: ${downloadLink}`;
+            const message = buildWhatsappReceiptsMessage(attachments, periodLabel, downloadLink);
             if (channel === 'whatsapp') {
-                window.open(`whatsapp://send?text=${encodeURIComponent(message)}`, '_blank');
-                setTimeout(() => {
-                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                }, 400);
+                const encodedMessage = encodeURIComponent(message);
+                const opened = openExternalAppLink(`whatsapp://send?text=${encodedMessage}`, `https://wa.me/?text=${encodedMessage}`);
+                if (!opened) {
+                    alert('לא הצלחנו לפתוח את WhatsApp כרגע. נסה/י שוב בעוד כמה רגעים.');
+                }
             }
         }
 
