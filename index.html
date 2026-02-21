@@ -6493,7 +6493,6 @@ body.dark-mode .history-row {
                         <option value="expense">קבלות: הוצאות</option>
                         <option value="income">קבלות: הכנסות</option>
                     </select>
-                    <button class="download-pdf-btn" onclick="downloadYearlyFinancePDF()">הורד כ-PDF</button>
                     <button class="download-pdf-btn" onclick="downloadYearlyReceiptsZip()">הורד את כל הקבצים</button>
                     <button class="download-pdf-btn" onclick="openFinanceMediaListModal('yearly')">קבלות/תמונות</button>
                     <button class="download-pdf-btn" onclick="shareYearlyReceipts('email')">שלח במייל</button>
@@ -7612,6 +7611,13 @@ body.dark-mode .history-row {
         }
         
         async function openCameraForReminder() {
+            if (isLikelyWebViewEnvironment()) {
+                const fallbackFile = await openCameraFilePickerFallback();
+                if (fallbackFile) {
+                    await processReminderImageSelection(fallbackFile);
+                    return;
+                }
+            }
             try {
                 const file = await openCameraCaptureModal({ title: 'צלם תמונה' });
                 if (!file) return;
@@ -10036,6 +10042,15 @@ body.dark-mode .history-row {
         }
 
         async function openFinanceCameraCapture() {
+            if (isLikelyWebViewEnvironment()) {
+                const capturedFromWebView = await openCameraFilePickerFallback();
+                if (capturedFromWebView) {
+                    setPendingFinanceAttachment(capturedFromWebView);
+                    await preUploadPendingFinanceAttachment();
+                    return;
+                }
+            }
+
             // צילום קבלה: ננסה קודם מצלמה ישירה כדי לא לפתוח "מצלמה או קבצים"
             try {
                 const streamedCapture = await openCameraCaptureModal({ title: 'צילום קבלה' });
@@ -10675,14 +10690,46 @@ body.dark-mode .history-row {
             return (name || fallback).replace(/[\/:*?"<>|]+/g, '_');
         }
 
+        function detectExtensionFromPath(path = '') {
+            const clean = String(path || '').split('?')[0].split('#')[0];
+            const parts = clean.split('.');
+            if (parts.length < 2) return '';
+            return parts.pop()?.toLowerCase() || '';
+        }
+
+        function buildDownloadName(item, index = 0) {
+            const fallbackName = `attachment_${String(index + 1).padStart(3, '0')}`;
+            const baseName = sanitizeDownloadFileName(item?.name, fallbackName);
+            if (baseName.includes('.')) return baseName;
+
+            const fromPath = detectExtensionFromPath(item?.path || '');
+            if (fromPath) return `${baseName}.${fromPath}`;
+
+            const fromUrl = detectExtensionFromPath(item?.url || '');
+            if (fromUrl) return `${baseName}.${fromUrl}`;
+
+            return baseName;
+        }
+
         async function triggerSingleAttachmentDownload(item, index = 0) {
             if (!item) return;
-            const fallbackName = `attachment_${String(index + 1).padStart(3, '0')}`;
-            const fileName = sanitizeDownloadFileName(item.name, fallbackName);
-            const blob = await fetchAttachmentBlob(item.url, item.path);
-            if (!blob) {
-                throw new Error('ATTACHMENT_BLOB_MISSING');
+            const fileName = buildDownloadName(item, index);
+            const directUrl = await resolveAttachmentDownloadUrl(item);
+
+            if (directUrl) {
+                const a = document.createElement('a');
+                a.href = directUrl;
+                a.download = fileName;
+                a.rel = 'noopener';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                return;
             }
+
+            const blob = await fetchAttachmentBlob(item.url, item.path);
+            if (!blob) throw new Error('ATTACHMENT_BLOB_MISSING');
             downloadBlob(blob, fileName);
         }
 
@@ -10702,6 +10749,15 @@ body.dark-mode .history-row {
         function isMobileDevice() {
             const ua = navigator.userAgent || '';
             return /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+        }
+
+
+        function isLikelyWebViewEnvironment() {
+            const ua = navigator.userAgent || '';
+            const hasNativeBridge = Boolean(window.ReactNativeWebView || window.Android);
+            const androidWebView = /; wv\)/i.test(ua) || /Version\/\d+\.\d+\s+Chrome\//i.test(ua);
+            const iosWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
+            return hasNativeBridge || androidWebView || iosWebView;
         }
 
         function buildYearlyZipFileName() {
@@ -10802,14 +10858,18 @@ body.dark-mode .history-row {
                 lines.push('');
             }
 
-            lines.push('להורדת הקבצים לחץ כאן:');
+            lines.push('יש לך במייל קישורים לקבצים:');
+            lines.push('לכל קובץ יש קישור לפתיחה וקישור להורדה.');
+            lines.push('');
             attachments.forEach((item, index) => {
                 const fileName = item.name || `קובץ ${index + 1}`;
                 const projectName = item.projectName || 'ללא פרויקט';
                 const timestamp = item.timestamp || '';
                 const title = `${index + 1}. ${fileName} (${projectName}${timestamp ? ` | ${timestamp}` : ''})`;
+                const fileUrl = item.url || '';
                 lines.push(title);
-                lines.push(item.url || '');
+                lines.push(`פתח: ${fileUrl}`);
+                lines.push(`הורד: ${fileUrl}`);
                 lines.push('');
             });
 
@@ -10890,10 +10950,11 @@ body.dark-mode .history-row {
                 const bodyMessage = buildEmailReceiptsMessage(attachments, periodLabel, zipDownloadLink);
                 const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
                 const body = encodeURIComponent(bodyMessage);
-                const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
-                const opened = openExternalAppLink(mailtoUrl);
+                const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+                const gmailDeepLink = `googlegmail://co?subject=${subject}&body=${body}`;
+                const opened = openExternalAppLink(gmailDeepLink, gmailWebUrl);
                 if (!opened) {
-                    alert('לא הצלחנו לפתוח את אפליקציית המייל כרגע. נסה/י שוב בעוד כמה רגעים.');
+                    alert('לא הצלחנו לפתוח את Gmail כרגע. נסה/י שוב בעוד כמה רגעים.');
                 }
                 return;
             }

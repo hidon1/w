@@ -30,6 +30,37 @@ service firebase.storage {
 
 > אם רוצים הורדה ציבורית לגמרי לקבצים מסוימים, יש לשים אותם תחת `public/`.
 
+
+
+## 1.1) Rules חלופיים (Public read לכל הקבצים)
+
+> ⚠️ להשתמש בזה רק אם אתה באמת רוצה שכל מי שמחזיק קישור יוכל לקרוא קבצים מה־bucket.
+
+```rules
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+אם אתה רוצה גם כתיבה ציבורית (לא מומלץ):
+
+```rules
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
 ## 2) CORS שצריך להגדיר על ה־bucket
 
 צור קובץ `cors.json`:

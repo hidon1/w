@@ -1146,20 +1146,34 @@ async function downloadFile(filePath, fileName) {
     try {
         showToast('מתחיל הורדה...', 'info', 2000);
         const fileRef = storageRef(storage, filePath);
-        const blob = await getBlob(fileRef);
-        const url = URL.createObjectURL(blob);
+        const directUrl = await getDownloadURL(fileRef);
         const a = document.createElement('a');
-        a.href = url;
+        a.href = directUrl;
         a.download = fileName;
         a.rel = 'noopener';
         a.target = '_blank';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 3000);
     } catch (e) {
-        console.error('Download error:', e);
-        showToast('שגיאה בהורדת הקובץ', 'error');
+        console.warn('Direct URL download failed, trying blob fallback:', e);
+        try {
+            const fileRef = storageRef(storage, filePath);
+            const blob = await getBlob(fileRef);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.rel = 'noopener';
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 3000);
+        } catch (blobError) {
+            console.error('Download error:', blobError);
+            showToast('שגיאה בהורדת הקובץ', 'error');
+        }
     }
 }
 
