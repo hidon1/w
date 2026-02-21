@@ -10644,16 +10644,29 @@ body.dark-mode .history-row {
             return uploadResult?.downloadUrl || '';
         }
 
-        function buildIndividualReceiptLinksMessage(attachments, periodLabel) {
-            const lines = attachments.map((item, index) => {
+        function buildEmailReceiptsMessage(attachments, periodLabel, zipDownloadLink = '') {
+            const lines = [];
+            lines.push(`קבצים להורדה ${periodLabel}`);
+            lines.push('');
+
+            if (zipDownloadLink) {
+                lines.push('להורדת כל הקבצים יחד לחץ כאן:');
+                lines.push(zipDownloadLink);
+                lines.push('');
+            }
+
+            lines.push('להורדת הקבצים לחץ כאן:');
+            attachments.forEach((item, index) => {
                 const fileName = item.name || `קובץ ${index + 1}`;
                 const projectName = item.projectName || 'ללא פרויקט';
                 const timestamp = item.timestamp || '';
-                const downloadUrl = item.url || '';
-                return `${index + 1}. ${fileName} (${projectName}${timestamp ? ` | ${timestamp}` : ''})\n${downloadUrl}`;
+                const title = `${index + 1}. ${fileName} (${projectName}${timestamp ? ` | ${timestamp}` : ''})`;
+                lines.push(title);
+                lines.push(item.url || '');
+                lines.push('');
             });
 
-            return `קבצים להורדה ${periodLabel}.\nלינקים נפרדים לכל קובץ:\n\n${lines.join('\n\n')}`;
+            return lines.join('\n').trim();
         }
 
         async function shareYearlyReceipts(channel) {
@@ -10664,25 +10677,27 @@ body.dark-mode .history-row {
             }
 
             const periodLabel = getSelectedPeriodLabel();
-            const individualLinksMessage = buildIndividualReceiptLinksMessage(attachments, periodLabel);
-
             if (channel === 'email') {
+                const composeWindow = window.open('', '_blank', 'noopener,noreferrer');
+                if (!composeWindow) {
+                    alert('הדפדפן חסם פתיחת חלון מייל. יש לאפשר חלונות קופצים עבור האתר ולנסות שוב.');
+                    return;
+                }
+
                 const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
 
-                let bodyMessage = individualLinksMessage;
+                let zipDownloadLink = '';
                 try {
                     const zipBlob = await buildYearlyReceiptsZipBlob(attachments);
-                    const downloadLink = await uploadYearlyReceiptsZipAndGetLink(zipBlob);
-                    if (downloadLink) {
-                        bodyMessage = `קבצים להורדה ${periodLabel}.\nקישור להורדה (ZIP): ${downloadLink}\n\n${individualLinksMessage}`;
-                    }
+                    zipDownloadLink = await uploadYearlyReceiptsZipAndGetLink(zipBlob);
                 } catch (error) {
                     console.warn('Could not build/upload ZIP for email share, falling back to individual links.', error);
                 }
 
+                const bodyMessage = buildEmailReceiptsMessage(attachments, periodLabel, zipDownloadLink);
                 const body = encodeURIComponent(bodyMessage);
                 const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
-                window.open(gmailComposeUrl, '_blank', 'noopener,noreferrer');
+                composeWindow.location.href = gmailComposeUrl;
                 return;
             }
 
