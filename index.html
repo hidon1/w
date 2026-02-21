@@ -3134,6 +3134,12 @@ body.dark-mode .finance-yearly-project-section .project-balance.negative {
     min-height: 70vh;
 }
 
+.media-preview-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 8px 0;
+}
+
 .reminders-modal-content {
     background: linear-gradient(135deg, var(--card-background), #f9f9f9);
     margin: auto;
@@ -10007,7 +10013,7 @@ body.dark-mode .history-row {
             alert('לא הצלחנו לפתוח את המצלמה. בדקו הרשאת מצלמה במכשיר ונסו שוב.');
         }
 
-        function openMediaPreview(url, title = 'תצוגת קובץ') {
+        function openMediaPreview(url, title = 'תצוגת קובץ', downloadFileName = '') {
             if (!url) return;
             const modal = document.getElementById('mediaPreviewModal');
             const titleEl = document.getElementById('mediaPreviewTitle');
@@ -10019,13 +10025,36 @@ body.dark-mode .history-row {
             titleEl.textContent = title;
             bodyEl.innerHTML = '';
             bodyEl.classList.remove('pdf-mode');
+            const actionsWrap = document.createElement('div');
+            actionsWrap.className = 'media-preview-actions';
+            const downloadBtn = document.createElement('button');
+            downloadBtn.type = 'button';
+            downloadBtn.className = 'history-upload-btn';
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i> הורד';
+            downloadBtn.addEventListener('click', async () => {
+                try {
+                    await triggerSingleAttachmentDownload({ url, name: downloadFileName || title }, 0);
+                } catch (error) {
+                    console.error('Failed to download preview file:', error);
+                    alert('לא ניתן להוריד את הקובץ כרגע.');
+                }
+            });
+            actionsWrap.appendChild(downloadBtn);
+            bodyEl.appendChild(actionsWrap);
+            const previewNode = document.createElement('div');
+            previewNode.style.flex = '1';
+            previewNode.style.width = '100%';
+            previewNode.style.display = 'flex';
+            previewNode.style.alignItems = 'center';
+            previewNode.style.justifyContent = 'center';
             const lowerUrl = String(url).toLowerCase();
             if (lowerUrl.includes('.pdf') || lowerUrl.includes('application/pdf')) {
                 bodyEl.classList.add('pdf-mode');
-                bodyEl.innerHTML = `<iframe src="${url}#view=FitH" title="${title}"></iframe>`;
+                previewNode.innerHTML = `<iframe src="${url}#view=FitH" title="${title}"></iframe>`;
             } else {
-                bodyEl.innerHTML = `<img src="${url}" alt="${title}">`;
+                previewNode.innerHTML = `<img src="${url}" alt="${title}">`;
             }
+            bodyEl.appendChild(previewNode);
             modal.style.display = 'flex';
         }
 
@@ -10489,8 +10518,6 @@ body.dark-mode .history-row {
             } else if (yearlyBalance < 0) {
                 yearlyTotalBalanceDisplay.classList.add('negative');
             }
-
-            openFinanceMediaListModal('yearly');
         }
 
         function collectReceiptAttachmentsForReport() {
@@ -10626,11 +10653,26 @@ body.dark-mode .history-row {
             return zip.generateAsync({ type: 'blob' });
         }
 
+        function sanitizeDownloadFileName(name, fallback = 'download') {
+            return (name || fallback).replace(/[\/:*?"<>|]+/g, '_');
+        }
+
+        async function triggerSingleAttachmentDownload(item, index = 0) {
+            if (!item) return;
+            const fallbackName = `attachment_${String(index + 1).padStart(3, '0')}`;
+            const fileName = sanitizeDownloadFileName(item.name, fallbackName);
+            const blob = await fetchAttachmentBlob(item.url, item.path);
+            if (!blob) {
+                throw new Error('ATTACHMENT_BLOB_MISSING');
+            }
+            downloadBlob(blob, fileName);
+        }
+
         function downloadBlob(blob, fileName) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = fileName;
+            a.download = sanitizeDownloadFileName(fileName);
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -10656,11 +10698,7 @@ body.dark-mode .history-row {
             for (let i = 0; i < attachments.length; i += 1) {
                 const item = attachments[i];
                 try {
-                    const fallbackName = `attachment_${String(i + 1).padStart(3, '0')}`;
-                    const fileName = (item.name || fallbackName).replace(/[\/:*?"<>|]+/g, '_');
-                    const blob = await fetchAttachmentBlob(item.url, item.path);
-                    if (!blob) continue;
-                    downloadBlob(blob, fileName);
+                    await triggerSingleAttachmentDownload(item, i);
                     startedDownloads += 1;
                 } catch (error) {
                     console.warn('Failed to start direct download for attachment:', item, error);
@@ -10793,6 +10831,8 @@ body.dark-mode .history-row {
         }
 
 
+        let currentFinanceMediaListAttachments = [];
+
         function openFinanceMediaListModal(mode = 'yearly') {
             const listEl = document.getElementById('financeMediaList');
             const titleEl = document.getElementById('financeMediaListTitle');
@@ -10804,6 +10844,7 @@ body.dark-mode .history-row {
             const attachments = mode === 'global'
                 ? collectAllFinanceMedia()
                 : collectReceiptAttachmentsForReport();
+            currentFinanceMediaListAttachments = attachments.slice();
 
             titleEl.textContent = mode === 'global'
                 ? 'קבלות/תמונות/PDF - דוח כספי כולל'
@@ -10821,7 +10862,8 @@ body.dark-mode .history-row {
                             <span class="timestamp">${item.projectName || ''} | ${item.timestamp || ''}</span>
                         </div>
                         <div class="history-entry-actions">
-                            <button class="history-upload-btn" onclick="openMediaPreview('${item.url}', 'קובץ מצורף')">פתח</button>
+                            <button class="history-upload-btn" onclick="openMediaPreview('${item.url}', 'קובץ מצורף', '${item.name || 'attachment'}')">פתח</button>
+                            <button class="history-upload-btn" onclick="downloadSingleFinanceAttachment(${idx})"><i class="fas fa-download"></i> הורד</button>
                         </div>
                     `;
                     listEl.appendChild(li);
@@ -10833,6 +10875,25 @@ body.dark-mode .history-row {
         function closeFinanceMediaListModal() {
             const modalEl = document.getElementById('financeMediaListModal');
             if (modalEl) modalEl.style.display = 'none';
+            currentFinanceMediaListAttachments = [];
+        }
+
+
+        async function downloadSingleFinanceAttachment(index) {
+            const attachments = currentFinanceMediaListAttachments.length
+                ? currentFinanceMediaListAttachments
+                : collectReceiptAttachmentsForReport();
+            const item = attachments[index];
+            if (!item) {
+                alert('הקובץ לא נמצא.');
+                return;
+            }
+            try {
+                await triggerSingleAttachmentDownload(item, index);
+            } catch (error) {
+                console.error('Failed to download attachment:', error);
+                alert('לא ניתן להוריד את הקובץ כרגע.');
+            }
         }
 
         function collectAllFinanceMedia() {
