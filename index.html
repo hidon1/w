@@ -6068,7 +6068,6 @@ body.dark-mode .history-row {
         </div>
         <ul>
             <li><a href="#" onclick="closeSidebar(); showMainContent();">ראשי</a></li>
-            <li><a href="files.html"><i class="fas fa-file-download" style="margin-left:8px;"></i>ניהול קבצים</a></li>
             <li><button onclick="openProjectManagementModal();">ניהול פרויקטים</button></li>
             <li><button onclick="openFinanceModal();">ניהול כספים</button></li>
             <li><button onclick="openGlobalFinanceReportModal();">דוח כספי כולל</button></li>
@@ -8175,7 +8174,7 @@ body.dark-mode .history-row {
             ensureSecondaryCollections(projects[currentProjectId]);
             additionsDashboard.innerHTML = '';
             const additions = projects[currentProjectId]?.additions || {};
-            const names = Object.keys(additions);
+            const names = Object.keys(additions).filter((name) => String(name || '').trim());
             if (!names.length) {
                 additionsDashboard.innerHTML = '<p style="text-align:center;color:var(--light-text-color)">עדיין לא נוספו תוספות.</p>';
                 return;
@@ -8304,7 +8303,7 @@ body.dark-mode .history-row {
             entries.forEach((entry) => {
                 if (entry?.type) typeSet.add(entry.type);
             });
-            const types = Array.from(typeSet);
+            const types = Array.from(typeSet).map((type) => String(type || '').trim()).filter(Boolean);
             if (!types.length) {
                 extrasDashboard.innerHTML = '<p style="text-align:center;color:var(--light-text-color)">אין עדיין נתונים נוספים.</p>';
                 return;
@@ -9365,7 +9364,6 @@ body.dark-mode .history-row {
             dashboardItem.innerHTML = `
                 <h3>${name}</h3>
                 <p>סה"כ מצטבר: ${total} ${unit}</p>
-                <p>כמות עדכונים: ${entries.length}</p>
             `;
             dashboardItem.onclick = () => openSecondaryHistoryModal('addition', name);
             return dashboardItem;
@@ -9376,7 +9374,6 @@ body.dark-mode .history-row {
             dashboardItem.className = 'dashboard-item';
             dashboardItem.innerHTML = `
                 <h3>${type}</h3>
-                <p>כמות עדכונים: ${entries.length}</p>
             `;
             dashboardItem.onclick = () => openSecondaryHistoryModal('extra', type);
             return dashboardItem;
@@ -9385,7 +9382,7 @@ body.dark-mode .history-row {
         function renderAdditionsToMainDashboard() {
             fixedDashboardGrid.innerHTML = '';
             const additions = projects[currentProjectId]?.additions || {};
-            const names = Object.keys(additions);
+            const names = Object.keys(additions).filter((name) => String(name || '').trim());
             if (!names.length) {
                 fixedDashboardGrid.innerHTML = '<div class="dashboard-item"><h3>תוספות</h3><p>עדיין לא נוספו תוספות.</p></div>';
                 return;
@@ -9403,7 +9400,7 @@ body.dark-mode .history-row {
             entries.forEach((entry) => {
                 if (entry?.type) typeSet.add(entry.type);
             });
-            const types = Array.from(typeSet);
+            const types = Array.from(typeSet).map((type) => String(type || '').trim()).filter(Boolean);
             if (!types.length) {
                 fixedDashboardGrid.innerHTML = '<div class="dashboard-item"><h3>נתונים נוספים</h3><p>אין עדיין נתונים נוספים.</p></div>';
                 return;
@@ -10462,6 +10459,8 @@ body.dark-mode .history-row {
             } else if (yearlyBalance < 0) {
                 yearlyTotalBalanceDisplay.classList.add('negative');
             }
+
+            openFinanceMediaListModal('yearly');
         }
 
         function collectReceiptAttachmentsForReport() {
@@ -10660,8 +10659,14 @@ body.dark-mode .history-row {
                 console.warn('Could not build/upload ZIP for share', error);
             }
 
+            if (!downloadLink) {
+                alert('לא ניתן ליצור קישור הורדה כרגע. נסה/י שוב בעוד כמה רגעים.');
+                return;
+            }
+
             const periodLabel = getSelectedPeriodLabel();
-            const message = `קבצים להורדה ${periodLabel}.\nקישור להורדה: ${downloadLink || 'לא נוצר קישור הורדה אוטומטי, נסה/י להוריד ישירות מהמערכת.'}`;
+            const message = `קבצים להורדה ${periodLabel}.
+קישור להורדה: ${downloadLink}`;
             if (channel === 'email') {
                 const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
                 const body = encodeURIComponent(message);
@@ -10676,6 +10681,7 @@ body.dark-mode .history-row {
                 }, 400);
             }
         }
+
 
         function openFinanceMediaListModal(mode = 'yearly') {
             const listEl = document.getElementById('financeMediaList');
