@@ -7,6 +7,7 @@
     <link rel="icon" href="image_00b206.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Playfair+Display:wght@400;700&family=Noto+Sans+Hebrew:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
 /* ===== CSS Variables (same as index.html) ===== */
 :root {
@@ -744,6 +745,10 @@ body.dark-mode .upload-fab { background: linear-gradient(135deg, var(--dark-prim
             <i class="fas fa-sync-alt"></i>
             רענן
         </button>
+        <button class="btn-primary" id="downloadAllBtn" onclick="downloadAllFilteredFilesAsZip()">
+            <i class="fas fa-file-archive"></i>
+            הורד הכל ZIP
+        </button>
     </div>
 
     <!-- Files Grid -->
@@ -858,6 +863,7 @@ let currentUser = null;
 let dataUid = null;
 let isViewOnly = false;
 let allFiles = [];
+let visibleFiles = [];
 let selectedFiles = [];
 
 // ===== Dark Mode =====
@@ -999,16 +1005,17 @@ async function loadProjectFiles(projectId) {
 
     try {
         const folderRef = storageRef(storage, `accounts/${dataUid}/projects/${projectId}/`);
-        const result = await listAll(folderRef);
+        const allItems = await listAllItemsRecursively(folderRef);
 
-        if (result.items.length === 0) {
+        if (allItems.length === 0) {
             allFiles = [];
+            visibleFiles = [];
             showEmptyState('אין קבצים בפרויקט זה');
             populateYearFilter([]);
             return;
         }
 
-        const filesData = await Promise.all(result.items.map(async (item) => {
+        const filesData = await Promise.all(allItems.map(async (item) => {
             try {
                 const metadata = await getMetadata(item);
                 return {
@@ -1049,8 +1056,23 @@ async function loadProjectFiles(projectId) {
             showToast('שגיאה בטעינת הקבצים', 'error');
         }
         allFiles = [];
+        visibleFiles = [];
         populateYearFilter([]);
     }
+}
+
+async function listAllItemsRecursively(rootRef) {
+    const queue = [rootRef];
+    const items = [];
+
+    while (queue.length) {
+        const current = queue.shift();
+        const result = await listAll(current);
+        items.push(...(result.items || []));
+        queue.push(...(result.prefixes || []));
+    }
+
+    return items;
 }
 
 // ===== Filters =====
@@ -1076,6 +1098,7 @@ function applyFilters() {
     if (month) filtered = filtered.filter(f => f.timeCreated.getMonth() + 1 === parseInt(month));
     if (year) filtered = filtered.filter(f => f.timeCreated.getFullYear() === parseInt(year));
 
+    visibleFiles = filtered.slice();
     renderFiles(filtered);
 }
 
@@ -1158,33 +1181,100 @@ async function downloadFile(filePath, fileName) {
         const fileRef = storageRef(storage, filePath);
         const directUrl = await getDownloadURL(fileRef);
         const forcedDownloadUrl = withAttachmentDisposition(directUrl, fileName);
-        const a = document.createElement('a');
-        a.href = forcedDownloadUrl;
-        a.download = fileName;
-        a.rel = 'noopener';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const blob = await fetchWithValidation(forcedDownloadUrl, fileName);
+        triggerBlobDownload(blob, fileName);
     } catch (e) {
         console.warn('Direct URL download failed, trying blob fallback:', e);
         try {
             const fileRef = storageRef(storage, filePath);
             const blob = await getBlob(fileRef);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.rel = 'noopener';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 3000);
+            await assertImageBlobIsValid(blob, fileName);
+            triggerBlobDownload(blob, fileName);
         } catch (blobError) {
             console.error('Download error:', blobError);
             showToast('שגיאה בהורדת הקובץ', 'error');
         }
     }
 }
+
+function triggerBlobDownload(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+async function fetchWithValidation(url, fileName) {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) {
+        throw new Error(`HTTP_${response.status}`);
+    }
+    const blob = await response.blob();
+    await assertImageBlobIsValid(blob, fileName);
+    return blob;
+}
+
+async function assertImageBlobIsValid(blob, fileName) {
+    const lowerName = String(fileName || '').toLowerCase();
+    const isImage = blob.type.startsWith('image/') || /\.(png|jpg|jpeg|webp|gif|bmp|heic|heif)$/.test(lowerName);
+    if (!isImage) return;
+    if (blob.size < 1024) {
+        throw new Error('IMAGE_TOO_SMALL');
+    }
+    if (typeof createImageBitmap !== 'function') {
+        return;
+    }
+    const bitmap = await createImageBitmap(blob);
+    if (bitmap.width <= 1 || bitmap.height <= 1) {
+        bitmap.close();
+        throw new Error('IMAGE_INVALID_DIMENSIONS');
+    }
+    bitmap.close();
+}
+
+window.downloadAllFilteredFilesAsZip = async function() {
+    if (!visibleFiles.length) {
+        showToast('אין קבצים זמינים להורדה', 'error');
+        return;
+    }
+    if (!window.JSZip) {
+        showToast('ספריית ZIP לא זמינה כרגע', 'error');
+        return;
+    }
+
+    const button = document.getElementById('downloadAllBtn');
+    if (button) button.disabled = true;
+
+    try {
+        showToast('אוסף קבצים ל-ZIP...', 'info', 2500);
+        const zip = new JSZip();
+
+        for (let i = 0; i < visibleFiles.length; i += 1) {
+            const file = visibleFiles[i];
+            const fileRef = storageRef(storage, file.path);
+            const blob = await getBlob(fileRef);
+            await assertImageBlobIsValid(blob, file.name);
+
+            const relativePath = file.path.split('/projects/')[1]?.split('/').slice(1).join('/') || file.name;
+            zip.file(relativePath, blob);
+        }
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const projectId = document.getElementById('projectSelect')?.value || 'project';
+        triggerBlobDownload(zipBlob, `all_files_${projectId}_${Date.now()}.zip`);
+        showToast('הורדת ZIP החלה', 'success');
+    } catch (error) {
+        console.error('ZIP download failed:', error);
+        showToast('שגיאה ביצירת קובץ ההורדה', 'error');
+    } finally {
+        if (button) button.disabled = false;
+    }
+};
 
 // ===== Share =====
 let currentSharePath = null;
