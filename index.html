@@ -7588,86 +7588,23 @@ body.dark-mode .history-row {
         
         async function openCameraForReminder() {
             try {
-                // Check if getUserMedia is supported
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    alert('המצלמה לא נתמכת בדפדפן זה');
+                const file = await openCameraCaptureModal({ title: 'צלם תמונה' });
+                if (!file) return;
+                selectedReminderImageFile = file;
+                selectedReminderImage = await fileToDataUrl(file);
+                document.getElementById('reminderPreviewImg').src = selectedReminderImage;
+                document.getElementById('reminderImagePreview').style.display = 'block';
+            } catch (error) {
+                console.warn('Camera stream failed for reminder, fallback to capture input:', error);
+                const fallbackFile = await openCameraFilePickerFallback();
+                if (fallbackFile) {
+                    selectedReminderImageFile = fallbackFile;
+                    selectedReminderImage = await fileToDataUrl(fallbackFile);
+                    document.getElementById('reminderPreviewImg').src = selectedReminderImage;
+                    document.getElementById('reminderImagePreview').style.display = 'block';
                     return;
                 }
-                
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } // Use back camera on mobile
-                });
-                
-                // Create video element for preview
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                video.autoplay = true;
-                video.style.width = '100%';
-                video.style.maxWidth = '400px';
-                video.style.borderRadius = '8px';
-                
-                // Create canvas for capturing
-                const canvas = document.createElement('canvas');
-                
-                // Create capture button
-                const captureBtn = document.createElement('button');
-                captureBtn.textContent = 'צלם';
-                captureBtn.style.marginTop = '10px';
-                captureBtn.className = 'image-upload-btn';
-                
-                // Create cancel button
-                const cancelBtn = document.createElement('button');
-                cancelBtn.textContent = 'ביטול';
-                cancelBtn.style.marginTop = '10px';
-                cancelBtn.className = 'camera-btn';
-                
-                // Create modal for camera
-                const cameraModal = document.createElement('div');
-                cameraModal.className = 'modal';
-                cameraModal.style.display = 'flex';
-                cameraModal.innerHTML = `
-                    <div class="modal-content" style="max-width: 500px; padding: 20px;">
-                        <h3>צלם תמונה</h3>
-                        <div id="cameraContainer"></div>
-                        <div style="display: flex; gap: 10px; margin-top: 15px;">
-                            <button id="cameraCaptureBtn" class="image-upload-btn" style="flex: 1;">
-                                <i class="fas fa-camera"></i> צלם
-                            </button>
-                            <button id="cameraCancelBtn" class="camera-btn" style="flex: 1; background: linear-gradient(135deg, #f44336, #d32f2f);">
-                                <i class="fas fa-times"></i> ביטול
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                document.body.appendChild(cameraModal);
-                document.getElementById('cameraContainer').appendChild(video);
-                
-                document.getElementById('cameraCaptureBtn').onclick = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-                    
-                    canvas.toBlob((blob) => {
-                        selectedReminderImageFile = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
-                        selectedReminderImage = canvas.toDataURL('image/jpeg');
-                        document.getElementById('reminderPreviewImg').src = selectedReminderImage;
-                        document.getElementById('reminderImagePreview').style.display = 'block';
-                        
-                        // Stop camera and close modal
-                        stream.getTracks().forEach(track => track.stop());
-                        document.body.removeChild(cameraModal);
-                    }, 'image/jpeg');
-                };
-                
-                document.getElementById('cameraCancelBtn').onclick = () => {
-                    stream.getTracks().forEach(track => track.stop());
-                    document.body.removeChild(cameraModal);
-                };
-                
-            } catch (error) {
-                console.error('Error accessing camera:', error);
-                alert('שגיאה בגישה למצלמה: ' + error.message);
+                alert(error?.message || 'שגיאה בגישה למצלמה.');
             }
         }
         
@@ -9244,6 +9181,7 @@ body.dark-mode .history-row {
                 const picker = document.createElement('input');
                 picker.type = 'file';
                 picker.accept = 'image/*';
+                picker.setAttribute('accept', 'image/*;capture=camera');
                 picker.setAttribute('capture', 'environment');
                 picker.style.display = 'none';
                 document.body.appendChild(picker);
@@ -9268,6 +9206,127 @@ body.dark-mode .history-row {
                     cleanup();
                     resolve(null);
                 }, 60000);
+            });
+        }
+
+        function notifyNativeCameraPermissionRequest() {
+            try {
+                if (window.Android?.requestCameraPermission) {
+                    window.Android.requestCameraPermission();
+                }
+            } catch (error) {
+                console.warn('Android camera permission bridge failed:', error);
+            }
+
+            try {
+                if (window.ReactNativeWebView?.postMessage) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'request_camera_permission' }));
+                }
+            } catch (error) {
+                console.warn('ReactNative camera permission bridge failed:', error);
+            }
+        }
+
+        async function requestCameraPermissionStream() {
+            notifyNativeCameraPermissionRequest();
+            if (!navigator.mediaDevices?.getUserMedia) {
+                throw new Error('המצלמה לא נתמכת בסביבה זו.');
+            }
+            try {
+                return await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            } catch (error) {
+                if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
+                    throw new Error('אין הרשאה למצלמה. נא לאשר הרשאת מצלמה בהגדרות המכשיר.');
+                }
+                throw error;
+            }
+        }
+
+        function openCameraFilePickerFallback() {
+            return new Promise((resolve) => {
+                const picker = document.createElement('input');
+                picker.type = 'file';
+                picker.accept = 'image/*';
+                picker.setAttribute('accept', 'image/*;capture=camera');
+                picker.setAttribute('capture', 'environment');
+                picker.style.display = 'none';
+                document.body.appendChild(picker);
+
+                const cleanup = () => picker.remove();
+                picker.addEventListener('change', () => {
+                    const file = picker.files?.[0] || null;
+                    cleanup();
+                    resolve(file);
+                }, { once: true });
+
+                picker.addEventListener('cancel', () => {
+                    cleanup();
+                    resolve(null);
+                }, { once: true });
+
+                picker.click();
+                setTimeout(() => {
+                    cleanup();
+                    resolve(null);
+                }, 60000);
+            });
+        }
+
+        async function openCameraCaptureModal({ title = 'צלם תמונה' } = {}) {
+            const stream = await requestCameraPermissionStream();
+            return new Promise((resolve) => {
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.style.width = '100%';
+                video.style.maxWidth = '420px';
+                video.style.borderRadius = '8px';
+
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'flex';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 500px; padding: 20px;">
+                        <h3>${title}</h3>
+                        <div id="cameraContainer"></div>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button id="cameraCaptureBtn" class="image-upload-btn" style="flex: 1;">
+                                <i class="fas fa-camera"></i> צלם
+                            </button>
+                            <button id="cameraCancelBtn" class="camera-btn" style="flex: 1; background: linear-gradient(135deg, #f44336, #d32f2f);">
+                                <i class="fas fa-times"></i> ביטול
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                const closeModal = (file = null) => {
+                    stream.getTracks().forEach(track => track.stop());
+                    if (modal.parentNode) modal.parentNode.removeChild(modal);
+                    resolve(file);
+                };
+
+                document.body.appendChild(modal);
+                modal.querySelector('#cameraContainer')?.appendChild(video);
+
+                modal.querySelector('#cameraCaptureBtn')?.addEventListener('click', () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth || 1280;
+                    canvas.height = video.videoHeight || 720;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            closeModal(null);
+                            return;
+                        }
+                        const file = new File([blob], `camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        closeModal(file);
+                    }, 'image/jpeg', 0.92);
+                });
+
+                modal.querySelector('#cameraCancelBtn')?.addEventListener('click', () => closeModal(null));
             });
         }
 
@@ -9898,71 +9957,20 @@ body.dark-mode .history-row {
         async function openFinanceCameraCapture() {
             if (!financeAttachmentInput) return;
 
-            if (window.innerWidth <= 768) {
-                financeAttachmentInput.value = '';
-                financeAttachmentInput.accept = 'image/*';
-                financeAttachmentInput.capture = 'environment';
-                financeAttachmentInput.click();
-                return;
-            }
-
-            if (navigator.mediaDevices?.getUserMedia) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                    const video = document.createElement('video');
-                    video.autoplay = true;
-                    video.playsInline = true;
-                    video.style.width = '100%';
-                    video.style.borderRadius = '8px';
-                    video.srcObject = stream;
-
-                    const modal = document.createElement('div');
-                    modal.className = 'modal';
-                    modal.style.display = 'flex';
-                    modal.innerHTML = `
-                        <div class="modal-content" style="max-width: 420px;">
-                            <h3>צילום קבלה</h3>
-                            <div id="financeCameraContainer"></div>
-                            <div class="image-upload-buttons" style="margin-top:10px;">
-                                <button type="button" id="financeCameraCaptureBtn" class="image-upload-btn"><i class="fas fa-camera"></i> צלם</button>
-                                <button type="button" id="financeCameraCancelBtn" class="camera-btn">ביטול</button>
-                            </div>
-                        </div>
-                    `;
-                    document.body.appendChild(modal);
-                    modal.querySelector('#financeCameraContainer')?.appendChild(video);
-
-                    const closeCamera = () => {
-                        stream.getTracks().forEach(track => track.stop());
-                        if (modal.parentNode) modal.parentNode.removeChild(modal);
-                    };
-
-                    modal.querySelector('#financeCameraCaptureBtn')?.addEventListener('click', () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = video.videoWidth || 1280;
-                        canvas.height = video.videoHeight || 720;
-                        const ctx = canvas.getContext('2d');
-                        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        canvas.toBlob((blob) => {
-                            if (!blob) return;
-                            const file = new File([blob], `receipt_${Date.now()}.jpg`, { type: 'image/jpeg' });
-                            pendingFinanceAttachmentFile = file;
-                            if (financeAttachmentPreview) {
-                                financeAttachmentPreview.style.display = 'block';
-                                financeAttachmentPreview.textContent = `נבחר קובץ: ${file.name}`;
-                            }
-                            closeCamera();
-                        }, 'image/jpeg', 0.92);
-                    });
-
-                    modal.querySelector('#financeCameraCancelBtn')?.addEventListener('click', closeCamera);
-                    return;
-                } catch (error) {
-                    console.warn('Camera modal failed, fallback to input capture:', error);
+            try {
+                const capturedFile = await openCameraCaptureModal({ title: 'צילום קבלה' });
+                if (!capturedFile) return;
+                pendingFinanceAttachmentFile = capturedFile;
+                if (financeAttachmentPreview) {
+                    financeAttachmentPreview.style.display = 'block';
+                    financeAttachmentPreview.textContent = `נבחר קובץ: ${capturedFile.name}`;
                 }
+                return;
+            } catch (error) {
+                console.warn('Finance camera stream failed, fallback to capture input:', error);
             }
 
-            const capturedFile = await pickImageWithCameraPreference();
+            const capturedFile = await openCameraFilePickerFallback();
             if (capturedFile) {
                 pendingFinanceAttachmentFile = capturedFile;
                 if (financeAttachmentPreview) {
@@ -9971,10 +9979,8 @@ body.dark-mode .history-row {
                 }
                 return;
             }
-            financeAttachmentInput.value = '';
-            financeAttachmentInput.accept = 'image/*';
-            financeAttachmentInput.capture = 'environment';
-            financeAttachmentInput.click();
+
+            alert('לא הצלחנו לפתוח את המצלמה. בדקו הרשאת מצלמה במכשיר ונסו שוב.');
         }
 
         function openMediaPreview(url, title = 'תצוגת קובץ') {
