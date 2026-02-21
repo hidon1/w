@@ -10644,10 +10644,45 @@ body.dark-mode .history-row {
             return uploadResult?.downloadUrl || '';
         }
 
+        function buildIndividualReceiptLinksMessage(attachments, periodLabel) {
+            const lines = attachments.map((item, index) => {
+                const fileName = item.name || `קובץ ${index + 1}`;
+                const projectName = item.projectName || 'ללא פרויקט';
+                const timestamp = item.timestamp || '';
+                const downloadUrl = item.url || '';
+                return `${index + 1}. ${fileName} (${projectName}${timestamp ? ` | ${timestamp}` : ''})\n${downloadUrl}`;
+            });
+
+            return `קבצים להורדה ${periodLabel}.\nלינקים נפרדים לכל קובץ:\n\n${lines.join('\n\n')}`;
+        }
+
         async function shareYearlyReceipts(channel) {
             const attachments = collectReceiptAttachmentsForReport();
             if (!attachments.length) {
                 alert('לא נמצאו קבלות לתקופה שנבחרה.');
+                return;
+            }
+
+            const periodLabel = getSelectedPeriodLabel();
+            const individualLinksMessage = buildIndividualReceiptLinksMessage(attachments, periodLabel);
+
+            if (channel === 'email') {
+                const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
+
+                let bodyMessage = individualLinksMessage;
+                try {
+                    const zipBlob = await buildYearlyReceiptsZipBlob(attachments);
+                    const downloadLink = await uploadYearlyReceiptsZipAndGetLink(zipBlob);
+                    if (downloadLink) {
+                        bodyMessage = `קבצים להורדה ${periodLabel}.\nקישור להורדה (ZIP): ${downloadLink}\n\n${individualLinksMessage}`;
+                    }
+                } catch (error) {
+                    console.warn('Could not build/upload ZIP for email share, falling back to individual links.', error);
+                }
+
+                const body = encodeURIComponent(bodyMessage);
+                const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+                window.open(gmailComposeUrl, '_blank', 'noopener,noreferrer');
                 return;
             }
 
@@ -10664,16 +10699,8 @@ body.dark-mode .history-row {
                 return;
             }
 
-            const periodLabel = getSelectedPeriodLabel();
             const message = `קבצים להורדה ${periodLabel}.
 קישור להורדה: ${downloadLink}`;
-            if (channel === 'email') {
-                const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
-                const body = encodeURIComponent(message);
-                const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
-                window.open(gmailComposeUrl, '_blank', 'noopener,noreferrer');
-                return;
-            }
             if (channel === 'whatsapp') {
                 window.open(`whatsapp://send?text=${encodeURIComponent(message)}`, '_blank');
                 setTimeout(() => {
