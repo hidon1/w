@@ -1146,13 +1146,17 @@ async function downloadFile(filePath, fileName) {
     try {
         showToast('מתחיל הורדה...', 'info', 2000);
         const fileRef = storageRef(storage, filePath);
-        const url = await getDownloadURL(fileRef);
+        const blob = await getBlob(fileRef);
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = fileName;
+        a.rel = 'noopener';
+        a.target = '_blank';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
     } catch (e) {
         console.error('Download error:', e);
         showToast('שגיאה בהורדת הקובץ', 'error');
