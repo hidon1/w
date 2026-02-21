@@ -554,6 +554,20 @@ body.dark-mode .upload-drop-zone:hover, body.dark-mode .upload-drop-zone.drag-ov
     margin-top: 12px;
 }
 
+.transfer-progress {
+    display: none;
+    margin: 12px 0 18px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: rgba(101,22,47,0.04);
+}
+
+body.dark-mode .transfer-progress {
+    border-color: var(--dark-border-color);
+    background: rgba(161,44,74,0.1);
+}
+
 .progress-bar-container {
     background: var(--border-color);
     border-radius: 8px;
@@ -611,6 +625,20 @@ body.dark-mode .share-url-input { border-color: var(--dark-border-color); backgr
 body.dark-mode .share-loading { color: var(--dark-light-text-color); }
 
 .share-loading .spinner { margin: 0 auto 12px; }
+
+.btn-loading {
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+.btn-loading i {
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 
 /* ===== View-only notice ===== */
 .view-only-notice {
@@ -751,6 +779,13 @@ body.dark-mode .upload-fab { background: linear-gradient(135deg, var(--dark-prim
         </button>
     </div>
 
+    <div class="transfer-progress" id="downloadProgress">
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="downloadProgressBar"></div>
+        </div>
+        <div class="progress-text" id="downloadProgressText">מתכונן להורדה...</div>
+    </div>
+
     <!-- Files Grid -->
     <div id="filesGrid" class="files-grid" style="display:none;"></div>
 
@@ -865,6 +900,49 @@ let isViewOnly = false;
 let allFiles = [];
 let visibleFiles = [];
 let selectedFiles = [];
+
+const TRANSFER_PROGRESS_AUTO_HIDE_MS = 1500;
+
+function setProgressState({
+    containerId,
+    barId,
+    textId,
+    visible,
+    progress = 0,
+    text = ''
+}) {
+    const container = document.getElementById(containerId);
+    const bar = document.getElementById(barId);
+    const label = document.getElementById(textId);
+
+    if (!container || !bar || !label) return;
+
+    container.style.display = visible ? 'block' : 'none';
+    bar.style.width = `${Math.max(0, Math.min(100, progress)).toFixed(1)}%`;
+    if (text) label.textContent = text;
+}
+
+function setDownloadProgress(visible, progress = 0, text = 'מתכונן להורדה...') {
+    setProgressState({
+        containerId: 'downloadProgress',
+        barId: 'downloadProgressBar',
+        textId: 'downloadProgressText',
+        visible,
+        progress,
+        text
+    });
+}
+
+function setUploadProgress(visible, progress = 0, text = 'מעלה...') {
+    setProgressState({
+        containerId: 'uploadProgress',
+        barId: 'progressBar',
+        textId: 'progressText',
+        visible,
+        progress,
+        text
+    });
+}
 
 // ===== Dark Mode =====
 const darkModeToggle = document.getElementById('darkModeToggle');
@@ -1176,24 +1254,33 @@ function showEmptyState(message) {
 
 // ===== Download =====
 async function downloadFile(filePath, fileName) {
+    setDownloadProgress(true, 5, `מוריד: ${fileName} (5%)`);
     try {
         showToast('מתחיל הורדה...', 'info', 2000);
         const fileRef = storageRef(storage, filePath);
         const directUrl = await getDownloadURL(fileRef);
+        setDownloadProgress(true, 30, `מוריד: ${fileName} (30%)`);
         const forcedDownloadUrl = withAttachmentDisposition(directUrl, fileName);
         const blob = await fetchWithValidation(forcedDownloadUrl, fileName);
+        setDownloadProgress(true, 95, `מוריד: ${fileName} (95%)`);
         triggerBlobDownload(blob, fileName);
+        setDownloadProgress(true, 100, `הורדה הושלמה: ${fileName}`);
     } catch (e) {
         console.warn('Direct URL download failed, trying blob fallback:', e);
         try {
             const fileRef = storageRef(storage, filePath);
+            setDownloadProgress(true, 60, `מוריד: ${fileName} (60%)`);
             const blob = await getBlob(fileRef);
             await assertImageBlobIsValid(blob, fileName);
             triggerBlobDownload(blob, fileName);
+            setDownloadProgress(true, 100, `הורדה הושלמה: ${fileName}`);
         } catch (blobError) {
             console.error('Download error:', blobError);
             showToast('שגיאה בהורדת הקובץ', 'error');
+            setDownloadProgress(true, 0, `שגיאה בהורדה: ${fileName}`);
         }
+    } finally {
+        setTimeout(() => setDownloadProgress(false, 0, 'מתכונן להורדה...'), TRANSFER_PROGRESS_AUTO_HIDE_MS);
     }
 }
 
@@ -1252,6 +1339,7 @@ window.downloadAllFilteredFilesAsZip = async function() {
 
     try {
         showToast('אוסף קבצים ל-ZIP...', 'info', 2500);
+        setDownloadProgress(true, 5, 'מכין ZIP להורדה (5%)');
         const zip = new JSZip();
 
         for (let i = 0; i < visibleFiles.length; i += 1) {
@@ -1262,17 +1350,23 @@ window.downloadAllFilteredFilesAsZip = async function() {
 
             const relativePath = file.path.split('/projects/')[1]?.split('/').slice(1).join('/') || file.name;
             zip.file(relativePath, blob);
+            const loopProgress = ((i + 1) / visibleFiles.length) * 85;
+            setDownloadProgress(true, loopProgress, `אוסף ל-ZIP: ${file.name} (${Math.round(loopProgress)}%)`);
         }
 
+        setDownloadProgress(true, 92, 'יוצר קובץ ZIP...');
         const zipBlob = await zip.generateAsync({ type: 'blob' });
         const projectId = document.getElementById('projectSelect')?.value || 'project';
         triggerBlobDownload(zipBlob, `all_files_${projectId}_${Date.now()}.zip`);
+        setDownloadProgress(true, 100, 'הורדת ZIP הושלמה');
         showToast('הורדת ZIP החלה', 'success');
     } catch (error) {
         console.error('ZIP download failed:', error);
         showToast('שגיאה ביצירת קובץ ההורדה', 'error');
+        setDownloadProgress(true, 0, 'שגיאה ביצירת ZIP');
     } finally {
         if (button) button.disabled = false;
+        setTimeout(() => setDownloadProgress(false, 0, 'מתכונן להורדה...'), TRANSFER_PROGRESS_AUTO_HIDE_MS);
     }
 };
 
@@ -1342,7 +1436,21 @@ window.shareViaEmail = function() {
 
     const subject = encodeURIComponent(`קישור להורדת קובץ: ${currentShareName || ''}`);
     const body = encodeURIComponent(`היי,\n\nאפשר להוריד את הקובץ מהקישור הבא:\n${shareUrl}\n\nהקישור מוריד את הקובץ ישירות למחשב.`);
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+
+    const emailBtn = document.querySelector('#shareResult .btn-share');
+    if (emailBtn) {
+        emailBtn.classList.add('btn-loading');
+        emailBtn.innerHTML = '<i class="fas fa-spinner"></i> פותח Gmail...';
+    }
+
+    window.open(gmailUrl, '_blank', 'noopener');
+
+    setTimeout(() => {
+        if (!emailBtn) return;
+        emailBtn.classList.remove('btn-loading');
+        emailBtn.innerHTML = '<i class="fas fa-envelope"></i> שלח במייל';
+    }, 1500);
 };
 
 window.shareViaWhatsApp = function() {
@@ -1368,9 +1476,8 @@ window.openUploadModal = function() {
     if (isViewOnly) return;
     selectedFiles = [];
     document.getElementById('selectedFilesPreview').style.display = 'none';
-    document.getElementById('uploadProgress').style.display = 'none';
+    setUploadProgress(false, 0, 'מעלה...');
     document.getElementById('uploadSubmitBtn').style.display = 'none';
-    document.getElementById('progressBar').style.width = '0%';
     document.getElementById('fileUploadInput').value = '';
     document.getElementById('uploadModal').classList.add('open');
 };
@@ -1420,16 +1527,12 @@ window.uploadSelectedFiles = async function() {
     if (selectedFiles.length === 0) { showToast('לא נבחרו קבצים', 'error'); return; }
 
     const submitBtn = document.getElementById('uploadSubmitBtn');
-    const progressDiv = document.getElementById('uploadProgress');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-
     submitBtn.disabled = true;
-    progressDiv.style.display = 'block';
+    setUploadProgress(true, 0, 'מתחיל העלאה...');
 
     let uploaded = 0;
     for (const file of selectedFiles) {
-        progressText.textContent = `מעלה: ${file.name}`;
+        setUploadProgress(true, (uploaded / selectedFiles.length) * 100, `מעלה: ${file.name} (0%)`);
         await new Promise((resolve) => {
             const fileRef = storageRef(storage, `accounts/${dataUid}/projects/${projectId}/${file.name}`);
             const uploadTask = uploadBytesResumable(fileRef, file);
@@ -1437,8 +1540,7 @@ window.uploadSelectedFiles = async function() {
                 (snapshot) => {
                     const fileProgress = snapshot.bytesTransferred / snapshot.totalBytes;
                     const totalProgress = ((uploaded + fileProgress) / selectedFiles.length) * 100;
-                    progressBar.style.width = `${totalProgress.toFixed(1)}%`;
-                    progressText.textContent = `מעלה: ${file.name} (${Math.round(fileProgress * 100)}%)`;
+                    setUploadProgress(true, totalProgress, `מעלה: ${file.name} (${Math.round(fileProgress * 100)}%)`);
                 },
                 (error) => {
                     console.error('Upload error:', error);
@@ -1447,14 +1549,15 @@ window.uploadSelectedFiles = async function() {
                 },
                 () => {
                     uploaded++;
-                    progressBar.style.width = `${(uploaded / selectedFiles.length) * 100}%`;
+                    const uploadedPercent = (uploaded / selectedFiles.length) * 100;
+                    setUploadProgress(true, uploadedPercent, `הועלו ${uploaded} מתוך ${selectedFiles.length}`);
                     resolve();
                 }
             );
         });
     }
 
-    progressText.textContent = 'הושלם!';
+    setUploadProgress(true, 100, 'הושלם!');
     submitBtn.disabled = false;
     showToast(`${uploaded} קבצים הועלו בהצלחה`, 'success');
     setTimeout(() => {
