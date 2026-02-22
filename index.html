@@ -14,6 +14,7 @@
     <script src="fonts/hebrew-vfs.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
     <style>
 /* קוד CSS מעודכן למובייל */
 /* שינויים במובייל: .project-details-card עכשיו עם left: -280px; כדי שתציץ קצת */
@@ -3183,6 +3184,29 @@ body.dark-mode .finance-yearly-project-section .project-balance.negative {
     display: flex;
     justify-content: flex-end;
     margin: 8px 0;
+    gap: 8px;
+}
+
+.image-editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.image-editor-toolbar input[type="text"] {
+    min-width: 180px;
+}
+
+.image-editor-stage {
+    background: #f2f4f8;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+body.dark-mode .image-editor-stage {
+    background: #222;
 }
 
 .reminders-modal-content {
@@ -6630,19 +6654,16 @@ body.dark-mode .history-row {
                     <input type="file" id="financeAttachmentUpload" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.pdf,application/pdf" style="display:none;" onchange="handleFinanceAttachmentSelection()">
                     <div id="financeAttachmentPreview" style="font-size:12px; color:var(--light-text-color); margin-top:6px; display:none;"></div>
                 </div>
-                <div class="image-upload-section" style="margin:10px 0;">
-                    <label for="generalImageUpload"><i class="fas fa-images"></i> תמונות כלליות</label>
-                    <div class="image-upload-buttons">
-                        <button type="button" onclick="openGeneralImagePicker()" class="image-upload-btn">
-                            <i class="fas fa-image"></i> העלה תמונה כללית
-                        </button>
-                    </div>
-                    <input type="file" id="generalImageUpload" accept="image/*,video/*" style="display:none;" onchange="uploadGeneralProjectImage()">
-                    <ul id="generalImagesList" class="finance-attachments-list"></ul>
-                </div>
                 <div class="finance-input-buttons">
                     <button class="add-income-btn" onclick="addFinanceEntry('income')">הוסף הכנסה</button>
                     <button class="add-expense-btn" onclick="addFinanceEntry('expense')">הוסף הוצאה</button>
+                </div>
+                <div class="yearly-report-actions" style="margin-top:10px;">
+                    <select id="financeEntryFilter" class="project-filter-select" onchange="renderFinanceList()">
+                        <option value="all">תצוגה: הכל</option>
+                        <option value="income">הכנסות בלבד</option>
+                        <option value="expense">הוצאות בלבד</option>
+                    </select>
                 </div>
             </div>
             <ul id="financeList" class="finance-list"></ul>
@@ -6725,6 +6746,26 @@ body.dark-mode .history-row {
             <span class="close-button" onclick="closeMediaPreviewModal()">&times;</span>
             <h3 id="mediaPreviewTitle">תצוגת קובץ</h3>
             <div id="mediaPreviewBody" class="media-preview-body"></div>
+        </div>
+    </div>
+    <div id="imageEditorModal" class="modal">
+        <div class="modal-content media-preview-content">
+            <span class="close-button" onclick="closeImageEditorModal()">&times;</span>
+            <h3>עורך תמונה</h3>
+            <div class="image-editor-toolbar">
+                <input type="text" id="imageEditorFileName" placeholder="שם קובץ חדש">
+                <button type="button" class="history-upload-btn" onclick="setImageEditorMode('draw')"><i class="fas fa-pencil-alt"></i> עיפרון</button>
+                <button type="button" class="history-upload-btn" onclick="setImageEditorMode('erase')"><i class="fas fa-eraser"></i> מחק</button>
+                <button type="button" class="history-upload-btn" onclick="addImageEditorText()"><i class="fas fa-font"></i> טקסט</button>
+                <button type="button" class="history-upload-btn" onclick="startImageCropSelection()"><i class="fas fa-crop-alt"></i> סימון חיתוך</button>
+                <button type="button" class="history-upload-btn" onclick="applyImageCrop()">חתוך</button>
+                <label>צבע <input type="color" id="imageEditorColor" value="#d32f2f"></label>
+                <label>עובי <input type="range" id="imageEditorBrushSize" min="1" max="60" value="8"></label>
+                <button type="button" class="history-upload-btn" onclick="saveImageEditorChanges()"><i class="fas fa-save"></i> שמור</button>
+            </div>
+            <div class="media-preview-body image-editor-stage">
+                <canvas id="imageEditorCanvas"></canvas>
+            </div>
         </div>
     </div>
     <div id="inboxModal" class="reminders-modal">
@@ -10189,7 +10230,6 @@ body.dark-mode .history-row {
             fixedDashboardSection.style.display = 'none';
             financeModal.style.display = 'flex';
             renderFinanceList();
-            renderGeneralImagesList();
         }
         function closeFinanceModal() {
             financeModal.style.display = 'none';
@@ -10352,7 +10392,14 @@ body.dark-mode .history-row {
             const isImageFile = /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)(\?|#|$)/i.test(url || '') || /^data:image\//i.test(url || '');
             const actionsWrap = document.createElement('div');
             actionsWrap.className = 'media-preview-actions';
-            if (!isImageFile) {
+            if (isImageFile) {
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'history-upload-btn';
+                editBtn.innerHTML = '<i class="fas fa-edit"></i> ערוך';
+                editBtn.addEventListener('click', () => openImageEditorModal(url, downloadFileName || title));
+                actionsWrap.appendChild(editBtn);
+            } else {
                 const downloadBtn = document.createElement('button');
                 downloadBtn.type = 'button';
                 downloadBtn.className = 'history-upload-btn';
@@ -10385,6 +10432,102 @@ body.dark-mode .history-row {
             }
             bodyEl.appendChild(previewNode);
             modal.style.display = 'flex';
+        }
+
+
+        let imageEditorCanvas = null;
+        let imageEditorContext = { sourceUrl: '', fileName: 'edited-image.png', cropRect: null };
+
+        function openImageEditorModal(url, fileName = 'edited-image.png') {
+            const modal = document.getElementById('imageEditorModal');
+            if (!modal || !window.fabric) return;
+            imageEditorContext = { sourceUrl: url, fileName: fileName || 'edited-image.png', cropRect: null };
+            const nameInput = document.getElementById('imageEditorFileName');
+            if (nameInput) nameInput.value = imageEditorContext.fileName;
+            if (!imageEditorCanvas) imageEditorCanvas = new fabric.Canvas('imageEditorCanvas', { preserveObjectStacking: true });
+            const maxWidth = Math.min(window.innerWidth * 0.9, 980);
+            const maxHeight = Math.min(window.innerHeight * 0.62, 620);
+            imageEditorCanvas.setWidth(maxWidth);
+            imageEditorCanvas.setHeight(maxHeight);
+            imageEditorCanvas.clear();
+            fabric.Image.fromURL(url, (img) => {
+                const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+                img.set({ left: maxWidth / 2, top: maxHeight / 2, originX: 'center', originY: 'center', selectable: false, evented: false });
+                img.scale(scale);
+                imageEditorCanvas.setBackgroundImage(img, imageEditorCanvas.renderAll.bind(imageEditorCanvas));
+                setImageEditorMode('draw');
+            }, { crossOrigin: 'anonymous' });
+            modal.style.display = 'flex';
+        }
+
+        function setImageEditorMode(mode) {
+            if (!imageEditorCanvas) return;
+            const color = document.getElementById('imageEditorColor')?.value || '#d32f2f';
+            const width = parseInt(document.getElementById('imageEditorBrushSize')?.value || '8', 10);
+            imageEditorCanvas.freeDrawingBrush = new fabric.PencilBrush(imageEditorCanvas);
+            imageEditorCanvas.isDrawingMode = true;
+            imageEditorCanvas.freeDrawingBrush.color = mode === 'erase' ? '#ffffff' : color;
+            imageEditorCanvas.freeDrawingBrush.width = mode === 'erase' ? width + 8 : width;
+        }
+
+        function addImageEditorText() {
+            if (!imageEditorCanvas) return;
+            imageEditorCanvas.isDrawingMode = false;
+            const color = document.getElementById('imageEditorColor')?.value || '#d32f2f';
+            const text = new fabric.IText('טקסט', { left: 80, top: 80, fill: color, fontSize: 34 });
+            imageEditorCanvas.add(text);
+            imageEditorCanvas.setActiveObject(text);
+        }
+
+        function startImageCropSelection() {
+            if (!imageEditorCanvas) return;
+            imageEditorCanvas.isDrawingMode = false;
+            if (imageEditorContext.cropRect) imageEditorCanvas.remove(imageEditorContext.cropRect);
+            const rect = new fabric.Rect({ left: 60, top: 60, width: 260, height: 220, fill: 'rgba(0,0,0,0.08)', stroke: '#d32f2f', strokeDashArray: [6, 6] });
+            imageEditorContext.cropRect = rect;
+            imageEditorCanvas.add(rect);
+            imageEditorCanvas.setActiveObject(rect);
+        }
+
+        function applyImageCrop() {
+            if (!imageEditorCanvas || !imageEditorContext.cropRect) return;
+            const bounds = imageEditorContext.cropRect.getBoundingRect();
+            const dataUrl = imageEditorCanvas.toDataURL({ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height, format: 'png' });
+            openImageEditorModal(dataUrl, imageEditorContext.fileName);
+        }
+
+        async function saveImageEditorChanges() {
+            if (!imageEditorCanvas) return;
+            const desiredName = (document.getElementById('imageEditorFileName')?.value || '').trim() || imageEditorContext.fileName;
+            const confirmed = await showConfirmation('האם אתה בטוח שברצונך לשמור את השינויים?', 'שמירת תמונה');
+            if (!confirmed) return;
+            const dataUrl = imageEditorCanvas.toDataURL({ format: 'png', quality: 0.94 });
+            if (updateFinanceAttachmentByUrl(imageEditorContext.sourceUrl, { url: dataUrl, name: desiredName })) {
+                saveAllProjects();
+                renderFinanceList();
+            }
+            closeImageEditorModal();
+            openMediaPreview(dataUrl, 'תמונה ערוכה', desiredName);
+        }
+
+        function updateFinanceAttachmentByUrl(oldUrl, updates) {
+            let changed = false;
+            Object.values(projects || {}).forEach((project) => {
+                (project.finance || []).forEach((entry) => {
+                    if (entry?.attachment?.url === oldUrl) {
+                        entry.attachment.url = updates.url || entry.attachment.url;
+                        entry.attachment.name = updates.name || entry.attachment.name;
+                        entry.attachment.path = null;
+                        changed = true;
+                    }
+                });
+            });
+            return changed;
+        }
+
+        function closeImageEditorModal() {
+            const modal = document.getElementById('imageEditorModal');
+            if (modal) modal.style.display = 'none';
         }
 
         function closeMediaPreviewModal() {
@@ -10529,12 +10672,14 @@ body.dark-mode .history-row {
         function renderFinanceList() {
             financeList.innerHTML = '';
             let balance = 0;
+            const activeFilter = document.getElementById('financeEntryFilter')?.value || 'all';
             const sortedEntries = projects[currentProjectId].finance.slice().sort((a, b) => {
                 const dateA = parseHebrewLocaleTimestamp(a.timestamp) || new Date(0);
                 const dateB = parseHebrewLocaleTimestamp(b.timestamp) || new Date(0);
                 return dateB.getTime() - dateA.getTime();
             });
             sortedEntries.forEach(entry => {
+                if (activeFilter !== 'all' && entry.type !== activeFilter) return;
                 const listItem = document.createElement('li');
                 listItem.setAttribute('data-finance-id', entry.id);
                 const hasAmount = typeof entry.amount === 'number' && !isNaN(entry.amount);
@@ -10854,6 +10999,7 @@ body.dark-mode .history-row {
                     }
                 });
                 (project.generalImages || []).forEach((item) => {
+                    return;
                     const dateObj = item.createdAt ? new Date(item.createdAt) : parseHebrewLocaleTimestamp(item.timestamp);
                     if (dateObj && dateObj.getFullYear() !== parseInt(selectedYear, 10)) return;
                     if (selectedMonth !== 'all' && dateObj && (dateObj.getMonth() + 1) !== parseInt(selectedMonth, 10)) return;
@@ -11370,8 +11516,8 @@ body.dark-mode .history-row {
             currentFinanceMediaListAttachments = attachments.slice();
 
             titleEl.textContent = mode === 'global'
-                ? 'קבלות/תמונות/PDF - דוח כספי כולל'
-                : `קבלות/תמונות/PDF - ${selectedYear}${selectedMonth !== 'all' ? '/' + selectedMonth : ''}`;
+                ? 'קבלות/קבצים - דוח כספי כולל'
+                : `קבלות/קבצים - ${selectedYear}${selectedMonth !== 'all' ? '/' + selectedMonth : ''}`;
 
             listEl.innerHTML = '';
             if (!attachments.length) {
@@ -11454,6 +11600,7 @@ body.dark-mode .history-row {
                     deleted = true;
                 }
             } else if (item.sourceType === 'generalImage') {
+                return;
                 const images = project.generalImages || [];
                 const indexInArray = images.findIndex((img) =>
                     (storagePath && img.path && img.path === storagePath)
@@ -11500,6 +11647,7 @@ body.dark-mode .history-row {
                     }
                 });
                 (project.generalImages || []).forEach(item => {
+                    return;
                     if (item?.url) {
                         attachments.push({
                             projectId,
