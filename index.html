@@ -11,6 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/pdfmake.min.js"></script>
     <script src="https://unpkg.com/@digicole/pdfmake-rtl/build/vfs_fonts.js"></script>
+    <script src="fonts/hebrew-vfs.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
@@ -11942,7 +11943,97 @@ body.dark-mode .history-row {
                 timelineContainer.appendChild(eventDiv);
             });
         }
-        function downloadTimelinePDF() {
+
+        const HEBREW_PDF_FONT_FAMILY = 'DejaVuSans';
+        let hebrewPdfFontLoadPromise = null;
+
+        async function ensureHebrewPdfFont() {
+            if (!window.pdfMake) {
+                console.warn('pdfMake is unavailable, exporting with browser defaults.');
+                return false;
+            }
+            if (pdfMake.fonts && pdfMake.fonts[HEBREW_PDF_FONT_FAMILY]) return true;
+            if (hebrewPdfFontLoadPromise) {
+                try {
+                    await hebrewPdfFontLoadPromise;
+                    return true;
+                } catch (error) {
+                    return false;
+                }
+            }
+
+            hebrewPdfFontLoadPromise = (async () => {
+                const regular = 'DejaVuSans.ttf';
+                const bold = 'DejaVuSans-Bold.ttf';
+                const embeddedVfs = window.HEBREW_PDF_VFS || {};
+
+                if (!embeddedVfs[regular] || !embeddedVfs[bold]) {
+                    throw new Error('Hebrew font data is missing from embedded VFS script.');
+                }
+
+                pdfMake.vfs = {
+                    ...(pdfMake.vfs || {}),
+                    [regular]: embeddedVfs[regular],
+                    [bold]: embeddedVfs[bold]
+                };
+
+                pdfMake.fonts = {
+                    ...(pdfMake.fonts || {}),
+                    [HEBREW_PDF_FONT_FAMILY]: {
+                        normal: regular,
+                        bold,
+                        italics: regular,
+                        bolditalics: bold
+                    }
+                };
+            })();
+
+            try {
+                await hebrewPdfFontLoadPromise;
+                return true;
+            } catch (error) {
+                console.error('Hebrew PDF font registration failed, falling back to default font:', error);
+                hebrewPdfFontLoadPromise = null;
+                return false;
+            }
+        }
+
+        function applyRtlToPdfContent(content) {
+            if (Array.isArray(content)) {
+                return content.map(item => applyRtlToPdfContent(item));
+            }
+
+            if (content && typeof content === 'object') {
+                const cloned = { ...content };
+                if (typeof cloned.text !== 'undefined' && typeof cloned.direction === 'undefined') {
+                    cloned.direction = 'rtl';
+                }
+                return cloned;
+            }
+
+            return content;
+        }
+
+        async function downloadHebrewPdf(docDefinition, fileName) {
+            const hasHebrewFont = await ensureHebrewPdfFont();
+
+            const preparedDocDefinition = {
+                ...docDefinition,
+                defaultStyle: {
+                    alignment: 'right',
+                    ...(hasHebrewFont ? { font: HEBREW_PDF_FONT_FAMILY } : {}),
+                    ...(docDefinition.defaultStyle || {})
+                },
+                content: applyRtlToPdfContent(docDefinition.content)
+            };
+
+            if (!window.pdfMake) {
+                throw new Error('pdfMake לא זמין.');
+            }
+            pdfMake.createPdf(preparedDocDefinition).download(fileName);
+        }
+
+        async function downloadTimelinePDF() {
             const entries = Array.from(timelineContainer.querySelectorAll('.timeline-event')).map((event, index) => {
                 const title = event.querySelector('h4').textContent;
                 const value = event.querySelector('.event-value').textContent;
@@ -11959,10 +12050,15 @@ body.dark-mode .history-row {
                     text: { fontSize: 12, alignment: 'right' }
                 }
             };
-            pdfMake.createPdf(docDefinition).download('timeline.pdf');
+            try {
+                await downloadHebrewPdf(docDefinition, 'timeline.pdf');
+            } catch (error) {
+                console.error('Failed to export timeline PDF:', error);
+                alert('אירעה שגיאה בהורדת PDF. נסו שוב בעוד רגע.');
+            }
         }
         
-        function downloadGlobalFinancePDF() {
+        async function downloadGlobalFinancePDF() {
             const docDefinition = {
                 content: [
                     { text: 'דוח כספי כולל (כל הפרויקטים)', style: 'header' },
@@ -11982,9 +12078,14 @@ body.dark-mode .history-row {
                     text: { fontSize: 12, alignment: 'right' }
                 }
             };
-            pdfMake.createPdf(docDefinition).download('global_finance_report.pdf');
+            try {
+                await downloadHebrewPdf(docDefinition, 'global_finance_report.pdf');
+            } catch (error) {
+                console.error('Failed to export global finance PDF:', error);
+                alert('אירעה שגיאה בהורדת PDF. נסו שוב בעוד רגע.');
+            }
         }
-        function downloadYearlyFinancePDF() {
+        async function downloadYearlyFinancePDF() {
             const docDefinition = {
                 content: [
                     { text: `דוח כספי לפי שנה - ${yearSelect.value} (${monthSelect?.value === 'all' ? 'כל השנה' : 'חודש ' + monthSelect?.value})`, style: 'header' },
@@ -12004,7 +12105,12 @@ body.dark-mode .history-row {
                     text: { fontSize: 12, alignment: 'right' }
                 }
             };
-            pdfMake.createPdf(docDefinition).download(`yearly_finance_report_${yearSelect.value}_${monthSelect?.value || 'all'}.pdf`);
+            try {
+                await downloadHebrewPdf(docDefinition, `yearly_finance_report_${yearSelect.value}_${monthSelect?.value || 'all'}.pdf`);
+            } catch (error) {
+                console.error('Failed to export yearly finance PDF:', error);
+                alert('אירעה שגיאה בהורדת PDF. נסו שוב בעוד רגע.');
+            }
         }
         window.onclick = function(event) {
             if (event.target === historyModal) {
