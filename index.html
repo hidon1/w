@@ -1534,7 +1534,7 @@ body.dark-mode .history-list li {
     }
 
     .input-group {
-        min-height: 190px;
+        min-height: 240px;
     }
 
     .dashboard-section {
@@ -1550,7 +1550,17 @@ body.dark-mode .history-list li {
         top: 86px;
         bottom: auto;
         left: 14px;
-        z-index: 1210;
+        z-index: 1305;
+    }
+
+    .sidebar-toggle-handle {
+        top: 84px;
+        transform: none;
+        z-index: 1306;
+    }
+
+    .modal-graph-container {
+        height: 430px;
     }
 }
 .card-fab-icon {
@@ -4397,8 +4407,8 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
     .history-entry-actions-inline .undo-button {
         width: 100%;
         margin-right: 0;
-        padding: 6px 8px;
-        font-size: calc(var(--font-size-base) * 0.68);
+        padding: 5px 7px;
+        font-size: calc(var(--font-size-base) * 0.64);
         min-height: 30px;
         line-height: 1.15;
         text-align: center;
@@ -4406,7 +4416,7 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
 
     .history-entry-actions-inline .undo-button {
         grid-column: 1 / -1;
-        max-width: 82%;
+        max-width: 74%;
         justify-self: center;
     }
     .media-preview-content {
@@ -4421,9 +4431,9 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
     .yearly-report-actions .download-pdf-btn,
     .finance-attachment-actions button,
     #financeMediaListModal .history-upload-btn {
-        padding: 4px 8px;
-        font-size: calc(var(--font-size-base) * 0.72);
-        min-height: 28px;
+        padding: 6px 10px;
+        font-size: calc(var(--font-size-base) * 0.79);
+        min-height: 32px;
         border-radius: 5px;
         margin-top: 0;
     }
@@ -8082,14 +8092,22 @@ body.dark-mode .history-row {
         }
         async function deleteInbox(id, index = -1) {
             const normalizedId = String(id ?? '');
+            const currentInbox = Array.isArray(inbox) ? inbox : [];
+            let nextInbox = currentInbox;
+
             if (normalizedId) {
-                inbox = inbox.filter((item) => String(item?.id ?? '') !== normalizedId);
-            } else if (Number.isInteger(index) && index >= 0 && index < inbox.length) {
-                inbox.splice(index, 1);
+                nextInbox = currentInbox.filter((item) => String(item?.id ?? '') !== normalizedId);
             }
-            queueInboxSave();
+
+            if (nextInbox === currentInbox && Number.isInteger(index) && index >= 0 && index < currentInbox.length) {
+                nextInbox = currentInbox.slice(0, index).concat(currentInbox.slice(index + 1));
+            }
+
+            inbox = nextInbox;
+            window.inbox = nextInbox;
             renderInboxList();
             updateInboxBadge();
+            queueInboxSave();
         }
         function openRemindersModal() {
             requestNotificationPermission();
@@ -8701,6 +8719,7 @@ body.dark-mode .history-row {
         function openProjectSummaryModal() {
             if (!projectSummaryModal) return;
             closeSidebar();
+            setTimeout(() => closeSidebar(), 120);
             const project = projects[currentProjectId];
             const rows = [];
             const pills = [];
@@ -11038,27 +11057,31 @@ body.dark-mode .history-row {
                 throw new Error('DIRECT_URL_MISSING');
             }
             const safeUrl = String(url);
-            if (isMobileDevice() || isLikelyWebViewEnvironment()) {
-                window.location.assign(safeUrl);
-                return;
-            }
+            const safeName = sanitizeDownloadFileName(fileName || 'file');
             const a = document.createElement('a');
             a.href = safeUrl;
-            if (fileName) {
-                a.download = sanitizeDownloadFileName(fileName);
-            }
+            a.download = safeName;
+            a.setAttribute('download', safeName);
             a.rel = 'noopener';
             a.target = '_self';
             document.body.appendChild(a);
             a.click();
             a.remove();
+
+            if (isMobileDevice() || isLikelyWebViewEnvironment()) {
+                setTimeout(() => {
+                    window.location.assign(safeUrl);
+                }, 180);
+            }
         }
 
         function downloadBlob(blob, fileName) {
+            const safeName = sanitizeDownloadFileName(fileName || 'download');
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = sanitizeDownloadFileName(fileName);
+            a.download = safeName;
+            a.setAttribute('download', safeName);
             a.rel = 'noopener';
             a.target = '_self';
             document.body.appendChild(a);
