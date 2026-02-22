@@ -9321,6 +9321,7 @@ body.dark-mode .history-row {
                 picker.type = 'file';
                 picker.accept = 'image/*';
                 picker.setAttribute('capture', 'environment');
+                picker.capture = 'environment';
                 picker.style.display = 'none';
                 document.body.appendChild(picker);
 
@@ -10141,7 +10142,7 @@ body.dark-mode .history-row {
             downloadBtn.innerHTML = '<i class="fas fa-download"></i> הורד';
             downloadBtn.addEventListener('click', async () => {
                 try {
-                    await triggerSingleAttachmentDownload({ url, name: downloadFileName || title }, 0);
+                    await triggerSingleAttachmentDownload({ url, name: downloadFileName || title }, 0, { preferHttpDirect: isLikelyWebViewEnvironment() || isMobileDevice() });
                 } catch (error) {
                     console.error('Failed to download preview file:', error);
                     alert('לא ניתן להוריד את הקובץ כרגע.');
@@ -10793,10 +10794,16 @@ body.dark-mode .history-row {
             }
         }
 
-        async function triggerSingleAttachmentDownload(item, index = 0) {
+        async function triggerSingleAttachmentDownload(item, index = 0, options = {}) {
             if (!item) return;
             const fileName = buildDownloadName(item, index);
             const directUrl = await resolveAttachmentDownloadUrl(item);
+            const shouldPreferHttpDirect = options.preferHttpDirect === true || (isLikelyWebViewEnvironment() && isMobileDevice());
+
+            if (directUrl && shouldPreferHttpDirect) {
+                triggerHttpAttachmentDownload(forceAttachmentDisposition(directUrl, fileName), fileName);
+                return;
+            }
 
             if (directUrl) {
                 try {
@@ -10813,6 +10820,22 @@ body.dark-mode .history-row {
             if (!blob) throw new Error('ATTACHMENT_BLOB_MISSING');
             await assertImageBlobLooksValid(blob, fileName);
             downloadBlob(blob, fileName);
+        }
+
+        function triggerHttpAttachmentDownload(url, fileName = '') {
+            if (!url) {
+                throw new Error('DIRECT_URL_MISSING');
+            }
+            const a = document.createElement('a');
+            a.href = url;
+            if (fileName) {
+                a.download = sanitizeDownloadFileName(fileName);
+            }
+            a.target = '_blank';
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
         }
 
         function downloadBlob(blob, fileName) {
@@ -10856,6 +10879,7 @@ body.dark-mode .history-row {
 
         async function downloadAttachmentsDirectly(attachments) {
             let startedDownloads = 0;
+            const preferHttpDirect = isLikelyWebViewEnvironment() || isMobileDevice();
 
             for (let i = 0; i < attachments.length; i += 1) {
                 const item = attachments[i];
@@ -10863,7 +10887,7 @@ body.dark-mode .history-row {
                     if (i > 0) {
                         await new Promise((resolve) => setTimeout(resolve, 500));
                     }
-                    await triggerSingleAttachmentDownload(item, i);
+                    await triggerSingleAttachmentDownload(item, i, { preferHttpDirect });
                     startedDownloads += 1;
                 } catch (error) {
                     console.warn('Failed to start direct download for attachment:', item, error);
@@ -10928,24 +10952,36 @@ body.dark-mode .history-row {
             return uploadResult?.downloadUrl || '';
         }
 
-        function buildEmailReceiptsMessage(periodLabel, zipDownloadLink = '') {
-            const lines = [];
-            lines.push(`קבצים להורדה ${periodLabel}`);
-            lines.push('');
-            lines.push('להורדת כל הקבצים יחד לחץ כאן:');
-            lines.push(zipDownloadLink || 'קישור ההורדה לא זמין כרגע.');
-            lines.push('');
-            lines.push('הקישור יוריד קובץ ZIP אחד עם כל הקבצים מהתקופה שנבחרה.');
-            return lines.join('\n').trim();
+        async function resolveReceiptLinks(attachments) {
+            const links = [];
+            for (let i = 0; i < attachments.length; i += 1) {
+                const item = attachments[i];
+                try {
+                    const resolved = await resolveAttachmentDownloadUrl(item);
+                    if (!resolved) continue;
+                    links.push({
+                        index: i + 1,
+                        name: buildDownloadName(item, i),
+                        url: forceAttachmentDisposition(resolved, buildDownloadName(item, i))
+                    });
+                } catch (error) {
+                    console.warn('Failed to resolve attachment link for sharing:', item, error);
+                }
+            }
+            return links;
         }
 
-        function buildWhatsappReceiptsMessage(periodLabel, zipDownloadLink = '') {
-            const lines = [];
-            lines.push(`קבצים להורדה ${periodLabel}`);
-            lines.push('');
-            lines.push('קישור מרוכז להורדת כל הקבצים יחד (ZIP):');
-            lines.push(zipDownloadLink || 'קישור ההורדה לא זמין כרגע.');
-            return lines.join('\n').trim();
+        function buildPerFileLinksMessage(periodLabel, links) {
+            const lines = [`קבצים להורדה ${periodLabel}`, ''];
+            if (!links.length) {
+                lines.push('לא הצלחנו ליצור קישורי הורדה כרגע.');
+                return lines.join('\n');
+            }
+            lines.push('קישורים לכל קובץ:');
+            links.forEach((link) => {
+                lines.push(`${link.index}. ${link.name} - לחץ כאן: ${link.url}`);
+            });
+            return lines.join('\n');
         }
 
         function openExternalAppLink(deepLink, fallbackUrl = '') {
@@ -10993,15 +11029,8 @@ body.dark-mode .history-row {
 
             const periodLabel = getSelectedPeriodLabel();
             if (channel === 'email') {
-                let zipDownloadLink = '';
-                try {
-                    const zipBlob = await buildYearlyReceiptsZipBlob(attachments);
-                    zipDownloadLink = await uploadYearlyReceiptsZipAndGetLink(zipBlob);
-                } catch (error) {
-                    console.warn('Could not build/upload ZIP for email share, falling back to individual links.', error);
-                }
-
-                const bodyMessage = buildEmailReceiptsMessage(periodLabel, zipDownloadLink);
+                const links = await resolveReceiptLinks(attachments);
+                const bodyMessage = buildPerFileLinksMessage(periodLabel, links);
                 const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
                 const body = encodeURIComponent(bodyMessage);
                 const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
@@ -11013,20 +11042,13 @@ body.dark-mode .history-row {
                 return;
             }
 
-            let downloadLink = '';
-            try {
-                const zipBlob = await buildYearlyReceiptsZipBlob(attachments);
-                downloadLink = await uploadYearlyReceiptsZipAndGetLink(zipBlob);
-            } catch (error) {
-                console.warn('Could not build/upload ZIP for share', error);
-            }
-
-            if (!downloadLink) {
-                alert('לא ניתן ליצור קישור הורדה כרגע. נסה/י שוב בעוד כמה רגעים.');
+            const links = await resolveReceiptLinks(attachments);
+            if (!links.length) {
+                alert('לא ניתן ליצור קישורי הורדה כרגע. נסה/י שוב בעוד כמה רגעים.');
                 return;
             }
 
-            const message = buildWhatsappReceiptsMessage(periodLabel, downloadLink);
+            const message = buildPerFileLinksMessage(periodLabel, links);
             if (channel === 'whatsapp') {
                 const encodedMessage = encodeURIComponent(message);
                 const opened = openExternalAppLink(`whatsapp://send?text=${encodedMessage}`, `https://wa.me/?text=${encodedMessage}`);
@@ -11095,7 +11117,7 @@ body.dark-mode .history-row {
                 return;
             }
             try {
-                await triggerSingleAttachmentDownload(item, index);
+                await triggerSingleAttachmentDownload(item, index, { preferHttpDirect: isLikelyWebViewEnvironment() || isMobileDevice() });
             } catch (error) {
                 console.error('Failed to download attachment:', error);
                 alert('לא ניתן להוריד את הקובץ כרגע.');
