@@ -626,6 +626,30 @@ body.dark-mode .share-loading { color: var(--dark-light-text-color); }
 
 .share-loading .spinner { margin: 0 auto 12px; }
 
+
+.share-mini-progress {
+    margin-top: 12px;
+}
+
+.share-mini-progress-track {
+    height: 8px;
+    background: #f4dfe6;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.share-mini-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    transition: width .25s ease;
+}
+
+.share-mini-progress-text {
+    margin-top: 8px;
+    font-size: calc(var(--font-size-base) * 0.8);
+}
+
 .btn-loading {
     opacity: 0.85;
     pointer-events: none;
@@ -843,6 +867,12 @@ body.dark-mode .upload-fab { background: linear-gradient(135deg, var(--dark-prim
             <div class="share-loading" id="shareLoading">
                 <div class="spinner"></div>
                 <p>יוצר קישור לשיתוף...</p>
+                <div class="share-mini-progress">
+                    <div class="share-mini-progress-track">
+                        <div class="share-mini-progress-bar" id="shareProgressBar"></div>
+                    </div>
+                    <div class="share-mini-progress-text" id="shareProgressText">מתחיל...</div>
+                </div>
             </div>
             <div id="shareResult" style="display:none;">
                 <p style="font-size:calc(var(--font-size-base)*0.9); margin-bottom:8px;">
@@ -1408,6 +1438,35 @@ let currentSharePath = null;
 let currentShareName = null;
 let currentShareProjectId = null;
 
+
+function setShareProgress(progress = 0, text = 'מתחיל...') {
+    const bar = document.getElementById('shareProgressBar');
+    const txt = document.getElementById('shareProgressText');
+    if (bar) bar.style.width = `${Math.max(0, Math.min(100, Number(progress) || 0))}%`;
+    if (txt) txt.textContent = text;
+}
+
+function openGmailInChrome(subject, body) {
+    const ua = navigator.userAgent || '';
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+
+    if (/Android/i.test(ua)) {
+        const chromeIntent = `intent://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}#Intent;scheme=https;package=com.android.chrome;end`;
+        window.location.href = chromeIntent;
+        setTimeout(() => { window.open(gmailUrl, '_blank', 'noopener'); }, 500);
+        return;
+    }
+
+    if (/iPhone|iPad|iPod/i.test(ua)) {
+        const chromeScheme = `googlechrome://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+        window.location.href = chromeScheme;
+        setTimeout(() => { window.open(gmailUrl, '_blank', 'noopener'); }, 500);
+        return;
+    }
+
+    window.open(gmailUrl, '_blank', 'noopener');
+}
+
 async function openShareModal(filePath, fileName, projectId) {
     currentSharePath = filePath;
     currentShareName = fileName;
@@ -1415,6 +1474,7 @@ async function openShareModal(filePath, fileName, projectId) {
 
     document.getElementById('shareLoading').style.display = 'block';
     document.getElementById('shareResult').style.display = 'none';
+    setShareProgress(8, 'מכין קובץ לשיתוף...');
     document.getElementById('shareModal').classList.add('open');
 
     await createShareableLink(filePath, fileName, projectId);
@@ -1427,13 +1487,17 @@ window.closeShareModal = function() {
 async function createShareableLink(filePath, fileName, projectId) {
     try {
         const sourceRef = storageRef(storage, filePath);
+        setShareProgress(28, 'מוריד קובץ מאחסון...');
         const blob = await getBlob(sourceRef);
         const sharedPath = `shared/${dataUid}/${projectId}/${fileName}`;
         const sharedRef = storageRef(storage, sharedPath);
+        setShareProgress(62, 'מעלה קובץ לשיתוף...');
         await uploadBytes(sharedRef, blob, { contentType: blob.type });
+        setShareProgress(86, 'יוצר קישור הורדה...');
         const url = await getDownloadURL(sharedRef);
         const forcedDownloadUrl = withAttachmentDisposition(url, fileName);
 
+        setShareProgress(100, 'הקישור מוכן!');
         document.getElementById('shareLoading').style.display = 'none';
         document.getElementById('shareResult').style.display = 'block';
         document.getElementById('shareUrlInput').value = forcedDownloadUrl;
@@ -1468,8 +1532,7 @@ window.shareViaEmail = function() {
     }
 
     const subject = encodeURIComponent(`קישור להורדת קובץ: ${currentShareName || ''}`);
-    const body = encodeURIComponent(`היי,\n\nאפשר להוריד את הקובץ מהקישור הבא:\n${shareUrl}\n\nהקישור מוריד את הקובץ ישירות למחשב.`);
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+    const body = encodeURIComponent(`היי,\n\nאפשר להוריד את הקובץ מהקישור הבא (הורדה ישירה):\n${shareUrl}\n\nבמובייל ההורדה תרד ישירות למכשיר.`);
 
     const emailBtn = document.querySelector('#shareResult .btn-share');
     if (emailBtn) {
@@ -1477,7 +1540,8 @@ window.shareViaEmail = function() {
         emailBtn.innerHTML = '<i class="fas fa-spinner"></i> פותח Gmail...';
     }
 
-    window.open(gmailUrl, '_blank', 'noopener');
+    setShareProgress(100, 'פותח Gmail בכרום...');
+    openGmailInChrome(subject, body);
 
     setTimeout(() => {
         if (!emailBtn) return;
