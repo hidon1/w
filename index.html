@@ -11967,23 +11967,25 @@ body.dark-mode .history-row {
                 const bold = 'DejaVuSans-Bold.ttf';
                 const embeddedVfs = window.HEBREW_PDF_VFS || {};
 
-                if (!embeddedVfs[regular] || !embeddedVfs[bold]) {
+                if (!embeddedVfs[regular]) {
                     throw new Error('Hebrew font data is missing from embedded VFS script.');
                 }
+
+                const resolvedBold = embeddedVfs[bold] ? bold : regular;
 
                 pdfMake.vfs = {
                     ...(pdfMake.vfs || {}),
                     [regular]: embeddedVfs[regular],
-                    [bold]: embeddedVfs[bold]
+                    [resolvedBold]: embeddedVfs[resolvedBold]
                 };
 
                 pdfMake.fonts = {
                     ...(pdfMake.fonts || {}),
                     [HEBREW_PDF_FONT_FAMILY]: {
                         normal: regular,
-                        bold,
+                        bold: resolvedBold,
                         italics: regular,
-                        bolditalics: bold
+                        bolditalics: resolvedBold
                     }
                 };
             })();
