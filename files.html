@@ -1261,7 +1261,10 @@ async function downloadFile(filePath, fileName) {
         const directUrl = await getDownloadURL(fileRef);
         setDownloadProgress(true, 30, `מוריד: ${fileName} (30%)`);
         const forcedDownloadUrl = withAttachmentDisposition(directUrl, fileName);
-        const blob = await fetchWithValidation(forcedDownloadUrl, fileName);
+        const blob = await fetchWithValidation(forcedDownloadUrl, fileName, (ratio) => {
+            const progressPercent = 30 + (Math.max(0, ratio) * 60);
+            setDownloadProgress(true, progressPercent, `מוריד: ${fileName} (${Math.round(progressPercent)}%)`);
+        });
         setDownloadProgress(true, 95, `מוריד: ${fileName} (95%)`);
         triggerBlobDownload(blob, fileName);
         setDownloadProgress(true, 100, `הורדה הושלמה: ${fileName}`);
@@ -1296,12 +1299,42 @@ function triggerBlobDownload(blob, fileName) {
     setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
-async function fetchWithValidation(url, fileName) {
+async function fetchWithValidation(url, fileName, onProgress = null) {
     const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) {
         throw new Error(`HTTP_${response.status}`);
     }
-    const blob = await response.blob();
+
+    const totalBytes = Number(response.headers.get('content-length') || 0);
+    if (!response.body || typeof response.body.getReader !== 'function') {
+        const blob = await response.blob();
+        if (typeof onProgress === 'function') onProgress(1);
+        await assertImageBlobIsValid(blob, fileName);
+        return blob;
+    }
+
+    const reader = response.body.getReader();
+    const chunks = [];
+    let receivedBytes = 0;
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+            chunks.push(value);
+            receivedBytes += value.byteLength || value.length || 0;
+            if (typeof onProgress === 'function') {
+                if (totalBytes > 0) {
+                    onProgress(Math.min(1, receivedBytes / totalBytes));
+                } else {
+                    onProgress(0);
+                }
+            }
+        }
+    }
+
+    if (typeof onProgress === 'function') onProgress(1);
+    const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'application/octet-stream' });
     await assertImageBlobIsValid(blob, fileName);
     return blob;
 }
@@ -1466,8 +1499,11 @@ window.shareViaWhatsApp = function() {
 
 function withAttachmentDisposition(url, fileName) {
     const urlObject = new URL(url);
-    const safeFileName = encodeURIComponent(fileName || 'file');
-    urlObject.searchParams.set('response-content-disposition', `attachment; filename*=UTF-8''${safeFileName}`);
+    const cleanFileName = String(fileName || 'file').replace(/[\r\n]/g, '').trim() || 'file';
+    const asciiFallback = cleanFileName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+    const utfEncoded = encodeURIComponent(cleanFileName);
+    urlObject.searchParams.set('response-content-disposition', `attachment; filename="${asciiFallback}"; filename*=UTF-8''${utfEncoded}`);
+    urlObject.searchParams.set('response-content-type', 'application/octet-stream');
     return urlObject.toString();
 }
 

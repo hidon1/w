@@ -6425,7 +6425,7 @@ body.dark-mode .history-row {
                             <i class="fas fa-image"></i> העלה תמונה כללית
                         </button>
                     </div>
-                    <input type="file" id="generalImageUpload" accept="image/*" style="display:none;" onchange="uploadGeneralProjectImage()">
+                    <input type="file" id="generalImageUpload" accept="image/*,video/*" style="display:none;" onchange="uploadGeneralProjectImage()">
                     <ul id="generalImagesList" class="finance-attachments-list"></ul>
                 </div>
                 <div class="finance-input-buttons">
@@ -7552,7 +7552,7 @@ body.dark-mode .history-row {
                     showReminderPopup(reminder.text);
                     
                     // Show browser/system notification if enabled
-                    if (reminder.popup && 'Notification' in window && Notification.permission === 'granted') {
+                    if ('Notification' in window && Notification.permission === 'granted') {
                         const notificationOptions = {
                             icon: 'image_00b206.png',
                             badge: 'image_00b206.png',
@@ -7885,6 +7885,7 @@ body.dark-mode .history-row {
             updateInboxBadge();
         }
         function openRemindersModal() {
+            requestNotificationPermission();
             closeSidebar();
             document.querySelector('.container').style.display = 'none';
             document.querySelector('.top-section-wrapper').style.display = 'none';
@@ -9412,7 +9413,14 @@ body.dark-mode .history-row {
         }
 
         function openGeneralImagePicker() {
-            triggerFilePickerById('generalImageUpload');
+            if (!generalImageUploadInput) return;
+            generalImageUploadInput.value = '';
+            if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')) {
+                generalImageUploadInput.setAttribute('capture', 'environment');
+            } else {
+                generalImageUploadInput.removeAttribute('capture');
+            }
+            generalImageUploadInput.click();
         }
 
         function fileToDataUrl(file) {
@@ -10008,7 +10016,11 @@ body.dark-mode .history-row {
                 clearPendingFinanceAttachment();
                 return;
             }
+            if (file.type?.startsWith('image/')) {
+                notifyNativeSaveImageToGallery(file);
+            }
             setPendingFinanceAttachment(file);
+            preUploadPendingFinanceAttachment();
         }
 
         function openFinanceAttachmentPicker() {
@@ -10147,6 +10159,8 @@ body.dark-mode .history-row {
             if (lowerUrl.includes('.pdf') || lowerUrl.includes('application/pdf')) {
                 bodyEl.classList.add('pdf-mode');
                 previewNode.innerHTML = `<iframe src="${url}#view=FitH" title="${title}"></iframe>`;
+            } else if (lowerUrl.includes('.mp4') || lowerUrl.includes('.mov') || lowerUrl.includes('.webm') || lowerUrl.includes('video/')) {
+                previewNode.innerHTML = `<video src="${url}" controls playsinline style="max-width:100%;max-height:70vh;border-radius:8px;"></video>`;
             } else {
                 previewNode.innerHTML = `<img src="${url}" alt="${title}">`;
             }
@@ -10177,7 +10191,7 @@ body.dark-mode .history-row {
                 li.innerHTML = `
                     <span>${image.name || `תמונה ${idx + 1}`}</span>
                     <div class="finance-attachment-actions">
-                        <button type="button" onclick="openMediaPreview('${image.url}', 'תמונה כללית')">פתח</button>
+                        <button type="button" onclick="openMediaPreview('${image.url}', 'מדיה כללית', '${image.name || 'attachment'}')">פתח</button>
                         <button type="button" onclick="deleteGeneralProjectImage(${idx})">מחק</button>
                     </div>
                 `;
@@ -10188,9 +10202,12 @@ body.dark-mode .history-row {
         async function uploadGeneralProjectImage() {
             const file = generalImageUploadInput?.files?.[0];
             if (!file) return;
-            if (!file.type.startsWith('image/')) {
-                alert('ניתן להעלות תמונה בלבד באזור התמונות הכלליות.');
+            if (!(file.type.startsWith('image/') || file.type.startsWith('video/'))) {
+                alert('ניתן להעלות תמונה או וידאו באזור המדיה הכללית.');
                 return;
+            }
+            if (file.type.startsWith('image/')) {
+                notifyNativeSaveImageToGallery(file);
             }
             const timestamp = new Date().toLocaleString('he-IL');
             const createdAt = Date.now();
@@ -10911,85 +10928,60 @@ body.dark-mode .history-row {
             return uploadResult?.downloadUrl || '';
         }
 
-        function buildEmailReceiptsMessage(attachments, periodLabel, zipDownloadLink = '') {
+        function buildEmailReceiptsMessage(periodLabel, zipDownloadLink = '') {
             const lines = [];
             lines.push(`קבצים להורדה ${periodLabel}`);
             lines.push('');
-
-            if (zipDownloadLink) {
-                lines.push('להורדת כל הקבצים יחד לחץ כאן:');
-                lines.push(zipDownloadLink);
-                lines.push('');
-            }
-
-            lines.push('יש לך במייל קישורי הורדה ישירה לקבצים:');
+            lines.push('להורדת כל הקבצים יחד לחץ כאן:');
+            lines.push(zipDownloadLink || 'קישור ההורדה לא זמין כרגע.');
             lines.push('');
-            attachments.forEach((item, index) => {
-                const fileName = item.name || `קובץ ${index + 1}`;
-                const projectName = item.projectName || 'ללא פרויקט';
-                const timestamp = item.timestamp || '';
-                const title = `${index + 1}. ${fileName} (${projectName}${timestamp ? ` | ${timestamp}` : ''})`;
-                const fileUrl = item.url ? forceAttachmentDisposition(item.url, fileName) : '';
-                lines.push(title);
-                lines.push(`הורד: ${fileUrl}`);
-                lines.push('');
-            });
-
+            lines.push('הקישור יוריד קובץ ZIP אחד עם כל הקבצים מהתקופה שנבחרה.');
             return lines.join('\n').trim();
         }
 
-        function buildWhatsappReceiptsMessage(attachments, periodLabel, zipDownloadLink = '') {
+        function buildWhatsappReceiptsMessage(periodLabel, zipDownloadLink = '') {
             const lines = [];
             lines.push(`קבצים להורדה ${periodLabel}`);
             lines.push('');
-
-            if (zipDownloadLink) {
-                lines.push('קישור מרוכז להורדה:');
-                lines.push(zipDownloadLink);
-                lines.push('');
-            }
-
-            lines.push('קישורים לכל הקבצים:');
-            attachments.forEach((item, index) => {
-                const fileName = item.name || `קובץ ${index + 1}`;
-                lines.push(`${index + 1}. ${fileName}`);
-                lines.push(item.url || '');
-            });
-
+            lines.push('קישור מרוכז להורדת כל הקבצים יחד (ZIP):');
+            lines.push(zipDownloadLink || 'קישור ההורדה לא זמין כרגע.');
             return lines.join('\n').trim();
         }
 
         function openExternalAppLink(deepLink, fallbackUrl = '') {
             const normalizedDeepLink = typeof deepLink === 'string' ? deepLink.trim() : '';
             const normalizedFallback = typeof fallbackUrl === 'string' ? fallbackUrl.trim() : '';
-            const targetUrl = normalizedDeepLink || normalizedFallback;
-            if (!targetUrl) return false;
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+            const preferredUrl = isMobile ? (normalizedDeepLink || normalizedFallback) : (normalizedFallback || normalizedDeepLink);
+            const secondaryUrl = isMobile ? normalizedFallback : normalizedDeepLink;
+            if (!preferredUrl) return false;
 
+            let opened = false;
             try {
-                window.location.href = targetUrl;
+                const popup = window.open(preferredUrl, '_blank');
+                opened = !!popup;
             } catch (error) {
-                console.warn('Failed to set location.href for external app link', error);
+                console.warn('Failed to open external link with window.open', error);
             }
 
-            let popupOpened = false;
             try {
-                const popup = window.open(targetUrl, '_blank');
-                popupOpened = !!popup;
+                window.location.href = preferredUrl;
+                opened = true;
             } catch (error) {
-                console.warn('Failed to open external app link with window.open', error);
+                console.warn('Failed to set location.href for external link', error);
             }
 
-            if (normalizedFallback && normalizedDeepLink && normalizedFallback !== normalizedDeepLink) {
+            if (secondaryUrl && secondaryUrl !== preferredUrl) {
                 setTimeout(() => {
                     try {
-                        window.location.href = normalizedFallback;
+                        window.location.href = secondaryUrl;
                     } catch (error) {
-                        console.warn('Failed to open fallback app link', error);
+                        console.warn('Failed to open secondary external link', error);
                     }
-                }, 500);
+                }, 700);
             }
 
-            return popupOpened || !!targetUrl;
+            return opened;
         }
 
         async function shareYearlyReceipts(channel) {
@@ -11009,7 +11001,7 @@ body.dark-mode .history-row {
                     console.warn('Could not build/upload ZIP for email share, falling back to individual links.', error);
                 }
 
-                const bodyMessage = buildEmailReceiptsMessage(attachments, periodLabel, zipDownloadLink);
+                const bodyMessage = buildEmailReceiptsMessage(periodLabel, zipDownloadLink);
                 const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
                 const body = encodeURIComponent(bodyMessage);
                 const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
@@ -11034,7 +11026,7 @@ body.dark-mode .history-row {
                 return;
             }
 
-            const message = buildWhatsappReceiptsMessage(attachments, periodLabel, downloadLink);
+            const message = buildWhatsappReceiptsMessage(periodLabel, downloadLink);
             if (channel === 'whatsapp') {
                 const encodedMessage = encodeURIComponent(message);
                 const opened = openExternalAppLink(`whatsapp://send?text=${encodedMessage}`, `https://wa.me/?text=${encodedMessage}`);
