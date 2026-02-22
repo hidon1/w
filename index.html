@@ -113,7 +113,7 @@
         min-width: 50px;
         max-width: none;
         padding: 6px 8px;
-        font-size: calc(var(--font-size-base) * 0.68);
+        font-size: calc(var(--font-size-base) * 0.76);
         flex: 1 1 calc(33.333% - 4px);
         border-radius: 8px;
         min-height: 44px; /* Ensure minimum touch target size on mobile */
@@ -125,7 +125,7 @@
     }
 
     .stage-nav-button.tight-hebrew {
-        font-size: calc(var(--font-size-base) * 0.63);
+        font-size: calc(var(--font-size-base) * 0.71);
     }
     .close-button {
         top: 20px;
@@ -272,7 +272,7 @@
     }
     
     .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.64);
+        font-size: calc(var(--font-size-base) * 0.72);
         white-space: normal;
         word-break: break-word;
         overflow-wrap: anywhere;
@@ -303,10 +303,10 @@
     }
     
     .modal-content {
-        width: 95%;
-        max-width: 95vw;
+        width: 99%;
+        max-width: 99vw;
         max-height: 85vh;
-        padding: 20px 15px;
+        padding: 20px 10px;
         overflow-y: auto;
     }
     
@@ -3666,27 +3666,113 @@ body.dark-mode .inbox-message-content p {
 }
 
 @media (max-width: 768px) {
+    .modal {
+        padding: 4px;
+    }
+
+    .project-summary-modal-content {
+        width: 99vw;
+        max-width: 99vw;
+        padding: 18px 8px;
+    }
+
+    .project-summary-table {
+        font-size: 0.78rem;
+        table-layout: fixed;
+    }
+
+    .project-summary-table th,
+    .project-summary-table td {
+        padding: 6px 4px;
+        word-break: break-word;
+    }
+
+    .project-summary-table th:nth-child(1),
+    .project-summary-table td:nth-child(1) { width: 20%; }
+
+    .project-summary-table th:nth-child(2),
+    .project-summary-table td:nth-child(2) { width: 24%; }
+
+    .project-summary-table th:nth-child(3),
+    .project-summary-table td:nth-child(3) { width: 22%; }
+
+    .project-summary-table th:nth-child(4),
+    .project-summary-table td:nth-child(4) {
+        width: 34%;
+        font-size: 0.74rem;
+    }
+
+    .reminders-modal-content {
+        width: 99vw;
+        max-width: 99vw;
+        padding: 18px 10px;
+    }
+
+    .image-upload-buttons {
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    .image-upload-btn,
+    .camera-btn {
+        min-width: 0;
+        flex: 1 1 50%;
+        font-size: calc(var(--font-size-base) * 0.82);
+        padding: 9px 8px;
+    }
+
     .inbox-message-header {
-        padding: 12px;
-        gap: 10px;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "meta icon"
+            "preview preview";
+        align-items: start;
+        padding: 10px;
+        gap: 8px;
     }
     
     .inbox-icon {
-        width: 35px;
-        height: 35px;
-        font-size: 16px;
+        grid-area: icon;
+        justify-self: end;
+        width: 36px;
+        height: 36px;
+        font-size: 15px;
+    }
+
+    .inbox-preview {
+        grid-area: preview;
+        width: 100%;
     }
     
     .inbox-subject {
-        font-size: calc(var(--font-size-base) * 0.9);
+        font-size: calc(var(--font-size-base) * 0.92);
     }
     
     .inbox-snippet {
-        font-size: calc(var(--font-size-base) * 0.8);
+        font-size: calc(var(--font-size-base) * 0.84);
+        white-space: normal;
     }
     
     .inbox-meta {
-        font-size: calc(var(--font-size-base) * 0.75);
+        grid-area: meta;
+        font-size: calc(var(--font-size-base) * 0.8);
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .inbox-message-body {
+        padding: 12px 10px;
+    }
+
+    .inbox-message-actions {
+        justify-content: stretch;
+    }
+
+    .inbox-delete-btn {
+        width: 100%;
+        justify-content: center;
     }
 }
 
@@ -4240,7 +4326,7 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
     }
     .history-upload-btn,
     .history-list li .undo-button {
-        font-size: calc(var(--font-size-base) * 0.54);
+        font-size: calc(var(--font-size-base) * 0.64);
         padding: 2px 6px;
         margin-right: 0;
         min-height: 24px;
@@ -4268,7 +4354,7 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
     }
     #financeMediaListModal .history-upload-btn {
         padding: 2px 5px;
-        font-size: calc(var(--font-size-base) * 0.52);
+        font-size: calc(var(--font-size-base) * 0.62);
         min-height: 22px;
     }
     .media-preview-content {
@@ -4284,7 +4370,7 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
     .finance-attachment-actions button,
     #financeMediaListModal .history-upload-btn {
         padding: 2px 6px;
-        font-size: calc(var(--font-size-base) * 0.54);
+        font-size: calc(var(--font-size-base) * 0.64);
         min-height: 22px;
         border-radius: 5px;
         margin-top: 0;
