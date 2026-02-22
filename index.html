@@ -6205,6 +6205,158 @@ body.dark-mode .history-row {
     }
 }
 
+
+
+/* ===== 2026 WebView-safe redesign override ===== */
+:root {
+    --app-surface: #fffdf9;
+    --app-surface-2: #f8f1e8;
+    --app-border-soft: rgba(101, 22, 47, 0.12);
+}
+
+body {
+    background: radial-gradient(circle at 12% 15%, #fff8ee 0%, #f9efe0 45%, #f2e5d1 100%) !important;
+    background-attachment: scroll !important;
+    min-height: 100dvh;
+    padding-bottom: 78px;
+}
+
+.top-section-wrapper,
+.dashboard-section,
+.input-group,
+.project-details-card,
+.secondary-panel,
+.modal-content,
+.filters-panel,
+.sidebar {
+    border-radius: 18px !important;
+    border: 1px solid var(--app-border-soft) !important;
+    box-shadow: 0 10px 28px rgba(101, 22, 47, 0.09) !important;
+    backdrop-filter: saturate(1.04);
+}
+
+.stage-nav-container {
+    gap: 10px !important;
+    padding: 10px 14px !important;
+}
+
+.stage-nav-button,
+.input-group button,
+.graph-controls button,
+.add-data-cube,
+.category-nav-btn,
+.sidebar button {
+    min-height: 38px !important;
+    padding: 7px 11px !important;
+    border-radius: 11px !important;
+    font-size: calc(var(--font-size-base) * 0.78) !important;
+    letter-spacing: 0;
+    transform: translateZ(0);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.stage-nav-button {
+    background: linear-gradient(135deg, #6d1632, #8d2645) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.input-section,
+.dashboard-grid,
+.secondary-grid {
+    gap: 12px !important;
+}
+
+.input-group {
+    background: linear-gradient(165deg, var(--app-surface), var(--app-surface-2)) !important;
+}
+
+.input-group input,
+.input-group select,
+.input-group textarea,
+.secondary-input-row input,
+.secondary-input-row select {
+    border-radius: 10px !important;
+    border: 1px solid rgba(101, 22, 47, 0.18) !important;
+    background: #fff !important;
+    min-height: 38px;
+    font-size: calc(var(--font-size-base) * 0.84) !important;
+}
+
+button,
+.stage-nav-button,
+.dashboard-item,
+.input-group,
+.sidebar,
+.project-details-card,
+.category-nav,
+.top-section-wrapper {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: auto !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+    * {
+        animation: none !important;
+    }
+
+    .stage-nav-button:hover,
+    .input-group button:hover,
+    .category-nav-btn:hover,
+    .dashboard-item:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    .input-section,
+    .dashboard-grid,
+    .secondary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-bottom: 88px;
+    }
+
+    .top-section-wrapper {
+        border-radius: 0 0 18px 18px !important;
+        padding: 12px !important;
+    }
+
+    .stage-nav-button,
+    .input-group button,
+    .graph-controls button,
+    .add-data-cube {
+        min-height: 36px !important;
+        font-size: calc(var(--font-size-base) * 0.72) !important;
+        padding: 6px 8px !important;
+    }
+
+    .input-group {
+        padding: 10px !important;
+    }
+
+    .input-section,
+    .dashboard-grid,
+    .secondary-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+}
+
+@media (max-width: 560px) {
+    .input-section,
+    .dashboard-grid,
+    .secondary-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
     </style>
 </head>
 <body class="preload">
