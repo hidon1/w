@@ -1401,6 +1401,14 @@ body.dark-mode .modal-graph-container {
     flex-shrink: 0;
 }
 
+.history-entry-actions-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 8px;
+    flex-wrap: wrap;
+}
+
 .history-upload-btn {
     background: linear-gradient(135deg, #1e88e5, #1565c0);
     color: white;
@@ -4210,20 +4218,75 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
     }
 
     .history-list li {
-        padding: 10px;
+        padding: 8px;
         align-items: stretch;
     }
+    .history-list li strong {
+        font-size: calc(var(--font-size-base) * 0.92);
+    }
+    .history-list li span.timestamp {
+        font-size: calc(var(--font-size-base) * 0.62);
+    }
     .history-entry-actions {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: flex-end;
-        gap: 6px;
+        gap: 4px;
+        margin-top: 4px;
+    }
+    .history-entry-actions-inline {
+        margin-right: 6px;
+        gap: 3px;
     }
     .history-upload-btn,
     .history-list li .undo-button {
-        font-size: calc(var(--font-size-base) * 0.62);
-        padding: 5px 8px;
+        font-size: calc(var(--font-size-base) * 0.54);
+        padding: 2px 6px;
         margin-right: 0;
-        min-height: 34px;
+        min-height: 24px;
+        line-height: 1.1;
+        border-radius: 5px;
+        white-space: nowrap;
+    }
+    .history-upload-btn i,
+    .history-list li .undo-button i {
+        font-size: 0.9em;
+    }
+    #financeMediaListModal .finance-yearly-modal-content,
+    #financeYearlyModal .finance-yearly-modal-content,
+    #globalFinanceReportModal .global-finance-modal-content,
+    #historyModal .modal-content {
+        width: 96vw;
+        max-width: 96vw;
+        padding: 16px 10px;
+    }
+    #financeMediaListModal .history-list li {
+        gap: 6px;
+    }
+    #financeMediaListModal .history-entry-actions {
+        gap: 3px;
+    }
+    #financeMediaListModal .history-upload-btn {
+        padding: 2px 5px;
+        font-size: calc(var(--font-size-base) * 0.52);
+        min-height: 22px;
+    }
+    .media-preview-content {
+        width: 98vw;
+        max-width: 98vw;
+        height: min(94vh, 940px);
+        padding: 14px 10px;
+    }
+    .media-preview-body {
+        min-height: 220px;
+    }
+    .yearly-report-actions .download-pdf-btn,
+    .finance-attachment-actions button,
+    #financeMediaListModal .history-upload-btn {
+        padding: 2px 6px;
+        font-size: calc(var(--font-size-base) * 0.54);
+        min-height: 22px;
+        border-radius: 5px;
+        margin-top: 0;
     }
     .modal-graph-container {
         height: 260px;
@@ -9646,18 +9709,15 @@ body.dark-mode .history-row {
                         ? `<img src="${entry.imageUrl}" class="metric-thumb-preview" onclick="event.stopPropagation(); openMetricImagePreview('${entry.imageUrl}')" alt="תמונת מדידה">`
                         : '';
                     const uploadMetricImageButton = sectionId !== 'wineDetails'
-                        ? `<button class="history-upload-btn" onclick="event.stopPropagation(); uploadMetricImageForEntry('${sectionId}', '${metricId}', ${originalIndex})"><i class="fas fa-camera"></i> העלאת תמונה</button>`
+                        ? `<button class="history-upload-btn" onclick="event.stopPropagation(); uploadMetricImageForEntry('${sectionId}', '${metricId}', ${originalIndex})"><i class="fas fa-camera"></i> תמונה</button>`
                         : '';
                     listItem.innerHTML = `
                         <div class="history-entry-main">
                             <strong>${displayValue}</strong>
-                            <span class="timestamp">${entry.timestamp}</span>
+                            <span class="timestamp">${entry.timestamp}<span class="history-entry-actions-inline">${uploadMetricImageButton}<button class="history-upload-btn" onclick="editHistoryEntry('${sectionId}', '${metricId}', ${originalIndex})">ערוך</button><button class="undo-button" onclick="undoUpdate('${sectionId}', '${metricId}', ${originalIndex})">בטל</button></span></span>
                         </div>
                         <div class="history-entry-actions">
                             ${imagePreviewHtml}
-                            ${uploadMetricImageButton}
-                            <button class="history-upload-btn" onclick="editHistoryEntry('${sectionId}', '${metricId}', ${originalIndex})">ערוך</button>
-                            <button class="undo-button" onclick="undoUpdate('${sectionId}', '${metricId}', ${originalIndex})">בטל</button>
                         </div>
                     `;
                     historyList.appendChild(listItem);
@@ -10125,21 +10185,24 @@ body.dark-mode .history-row {
             titleEl.textContent = title;
             bodyEl.innerHTML = '';
             bodyEl.classList.remove('pdf-mode');
+            const isImageFile = /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)(\?|#|$)/i.test(url || '') || /^data:image\//i.test(url || '');
             const actionsWrap = document.createElement('div');
             actionsWrap.className = 'media-preview-actions';
-            const downloadBtn = document.createElement('button');
-            downloadBtn.type = 'button';
-            downloadBtn.className = 'history-upload-btn';
-            downloadBtn.innerHTML = '<i class="fas fa-download"></i> הורד';
-            downloadBtn.addEventListener('click', async () => {
-                try {
-                    await triggerSingleAttachmentDownload({ url, name: downloadFileName || title }, 0, { preferHttpDirect: isLikelyWebViewEnvironment() || isMobileDevice() });
-                } catch (error) {
-                    console.error('Failed to download preview file:', error);
-                    alert('לא ניתן להוריד את הקובץ כרגע.');
-                }
-            });
-            actionsWrap.appendChild(downloadBtn);
+            if (!isImageFile) {
+                const downloadBtn = document.createElement('button');
+                downloadBtn.type = 'button';
+                downloadBtn.className = 'history-upload-btn';
+                downloadBtn.innerHTML = '<i class="fas fa-download"></i> הורד';
+                downloadBtn.addEventListener('click', async () => {
+                    try {
+                        await triggerSingleAttachmentDownload({ url, name: downloadFileName || title }, 0, { preferHttpDirect: isLikelyWebViewEnvironment() || isMobileDevice() });
+                    } catch (error) {
+                        console.error('Failed to download preview file:', error);
+                        alert('לא ניתן להוריד את הקובץ כרגע.');
+                    }
+                });
+                actionsWrap.appendChild(downloadBtn);
+            }
             bodyEl.appendChild(actionsWrap);
             const previewNode = document.createElement('div');
             previewNode.style.flex = '1';
@@ -11148,8 +11211,8 @@ body.dark-mode .history-row {
                         </div>
                         <div class="history-entry-actions">
                             <button class="history-upload-btn" onclick="openMediaPreview('${item.url}', 'קובץ מצורף', '${item.name || 'attachment'}')">פתח</button>
-                            <button class="history-upload-btn" onclick="downloadSingleFinanceAttachment(${idx})"><i class="fas fa-download"></i> הורד</button>
-                            <button class="history-upload-btn" onclick="deleteFinanceMediaListItem(${idx})"><i class="fas fa-trash"></i> מחק</button>
+                            <button class="history-upload-btn" onclick="downloadSingleFinanceAttachment(${idx})">הורד</button>
+                            <button class="history-upload-btn" onclick="deleteFinanceMediaListItem(${idx})">מחק</button>
                         </div>
                     `;
                     listEl.appendChild(li);
