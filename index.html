@@ -1519,13 +1519,39 @@ body.dark-mode .history-list li {
     border: none;
     box-shadow: 0 4px 16px rgba(123, 31, 61, 0.4);
     cursor: pointer;
-    z-index: 950;
+    z-index: 1120;
     display: none;
     font-size: 20px;
     transition: all 0.3s ease;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     user-select: none;
+}
+
+@media (min-width: 769px) and (max-width: 1100px) {
+    .input-section {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 260px));
+    }
+
+    .input-group {
+        min-height: 190px;
+    }
+
+    .dashboard-section {
+        top: 62px;
+        bottom: auto;
+    }
+
+    .secondary-panel {
+        margin-top: 140px;
+    }
+
+    .card-fab {
+        top: 86px;
+        bottom: auto;
+        left: 14px;
+        z-index: 1210;
+    }
 }
 .card-fab-icon {
     width: 36px;
@@ -4350,12 +4376,38 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
         gap: 6px;
     }
     #financeMediaListModal .history-entry-actions {
-        gap: 3px;
+        gap: 5px;
     }
     #financeMediaListModal .history-upload-btn {
-        padding: 2px 5px;
-        font-size: calc(var(--font-size-base) * 0.62);
-        min-height: 22px;
+        padding: 4px 8px;
+        font-size: calc(var(--font-size-base) * 0.72);
+        min-height: 28px;
+    }
+
+    .history-entry-actions-inline {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px;
+        width: 100%;
+        margin-top: 6px;
+        margin-right: 0;
+    }
+
+    .history-entry-actions-inline .history-upload-btn,
+    .history-entry-actions-inline .undo-button {
+        width: 100%;
+        margin-right: 0;
+        padding: 6px 8px;
+        font-size: calc(var(--font-size-base) * 0.68);
+        min-height: 30px;
+        line-height: 1.15;
+        text-align: center;
+    }
+
+    .history-entry-actions-inline .undo-button {
+        grid-column: 1 / -1;
+        max-width: 82%;
+        justify-self: center;
     }
     .media-preview-content {
         width: 98vw;
@@ -4369,9 +4421,9 @@ body.dark-mode .login-modal-content .toggle-form-btn:hover {
     .yearly-report-actions .download-pdf-btn,
     .finance-attachment-actions button,
     #financeMediaListModal .history-upload-btn {
-        padding: 2px 6px;
-        font-size: calc(var(--font-size-base) * 0.64);
-        min-height: 22px;
+        padding: 4px 8px;
+        font-size: calc(var(--font-size-base) * 0.72);
+        min-height: 28px;
         border-radius: 5px;
         margin-top: 0;
     }
@@ -8003,7 +8055,7 @@ body.dark-mode .history-row {
                             ${imageHtml}
                         </div>
                         <div class="inbox-message-actions">
-                            <button onclick="deleteInbox(${reminder.id})" class="inbox-delete-btn">
+                            <button onclick="deleteInbox(${reminder.id}, ${index})" class="inbox-delete-btn">
                                 <i class="fas fa-trash"></i> מחק
                             </button>
                         </div>
@@ -8028,8 +8080,13 @@ body.dark-mode .history-row {
                 icon.classList.add('fa-chevron-down');
             }
         }
-        async function deleteInbox(id) {
-            inbox = inbox.filter(r => r.id !== id);
+        async function deleteInbox(id, index = -1) {
+            const normalizedId = String(id ?? '');
+            if (normalizedId) {
+                inbox = inbox.filter((item) => String(item?.id ?? '') !== normalizedId);
+            } else if (Number.isInteger(index) && index >= 0 && index < inbox.length) {
+                inbox.splice(index, 1);
+            }
             queueInboxSave();
             renderInboxList();
             updateInboxBadge();
@@ -8643,6 +8700,7 @@ body.dark-mode .history-row {
 
         function openProjectSummaryModal() {
             if (!projectSummaryModal) return;
+            closeSidebar();
             const project = projects[currentProjectId];
             const rows = [];
             const pills = [];
@@ -10979,12 +11037,18 @@ body.dark-mode .history-row {
             if (!url) {
                 throw new Error('DIRECT_URL_MISSING');
             }
+            const safeUrl = String(url);
+            if (isMobileDevice() || isLikelyWebViewEnvironment()) {
+                window.location.assign(safeUrl);
+                return;
+            }
             const a = document.createElement('a');
-            a.href = url;
+            a.href = safeUrl;
             if (fileName) {
                 a.download = sanitizeDownloadFileName(fileName);
             }
             a.rel = 'noopener';
+            a.target = '_self';
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -10996,6 +11060,7 @@ body.dark-mode .history-row {
             a.href = url;
             a.download = sanitizeDownloadFileName(fileName);
             a.rel = 'noopener';
+            a.target = '_self';
             document.body.appendChild(a);
             a.click();
             a.remove();
