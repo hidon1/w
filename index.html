@@ -10986,6 +10986,54 @@ body.dark-mode .history-row {
             return lines.join('\n');
         }
 
+        function ensureShareProgressDialog() {
+            let dialog = document.getElementById('shareProgressDialog');
+            if (dialog) return dialog;
+
+            dialog = document.createElement('div');
+            dialog.id = 'shareProgressDialog';
+            dialog.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.34);display:none;align-items:center;justify-content:center;z-index:10002;padding:14px;';
+            dialog.innerHTML = `
+                <div style="width:min(360px,95vw);background:#fff;border-radius:14px;padding:16px 14px;box-shadow:0 18px 40px rgba(0,0,0,0.2);border:1px solid rgba(125,27,56,0.15);text-align:right;direction:rtl;">
+                    <div id="shareProgressText" style="font-weight:700;color:#7b1f3d;font-size:0.95rem;margin-bottom:10px;">מכין שיתוף...</div>
+                    <div style="height:10px;background:#f4dfe6;border-radius:999px;overflow:hidden;">
+                        <div id="shareProgressBar" style="height:100%;width:0%;background:linear-gradient(135deg,#7b1f3d,#b85c80);transition:width .25s ease;"></div>
+                    </div>
+                </div>`;
+            document.body.appendChild(dialog);
+            return dialog;
+        }
+
+        function setShareProgressDialog(visible, progress = 0, text = 'מכין שיתוף...') {
+            const dialog = ensureShareProgressDialog();
+            const textEl = document.getElementById('shareProgressText');
+            const barEl = document.getElementById('shareProgressBar');
+            dialog.style.display = visible ? 'flex' : 'none';
+            if (textEl) textEl.textContent = text;
+            if (barEl) barEl.style.width = `${Math.max(0, Math.min(100, Number(progress) || 0))}%`;
+        }
+
+        function openGmailComposeInChrome(subject, body) {
+            const ua = navigator.userAgent || '';
+            const isAndroid = /Android/i.test(ua);
+            const isIOS = /iPhone|iPad|iPod/i.test(ua);
+            const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+
+            if (isAndroid) {
+                const chromeIntentUrl = `intent://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}#Intent;scheme=https;package=com.android.chrome;end`;
+                openExternalAppLink(chromeIntentUrl, gmailWebUrl);
+                return;
+            }
+
+            if (isIOS) {
+                const chromeUrl = `googlechrome://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+                openExternalAppLink(chromeUrl, gmailWebUrl);
+                return;
+            }
+
+            window.open(gmailWebUrl, '_blank', 'noopener');
+        }
+
         function openExternalAppLink(deepLink, fallbackUrl = '') {
             const normalizedDeepLink = typeof deepLink === 'string' ? deepLink.trim() : '';
             const normalizedFallback = typeof fallbackUrl === 'string' ? fallbackUrl.trim() : '';
@@ -11031,20 +11079,20 @@ body.dark-mode .history-row {
 
             const periodLabel = getSelectedPeriodLabel();
             if (channel === 'email') {
-                const links = await resolveReceiptLinks(attachments);
-                const bodyMessage = buildPerFileLinksMessage(periodLabel, links);
-                const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
-                const body = encodeURIComponent(bodyMessage);
-                const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
                 try {
-                    window.location.href = mailtoUrl;
+                    setShareProgressDialog(true, 12, 'מכין קישורי הורדה...');
+                    const links = await resolveReceiptLinks(attachments);
+                    setShareProgressDialog(true, 72, 'פותח Gmail בכרום...');
+                    const bodyMessage = buildPerFileLinksMessage(periodLabel, links);
+                    const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
+                    const body = encodeURIComponent(bodyMessage);
+                    openGmailComposeInChrome(subject, body);
+                    setShareProgressDialog(true, 100, 'מוכן! חלון המייל נפתח.');
                 } catch (error) {
-                    const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
-                    const gmailDeepLink = `googlegmail://co?subject=${subject}&body=${body}`;
-                    const opened = openExternalAppLink(gmailDeepLink, gmailWebUrl);
-                    if (!opened) {
-                        alert('לא הצלחנו לפתוח את המייל כרגע. נסה/י שוב בעוד כמה רגעים.');
-                    }
+                    console.warn('Failed to open Gmail share flow', error);
+                    alert('לא הצלחנו לפתוח את Gmail כרגע. נסה/י שוב בעוד כמה רגעים.');
+                } finally {
+                    setTimeout(() => setShareProgressDialog(false, 0, 'מכין שיתוף...'), 900);
                 }
                 return;
             }
