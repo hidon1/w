@@ -720,6 +720,76 @@ body.dark-mode .upload-fab { background: linear-gradient(135deg, var(--dark-prim
 @media (max-width: 380px) {
     :root { --font-size-base: 15px; }
 }
+
+
+/* ===== 2026 responsive redesign override ===== */
+body {
+    background: radial-gradient(circle at 10% 10%, #fff7ee 0%, #f6ebdd 45%, #f0dfcb 100%) !important;
+    background-attachment: scroll !important;
+    min-height: 100dvh;
+}
+
+.top-section-wrapper,
+.filters-section,
+.file-list-section,
+.file-item,
+.auth-notice,
+.modal-content {
+    border-radius: 16px !important;
+    border: 1px solid rgba(101,22,47,0.12) !important;
+    box-shadow: 0 10px 24px rgba(101,22,47,0.08) !important;
+}
+
+.btn-primary,
+.btn-secondary,
+.file-actions button,
+.back-link {
+    min-height: 38px !important;
+    border-radius: 10px !important;
+    padding: 7px 12px !important;
+    font-size: calc(var(--font-size-base) * 0.78) !important;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.file-item {
+    background: linear-gradient(145deg, #fffdf9, #f8eee3) !important;
+}
+
+.file-name {
+    font-size: calc(var(--font-size-base) * 0.9) !important;
+}
+
+.file-meta {
+    font-size: calc(var(--font-size-base) * 0.78) !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+    * { animation: none !important; }
+    .btn-primary:hover,
+    .btn-secondary:hover,
+    .file-item:hover,
+    .back-link:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .main-container { padding: 0 12px !important; }
+    .filters-section { gap: 8px !important; padding: 14px !important; }
+}
+
+@media (max-width: 640px) {
+    .top-section-wrapper { padding: 12px !important; }
+    .filter-group { min-width: 100% !important; }
+    .btn-primary,
+    .btn-secondary,
+    .file-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
     </style>
 </head>
 <body class="preload">
