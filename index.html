@@ -10090,16 +10090,7 @@ body.dark-mode .history-row {
         }
 
         async function openFinanceCameraCapture() {
-            if (isLikelyWebViewEnvironment()) {
-                const capturedFromWebView = await openCameraFilePickerFallback();
-                if (capturedFromWebView) {
-                    setPendingFinanceAttachment(capturedFromWebView);
-                    await preUploadPendingFinanceAttachment();
-                    return;
-                }
-            }
-
-            // צילום קבלה: ננסה קודם מצלמה ישירה כדי לא לפתוח "מצלמה או קבצים"
+            // צילום קבלה: ננסה קודם מצלמה ישירה כדי לפתוח מיד חלונית צילום עם כפתור "צלם"
             try {
                 const streamedCapture = await openCameraCaptureModal({ title: 'צילום קבלה' });
                 if (streamedCapture) {
@@ -10111,7 +10102,7 @@ body.dark-mode .history-row {
                 console.warn('Finance camera capture failed:', error);
             }
 
-            // fallback למכשירים שבהם אין תמיכה ב-stream
+            // fallback למכשירים/ווב-ויו שבהם אין תמיכה ב-stream
             const capturedFile = await openCameraFilePickerFallback();
             if (capturedFile) {
                 setPendingFinanceAttachment(capturedFile);
@@ -10258,6 +10249,11 @@ body.dark-mode .history-row {
             const images = projects[currentProjectId]?.generalImages || [];
             const target = images[index];
             if (!target) return;
+            const confirmed = await showConfirmation(
+                `האם אתה בטוח שברצונך למחוק את הקובץ "${target.name || 'קובץ'}"?`,
+                'מחיקת קובץ'
+            );
+            if (!confirmed) return;
             images.splice(index, 1);
             saveAllProjects();
             renderGeneralImagesList();
@@ -10618,6 +10614,9 @@ body.dark-mode .history-row {
                     if (receiptTypeFilter !== 'all' && entry.type !== receiptTypeFilter) return;
                     if (entry.attachment?.url) {
                         attachments.push({
+                            projectId,
+                            sourceType: 'financeEntry',
+                            entryId: entry.id,
                             projectName: project.name,
                             timestamp: entry.timestamp,
                             name: entry.attachment.name || 'receipt',
@@ -10632,6 +10631,9 @@ body.dark-mode .history-row {
                     if (dateObj && dateObj.getFullYear() !== parseInt(selectedYear, 10)) return;
                     if (selectedMonth !== 'all' && dateObj && (dateObj.getMonth() + 1) !== parseInt(selectedMonth, 10)) return;
                     attachments.push({
+                        projectId,
+                        sourceType: 'generalImage',
+                        generalImageIndex: (project.generalImages || []).indexOf(item),
                         projectName: project.name,
                         timestamp: item.timestamp || '',
                         name: item.name || 'general_image',
@@ -10769,6 +10771,7 @@ body.dark-mode .history-row {
                 const urlObj = new URL(url);
                 const safeFileName = encodeURIComponent(sanitizeDownloadFileName(fileName || 'file'));
                 urlObj.searchParams.set('response-content-disposition', `attachment; filename*=UTF-8''${safeFileName}`);
+                urlObj.searchParams.set('response-content-type', 'application/octet-stream');
                 return urlObj.toString();
             } catch (error) {
                 console.warn('Could not force attachment disposition for URL', error);
@@ -10831,7 +10834,6 @@ body.dark-mode .history-row {
             if (fileName) {
                 a.download = sanitizeDownloadFileName(fileName);
             }
-            a.target = '_blank';
             a.rel = 'noopener';
             document.body.appendChild(a);
             a.click();
@@ -11033,11 +11035,16 @@ body.dark-mode .history-row {
                 const bodyMessage = buildPerFileLinksMessage(periodLabel, links);
                 const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
                 const body = encodeURIComponent(bodyMessage);
-                const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
-                const gmailDeepLink = `googlegmail://co?subject=${subject}&body=${body}`;
-                const opened = openExternalAppLink(gmailDeepLink, gmailWebUrl);
-                if (!opened) {
-                    alert('לא הצלחנו לפתוח את Gmail כרגע. נסה/י שוב בעוד כמה רגעים.');
+                const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
+                try {
+                    window.location.href = mailtoUrl;
+                } catch (error) {
+                    const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+                    const gmailDeepLink = `googlegmail://co?subject=${subject}&body=${body}`;
+                    const opened = openExternalAppLink(gmailDeepLink, gmailWebUrl);
+                    if (!opened) {
+                        alert('לא הצלחנו לפתוח את המייל כרגע. נסה/י שוב בעוד כמה רגעים.');
+                    }
                 }
                 return;
             }
@@ -11060,6 +11067,7 @@ body.dark-mode .history-row {
 
 
         let currentFinanceMediaListAttachments = [];
+        let currentFinanceMediaListMode = 'yearly';
 
         function openFinanceMediaListModal(mode = 'yearly') {
             const listEl = document.getElementById('financeMediaList');
@@ -11072,6 +11080,7 @@ body.dark-mode .history-row {
             const attachments = mode === 'global'
                 ? collectAllFinanceMedia()
                 : collectReceiptAttachmentsForReport();
+            currentFinanceMediaListMode = mode;
             currentFinanceMediaListAttachments = attachments.slice();
 
             titleEl.textContent = mode === 'global'
@@ -11092,6 +11101,7 @@ body.dark-mode .history-row {
                         <div class="history-entry-actions">
                             <button class="history-upload-btn" onclick="openMediaPreview('${item.url}', 'קובץ מצורף', '${item.name || 'attachment'}')">פתח</button>
                             <button class="history-upload-btn" onclick="downloadSingleFinanceAttachment(${idx})"><i class="fas fa-download"></i> הורד</button>
+                            <button class="history-upload-btn" onclick="deleteFinanceMediaListItem(${idx})"><i class="fas fa-trash"></i> מחק</button>
                         </div>
                     `;
                     listEl.appendChild(li);
@@ -11104,6 +11114,7 @@ body.dark-mode .history-row {
             const modalEl = document.getElementById('financeMediaListModal');
             if (modalEl) modalEl.style.display = 'none';
             currentFinanceMediaListAttachments = [];
+            currentFinanceMediaListMode = 'yearly';
         }
 
 
@@ -11124,6 +11135,66 @@ body.dark-mode .history-row {
             }
         }
 
+
+        async function deleteFinanceMediaListItem(index) {
+            if (!ensureFinancePermission()) {
+                return;
+            }
+            const item = currentFinanceMediaListAttachments[index];
+            if (!item) {
+                alert('הקובץ לא נמצא.');
+                return;
+            }
+            const confirmed = await showConfirmation(
+                `האם אתה בטוח שברצונך למחוק את הקובץ "${item.name || 'קובץ'}"?`,
+                'מחיקת קובץ'
+            );
+            if (!confirmed) return;
+
+            const project = projects[item.projectId];
+            if (!project) {
+                alert('הפרויקט של הקובץ לא נמצא.');
+                return;
+            }
+
+            let deleted = false;
+            let storagePath = item.path || '';
+
+            if (item.sourceType === 'financeEntry') {
+                const entry = (project.finance || []).find((financeEntry) => String(financeEntry.id) === String(item.entryId));
+                if (entry?.attachment) {
+                    storagePath = storagePath || entry.attachment.path || '';
+                    entry.attachment = null;
+                    deleted = true;
+                }
+            } else if (item.sourceType === 'generalImage') {
+                const images = project.generalImages || [];
+                const indexInArray = images.findIndex((img) =>
+                    (storagePath && img.path && img.path === storagePath)
+                    || ((img.url || '') === (item.url || '') && (img.name || '') === (item.name || ''))
+                );
+                if (indexInArray >= 0) {
+                    const [removed] = images.splice(indexInArray, 1);
+                    storagePath = storagePath || removed?.path || '';
+                    deleted = true;
+                }
+            }
+
+            if (!deleted) {
+                alert('לא מצאנו את הקובץ למחיקה.');
+                return;
+            }
+
+            saveAllProjects();
+            renderFinanceList();
+            renderGeneralImagesList();
+            openFinanceMediaListModal(currentFinanceMediaListMode || 'yearly');
+
+            if (storagePath && window.firebaseAccess?.deleteFileFromStorage) {
+                window.firebaseAccess.deleteFileFromStorage(storagePath).catch(() => {});
+            }
+        }
+
         function collectAllFinanceMedia() {
             const attachments = [];
             Object.keys(projects).forEach(projectId => {
@@ -11131,20 +11202,28 @@ body.dark-mode .history-row {
                 (project.finance || []).forEach(entry => {
                     if (entry.attachment?.url) {
                         attachments.push({
+                            projectId,
+                            sourceType: 'financeEntry',
+                            entryId: entry.id,
                             projectName: project.name,
                             timestamp: entry.timestamp,
                             name: entry.attachment.name || 'receipt',
-                            url: entry.attachment.url
+                            url: entry.attachment.url,
+                            path: entry.attachment.path || ''
                         });
                     }
                 });
                 (project.generalImages || []).forEach(item => {
                     if (item?.url) {
                         attachments.push({
+                            projectId,
+                            sourceType: 'generalImage',
+                            generalImageIndex: (project.generalImages || []).indexOf(item),
                             projectName: project.name,
                             timestamp: item.timestamp || '',
                             name: item.name || 'general_image',
-                            url: item.url
+                            url: item.url,
+                            path: item.path || ''
                         });
                     }
                 });
