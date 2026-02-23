@@ -1517,17 +1517,8 @@ function setShareProgress(progress = 0, text = 'מתחיל...') {
 }
 
 function openEmailAppCompose(subject, body) {
-    const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
     const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
-
-    try {
-        window.location.href = mailtoUrl;
-        return;
-    } catch (error) {
-        console.warn('Could not open mail app via mailto, trying Gmail web fallback', error);
-    }
-
-    window.location.href = gmailWebUrl;
+    window.open(gmailWebUrl, '_blank', 'noopener,noreferrer');
 }
 
 async function openShareModal(filePath, fileName, projectId) {
@@ -1600,10 +1591,10 @@ window.shareViaEmail = function() {
     const emailBtn = document.querySelector('#shareResult .btn-share');
     if (emailBtn) {
         emailBtn.classList.add('btn-loading');
-        emailBtn.innerHTML = '<i class="fas fa-spinner"></i> פותח אפליקציית מייל...';
+        emailBtn.innerHTML = '<i class="fas fa-spinner"></i> פותח טופס Gmail...';
     }
 
-    setShareProgress(100, 'פותח אפליקציית מייל...');
+    setShareProgress(100, 'פותח טופס Gmail...');
     openEmailAppCompose(subject, body);
 
     setTimeout(() => {
