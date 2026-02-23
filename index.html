@@ -4636,9 +4636,9 @@ body.dark-mode .add-metric-modal-content input {
         padding: 8px 10px; /* Slightly reduce padding to fit better */
     }
     
-    /* Input section: 4 data cubes per row instead of 2 */
-    .input-section {
-        grid-template-columns: repeat(auto-fill, minmax(220px, 220px));
+    /* Metrics update cards (top section): always 2 per row on desktop */
+    #currentStageInputSection.input-section {
+        grid-template-columns: repeat(2, minmax(220px, 280px));
         justify-content: center;
         gap: 15px;
     }
@@ -4664,10 +4664,19 @@ body.dark-mode .add-metric-modal-content input {
         margin-bottom: 5px;
     }
     
-    .dashboard-grid {
+    #fixedDashboardGrid.dashboard-grid {
         flex: 1;
-        justify-content: flex-start;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        justify-content: stretch;
         max-width: 100%;
+    }
+
+    #fixedDashboardGrid .dashboard-item {
+        max-width: none;
+        min-width: 0;
+        width: 100%;
+        flex: 0 0 auto;
     }
     
     .add-data-cube {
@@ -6364,6 +6373,12 @@ button,
     }
 }
 
+@media (min-width: 769px) and (max-width: 1200px) {
+    #fixedDashboardGrid.dashboard-grid {
+        grid-template-columns: repeat(4, minmax(120px, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
     body {
         padding-bottom: 88px;
@@ -6392,6 +6407,18 @@ button,
     .secondary-grid {
         grid-template-columns: 1fr 1fr !important;
         gap: 8px !important;
+    }
+}
+
+
+@media (min-width: 769px) {
+    #fixedDashboardGrid.dashboard-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    #currentStageInputSection.input-section {
+        grid-template-columns: repeat(2, minmax(220px, 280px)) !important;
     }
 }
 
@@ -10664,7 +10691,7 @@ button,
 
         function openImageEditorModal(url, fileName = 'edited-image.png') {
             const modal = document.getElementById('imageEditorModal');
-            if (!modal || !window.fabric) return;
+            if (!modal || !window.fabric || !url) return;
             imageEditorContext = { sourceUrl: url, fileName: fileName || 'edited-image.png', cropRect: null };
             const nameInput = document.getElementById('imageEditorFileName');
             if (nameInput) nameInput.value = imageEditorContext.fileName;
@@ -10674,14 +10701,40 @@ button,
             imageEditorCanvas.setWidth(maxWidth);
             imageEditorCanvas.setHeight(maxHeight);
             imageEditorCanvas.clear();
-            fabric.Image.fromURL(url, (img) => {
-                const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+            modal.style.display = 'flex';
+
+            const applyImageToCanvas = (img) => {
+                if (!img) {
+                    alert('לא ניתן לטעון את התמונה לעריכה.');
+                    return;
+                }
+                const sourceWidth = Number(img.width || img.naturalWidth || 1);
+                const sourceHeight = Number(img.height || img.naturalHeight || 1);
+                const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
                 img.set({ left: maxWidth / 2, top: maxHeight / 2, originX: 'center', originY: 'center', selectable: false, evented: false });
-                img.scale(scale);
+                img.scale(scale || 1);
                 imageEditorCanvas.setBackgroundImage(img, imageEditorCanvas.renderAll.bind(imageEditorCanvas));
                 setImageEditorMode('draw');
-            }, { crossOrigin: 'anonymous' });
-            modal.style.display = 'flex';
+            };
+
+            const loadWithoutCors = () => {
+                fabric.Image.fromURL(url, (img) => {
+                    applyImageToCanvas(img);
+                });
+            };
+
+            try {
+                fabric.Image.fromURL(url, (img) => {
+                    if (img) {
+                        applyImageToCanvas(img);
+                        return;
+                    }
+                    loadWithoutCors();
+                }, { crossOrigin: 'anonymous' });
+            } catch (error) {
+                console.warn('Image editor CORS load failed, retrying without crossOrigin.', error);
+                loadWithoutCors();
+            }
         }
 
         function setImageEditorMode(mode) {
