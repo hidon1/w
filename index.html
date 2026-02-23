@@ -261,7 +261,7 @@
         width: 100%;
         display: grid !important;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 6px;
+        gap: 4px;
         justify-items: stretch;
     }
     #fixedDashboardGrid .dashboard-item {
@@ -269,8 +269,8 @@
         min-width: 0;
         max-width: none;
         width: 100%;
-        padding: 6px 4px;
-        min-height: 48px;
+        padding: 5px 3px;
+        min-height: 42px;
     }
 
     .stage-overview-container::before {
@@ -282,16 +282,16 @@
     }
     
     #fixedDashboardGrid .dashboard-item h3 {
-        font-size: calc(var(--font-size-base) * 0.72);
-        white-space: normal;
-        word-break: break-word;
-        overflow-wrap: anywhere;
-        line-height: 1.2;
+        font-size: calc(var(--font-size-base) * 0.66);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.1;
         max-width: 100%;
     }
-    
+
     #fixedDashboardGrid .dashboard-item p {
-        font-size: calc(var(--font-size-base) * 0.88);
+        font-size: calc(var(--font-size-base) * 0.8);
     }
     .card-fab {
         display: flex;
@@ -462,12 +462,12 @@
 
     .dashboard-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 6px;
+        gap: 4px;
     }
 
     .dashboard-item {
-        min-height: 46px;
-        padding: 5px 4px;
+        min-height: 42px;
+        padding: 4px 3px;
     }
     
     .pull-handle {
@@ -4676,20 +4676,22 @@ body.dark-mode .add-metric-modal-content input {
     
     #fixedDashboardGrid.dashboard-grid {
         flex: 1;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(88px, max-content));
-        justify-content: center;
-        gap: 6px;
+        width: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: flex-start;
+        gap: 0.35cm;
         max-width: 100%;
     }
 
     #fixedDashboardGrid .dashboard-item {
-        min-width: 88px;
-        max-width: 110px;
-        width: auto;
+        min-width: 96px;
+        max-width: 120px;
+        width: 100%;
         flex: 0 0 auto;
-        padding: 7px 6px;
-        min-height: 56px;
+        padding: 8px 6px;
+        min-height: 52px;
     }
     
     .add-data-cube {
