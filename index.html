@@ -11688,17 +11688,8 @@ button,
         }
 
         function openEmailAppCompose(subject, body) {
-            const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
             const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
-
-            try {
-                window.location.href = mailtoUrl;
-                return;
-            } catch (error) {
-                console.warn('Failed to open mailto link, trying Gmail web fallback', error);
-            }
-
-            window.location.href = gmailWebUrl;
+            window.open(gmailWebUrl, '_blank', 'noopener,noreferrer');
         }
 
         function openExternalAppLink(deepLink, fallbackUrl = '') {
@@ -11749,15 +11740,15 @@ button,
                 try {
                     setShareProgressDialog(true, 12, 'מכין קישורי הורדה...');
                     const links = await resolveReceiptLinks(attachments);
-                    setShareProgressDialog(true, 72, 'פותח אפליקציית מייל...');
+                    setShareProgressDialog(true, 72, 'פותח טופס Gmail...');
                     const bodyMessage = buildPerFileLinksMessage(periodLabel, links);
                     const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
                     const body = encodeURIComponent(bodyMessage);
                     openEmailAppCompose(subject, body);
                     setShareProgressDialog(true, 100, 'מוכן! חלון המייל נפתח.');
                 } catch (error) {
-                    console.warn('Failed to open mail app share flow', error);
-                    alert('לא הצלחנו לפתוח את אפליקציית המייל כרגע. נסה/י שוב בעוד כמה רגעים.');
+                    console.warn('Failed to open Gmail compose flow', error);
+                    alert('לא הצלחנו לפתוח את טופס Gmail כרגע. נסה/י שוב בעוד כמה רגעים.');
                 } finally {
                     setTimeout(() => setShareProgressDialog(false, 0, 'מכין שיתוף...'), 900);
                 }
