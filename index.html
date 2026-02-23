@@ -459,6 +459,16 @@
     .project-details-card {
         left: -280px;
     }
+
+    .dashboard-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .dashboard-item {
+        min-height: 46px;
+        padding: 5px 4px;
+    }
     
     .pull-handle {
         display: none; /* Floating button handles toggling */
@@ -4636,9 +4646,9 @@ body.dark-mode .add-metric-modal-content input {
         padding: 8px 10px; /* Slightly reduce padding to fit better */
     }
     
-    /* Metrics update cards (top section): always 2 per row on desktop */
+    /* Metrics update cards (top section): always 3 per row on desktop */
     #currentStageInputSection.input-section {
-        grid-template-columns: repeat(2, minmax(220px, 280px));
+        grid-template-columns: repeat(3, minmax(200px, 220px));
         justify-content: center;
         gap: 15px;
     }
@@ -4667,16 +4677,19 @@ body.dark-mode .add-metric-modal-content input {
     #fixedDashboardGrid.dashboard-grid {
         flex: 1;
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        justify-content: stretch;
+        grid-template-columns: repeat(auto-fit, minmax(95px, max-content));
+        justify-content: center;
+        gap: 8px;
         max-width: 100%;
     }
 
     #fixedDashboardGrid .dashboard-item {
-        max-width: none;
-        min-width: 0;
-        width: 100%;
+        min-width: 95px;
+        max-width: 120px;
+        width: auto;
         flex: 0 0 auto;
+        padding: 8px 7px;
+        min-height: 58px;
     }
     
     .add-data-cube {
