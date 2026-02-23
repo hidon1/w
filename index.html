@@ -6416,10 +6416,15 @@ button,
     }
 
     .input-section,
-    .dashboard-grid,
     .secondary-grid {
         grid-template-columns: 1fr 1fr !important;
         gap: 8px !important;
+    }
+
+    #fixedDashboardGrid.dashboard-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 6px !important;
     }
 }
 
@@ -6428,18 +6433,22 @@ button,
     #fixedDashboardGrid.dashboard-grid {
         display: grid !important;
         grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 10px !important;
     }
 
     #currentStageInputSection.input-section {
-        grid-template-columns: repeat(2, minmax(220px, 280px)) !important;
+        grid-template-columns: repeat(3, minmax(200px, 220px)) !important;
     }
 }
 
 @media (max-width: 560px) {
     .input-section,
-    .dashboard-grid,
     .secondary-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    #fixedDashboardGrid.dashboard-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     }
 }
 
