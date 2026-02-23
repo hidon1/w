@@ -69,7 +69,7 @@
     .close-card-btn {
         top: 5px;
         left: 5px;
-        font-size: calc(var(--font-size-base) * 1);
+        font-size: calc(var(--font-size-base) * 1.08);
         display: block; /* Show close button on mobile */
     }
     .stage-nav-container {
@@ -131,6 +131,11 @@
     .close-button {
         top: 20px;
         left: 20px;
+    }
+
+    .sidebar ul li a,
+    .sidebar ul li button {
+        font-size: calc(var(--font-size-base) * 0.98);
     }
     
     /* Mobile portrait: 2 cards per row */
@@ -254,13 +259,17 @@
     
     .dashboard-grid {
         width: 100%;
-        justify-content: center;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        justify-items: stretch;
     }
     .dashboard-item {
-        flex: 0 0 72px;
-        min-width: 72px;
-        max-width: 72px;
-        padding: 4px 5px;
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+        width: 100%;
+        padding: 6px 5px;
         min-height: 50px;
     }
 
@@ -1380,7 +1389,7 @@ body.dark-mode .modal-graph-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: calc(var(--font-size-base) * 1);
+    font-size: calc(var(--font-size-base) * 1.08);
     color: var(--text-color);
     box-shadow: 0 1px 4px rgba(0,0,0,0.03);
     position: relative;
@@ -3401,6 +3410,43 @@ body.dark-mode .image-upload-section label {
     border-radius: 8px;
     padding: 6px 10px;
     cursor: pointer;
+}
+
+.finance-attachment-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.upload-progress-mini {
+    display: none;
+    margin-top: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px;
+    background: rgba(76, 175, 80, 0.06);
+}
+
+.upload-progress-track {
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: #d9e7d9;
+    overflow: hidden;
+}
+
+.upload-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #31b44b, #66d17b);
+    transition: width 0.2s ease;
+}
+
+.upload-progress-text {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--light-text-color);
 }
 .metric-thumb-preview {
     width: 28px;
@@ -6805,6 +6851,10 @@ button,
                     </div>
                     <input type="file" id="financeAttachmentUpload" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.pdf,application/pdf" style="display:none;" onchange="handleFinanceAttachmentSelection()">
                     <div id="financeAttachmentPreview" style="font-size:12px; color:var(--light-text-color); margin-top:6px; display:none;"></div>
+                    <div id="financeUploadProgress" class="upload-progress-mini">
+                        <div class="upload-progress-track"><div id="financeUploadProgressFill" class="upload-progress-fill"></div></div>
+                        <div id="financeUploadProgressText" class="upload-progress-text">מעלה... 0%</div>
+                    </div>
                 </div>
                 <div class="finance-input-buttons">
                     <button class="add-income-btn" onclick="addFinanceEntry('income')">הוסף הכנסה</button>
@@ -7226,6 +7276,9 @@ button,
         const financeNotesInput = document.getElementById('financeNotes');
         const financeAttachmentInput = document.getElementById('financeAttachmentUpload');
         const financeAttachmentPreview = document.getElementById('financeAttachmentPreview');
+        const financeUploadProgress = document.getElementById('financeUploadProgress');
+        const financeUploadProgressFill = document.getElementById('financeUploadProgressFill');
+        const financeUploadProgressText = document.getElementById('financeUploadProgressText');
         const generalImageUploadInput = document.getElementById('generalImageUpload');
         const generalImagesList = document.getElementById('generalImagesList');
         const financeList = document.getElementById('financeList');
@@ -8524,6 +8577,26 @@ button,
         function formatLocalDateTimeForInput(date = new Date()) {
             const pad = (n) => String(n).padStart(2, '0');
             return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+
+        function isImageAttachment(url = '') {
+            return /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)(\?|#|$)/i.test(url || '') || /^data:image\//i.test(url || '');
+        }
+
+        function setFinanceUploadProgress(percent = 0, label = '') {
+            if (!financeUploadProgress || !financeUploadProgressFill || !financeUploadProgressText) return;
+            const bounded = Math.max(0, Math.min(100, Number(percent) || 0));
+            financeUploadProgress.style.display = 'block';
+            financeUploadProgressFill.style.width = `${bounded}%`;
+            financeUploadProgressText.textContent = `${label || 'מעלה...'} ${Math.round(bounded)}%`;
+        }
+
+        function hideFinanceUploadProgress() {
+            if (!financeUploadProgress) return;
+            financeUploadProgress.style.display = 'none';
+            if (financeUploadProgressFill) financeUploadProgressFill.style.width = '0%';
+            if (financeUploadProgressText) financeUploadProgressText.textContent = 'מעלה... 0%';
         }
 
         function parseDisplayTimestampToInputValue(ts) {
@@ -10420,6 +10493,7 @@ button,
                 financeAttachmentPreview.style.display = 'none';
                 financeAttachmentPreview.textContent = '';
             }
+            hideFinanceUploadProgress();
         }
 
         function handleFinanceAttachmentSelection() {
@@ -10474,12 +10548,14 @@ button,
             if (api?.uploadFileToStorage && api?.buildFinanceAttachmentPath) {
                 try {
                     const storagePath = api.buildFinanceAttachmentPath(currentProjectId, draftId, file.name);
+                    setFinanceUploadProgress(3, 'מתחיל העלאה...');
                     const uploadResult = await api.uploadFileToStorage(storagePath, file, {
                         section: 'finance',
                         projectId: currentProjectId,
                         entryId: String(draftId),
                         uploadMode: 'draft'
-                    });
+                    }, (progress) => setFinanceUploadProgress(progress, 'מעלה לשרת...'));
+                    setFinanceUploadProgress(100, 'הושלם');
                     pendingFinanceAttachmentUploaded = {
                         type: file.type,
                         name: file.name,
@@ -10487,9 +10563,11 @@ button,
                         path: uploadResult.storagePath
                     };
                     if (financeAttachmentPreview) financeAttachmentPreview.textContent = `הועלה ומוכן לשמירה: ${file.name}`;
+                    setTimeout(() => hideFinanceUploadProgress(), 800);
                     return pendingFinanceAttachmentUploaded;
                 } catch (error) {
                     console.warn('Draft finance attachment upload failed, using local fallback.', error);
+                hideFinanceUploadProgress();
                 }
             }
 
@@ -10502,6 +10580,7 @@ button,
                 storedLocally: true
             };
             if (financeAttachmentPreview) financeAttachmentPreview.textContent = `מוכן לשמירה (מקומי): ${file.name}`;
+            hideFinanceUploadProgress();
             return pendingFinanceAttachmentUploaded;
         }
 
@@ -10544,14 +10623,7 @@ button,
             const isImageFile = /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)(\?|#|$)/i.test(url || '') || /^data:image\//i.test(url || '');
             const actionsWrap = document.createElement('div');
             actionsWrap.className = 'media-preview-actions';
-            if (isImageFile) {
-                const editBtn = document.createElement('button');
-                editBtn.type = 'button';
-                editBtn.className = 'history-upload-btn';
-                editBtn.innerHTML = '<i class="fas fa-edit"></i> ערוך';
-                editBtn.addEventListener('click', () => openImageEditorModal(url, downloadFileName || title));
-                actionsWrap.appendChild(editBtn);
-            } else {
+            if (!isImageFile) {
                 const downloadBtn = document.createElement('button');
                 downloadBtn.type = 'button';
                 downloadBtn.className = 'history-upload-btn';
@@ -10650,16 +10722,29 @@ button,
 
         async function saveImageEditorChanges() {
             if (!imageEditorCanvas) return;
+            const saveBtn = document.querySelector('#imageEditorModal .history-upload-btn[onclick="saveImageEditorChanges()"]');
             const desiredName = (document.getElementById('imageEditorFileName')?.value || '').trim() || imageEditorContext.fileName;
             const confirmed = await showConfirmation('האם אתה בטוח שברצונך לשמור את השינויים?', 'שמירת תמונה');
             if (!confirmed) return;
-            const dataUrl = imageEditorCanvas.toDataURL({ format: 'png', quality: 0.94 });
-            if (updateFinanceAttachmentByUrl(imageEditorContext.sourceUrl, { url: dataUrl, name: desiredName })) {
-                saveAllProjects();
-                renderFinanceList();
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> שומר...';
             }
-            closeImageEditorModal();
-            openMediaPreview(dataUrl, 'תמונה ערוכה', desiredName);
+            try {
+                const dataUrl = imageEditorCanvas.toDataURL({ format: 'png', quality: 0.94 });
+                if (updateFinanceAttachmentByUrl(imageEditorContext.sourceUrl, { url: dataUrl, name: desiredName })) {
+                    saveAllProjects();
+                    renderFinanceList();
+                    await syncAllDataToFirebase();
+                }
+                closeImageEditorModal();
+                openMediaPreview(dataUrl, 'תמונה ערוכה', desiredName);
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> שמור';
+                }
+            }
         }
 
         function updateFinanceAttachmentByUrl(oldUrl, updates) {
@@ -11679,11 +11764,12 @@ button,
                     const li = document.createElement('li');
                     li.innerHTML = `
                         <div class="history-entry-main">
-                            <strong>${idx + 1}. ${item.name || 'קובץ'}</strong>
+                            <strong>${idx + 1}.</strong><span class="finance-attachment-name">${item.name || 'קובץ'}</span>
                             <span class="timestamp">${item.projectName || ''} | ${item.timestamp || ''}</span>
                         </div>
                         <div class="history-entry-actions">
                             <button class="history-upload-btn" onclick="openMediaPreview('${item.url}', 'קובץ מצורף', '${item.name || 'attachment'}')">פתח</button>
+                            ${isImageAttachment(item.url) ? `<button class="history-upload-btn" onclick="openImageEditorModal('${item.url}', '${item.name || 'attachment'}')">ערוך</button>` : ''}
                             <button class="history-upload-btn" onclick="downloadSingleFinanceAttachment(${idx})">הורד</button>
                             <button class="history-upload-btn" onclick="deleteFinanceMediaListItem(${idx})">מחק</button>
                         </div>
@@ -13195,6 +13281,7 @@ button,
             storage,
             storageRef,
             uploadBytes,
+            uploadBytesResumable,
             getBlob,
             getDownloadURL,
             deleteObject
@@ -13371,14 +13458,26 @@ button,
             return snap.data() || null;
         }
 
-        async function uploadFileToStorage(path, file, metadata = {}) {
+        async function uploadFileToStorage(path, file, metadata = {}, onProgress = null) {
             if (!currentUser) throw new Error('AUTH_REQUIRED');
             const safePath = path.replace(/[^a-zA-Z0-9_\-./]/g, '_');
             const fileRef = storageRef(storage, safePath);
-            await uploadBytes(fileRef, file, {
+            const uploadMetadata = {
                 contentType: file.type || 'application/octet-stream',
                 customMetadata: metadata
-            });
+            };
+
+            if (typeof onProgress === 'function') {
+                await new Promise((resolve, reject) => {
+                    const task = uploadBytesResumable(fileRef, file, uploadMetadata);
+                    task.on('state_changed', (snapshot) => {
+                        const percent = snapshot.totalBytes ? (snapshot.bytesTransferred / snapshot.totalBytes) * 100 : 0;
+                        onProgress(percent);
+                    }, reject, resolve);
+                });
+            } else {
+                await uploadBytes(fileRef, file, uploadMetadata);
+            }
             const downloadUrl = await getDownloadURL(fileRef);
             return { downloadUrl, storagePath: safePath };
         }

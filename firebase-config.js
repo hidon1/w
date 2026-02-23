@@ -34,6 +34,7 @@ import {
   getStorage,
   ref as storageRef,
   uploadBytes,
+  uploadBytesResumable,
   getBlob,
   getDownloadURL,
   deleteObject
@@ -70,6 +71,7 @@ export {
   storage,
   storageRef,
   uploadBytes,
+  uploadBytesResumable,
   getBlob,
   getDownloadURL,
   deleteObject,
