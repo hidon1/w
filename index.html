@@ -11634,25 +11634,18 @@ button,
             if (barEl) barEl.style.width = `${Math.max(0, Math.min(100, Number(progress) || 0))}%`;
         }
 
-        function openGmailComposeInChrome(subject, body) {
-            const ua = navigator.userAgent || '';
-            const isAndroid = /Android/i.test(ua);
-            const isIOS = /iPhone|iPad|iPod/i.test(ua);
+        function openEmailAppCompose(subject, body) {
+            const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
             const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
 
-            if (isAndroid) {
-                const chromeIntentUrl = `intent://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}#Intent;scheme=https;package=com.android.chrome;end`;
-                openExternalAppLink(chromeIntentUrl, gmailWebUrl);
+            try {
+                window.location.href = mailtoUrl;
                 return;
+            } catch (error) {
+                console.warn('Failed to open mailto link, trying Gmail web fallback', error);
             }
 
-            if (isIOS) {
-                const chromeUrl = `googlechrome://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
-                openExternalAppLink(chromeUrl, gmailWebUrl);
-                return;
-            }
-
-            window.open(gmailWebUrl, '_blank', 'noopener');
+            window.location.href = gmailWebUrl;
         }
 
         function openExternalAppLink(deepLink, fallbackUrl = '') {
@@ -11703,15 +11696,15 @@ button,
                 try {
                     setShareProgressDialog(true, 12, 'מכין קישורי הורדה...');
                     const links = await resolveReceiptLinks(attachments);
-                    setShareProgressDialog(true, 72, 'פותח Gmail בכרום...');
+                    setShareProgressDialog(true, 72, 'פותח אפליקציית מייל...');
                     const bodyMessage = buildPerFileLinksMessage(periodLabel, links);
                     const subject = encodeURIComponent(`קבצים להורדה ${periodLabel}`);
                     const body = encodeURIComponent(bodyMessage);
-                    openGmailComposeInChrome(subject, body);
+                    openEmailAppCompose(subject, body);
                     setShareProgressDialog(true, 100, 'מוכן! חלון המייל נפתח.');
                 } catch (error) {
-                    console.warn('Failed to open Gmail share flow', error);
-                    alert('לא הצלחנו לפתוח את Gmail כרגע. נסה/י שוב בעוד כמה רגעים.');
+                    console.warn('Failed to open mail app share flow', error);
+                    alert('לא הצלחנו לפתוח את אפליקציית המייל כרגע. נסה/י שוב בעוד כמה רגעים.');
                 } finally {
                     setTimeout(() => setShareProgressDialog(false, 0, 'מכין שיתוף...'), 900);
                 }
