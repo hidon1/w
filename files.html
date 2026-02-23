@@ -1516,25 +1516,18 @@ function setShareProgress(progress = 0, text = 'מתחיל...') {
     if (txt) txt.textContent = text;
 }
 
-function openGmailInChrome(subject, body) {
-    const ua = navigator.userAgent || '';
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+function openEmailAppCompose(subject, body) {
+    const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
+    const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
 
-    if (/Android/i.test(ua)) {
-        const chromeIntent = `intent://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}#Intent;scheme=https;package=com.android.chrome;end`;
-        window.location.href = chromeIntent;
-        setTimeout(() => { window.open(gmailUrl, '_blank', 'noopener'); }, 500);
+    try {
+        window.location.href = mailtoUrl;
         return;
+    } catch (error) {
+        console.warn('Could not open mail app via mailto, trying Gmail web fallback', error);
     }
 
-    if (/iPhone|iPad|iPod/i.test(ua)) {
-        const chromeScheme = `googlechrome://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
-        window.location.href = chromeScheme;
-        setTimeout(() => { window.open(gmailUrl, '_blank', 'noopener'); }, 500);
-        return;
-    }
-
-    window.open(gmailUrl, '_blank', 'noopener');
+    window.location.href = gmailWebUrl;
 }
 
 async function openShareModal(filePath, fileName, projectId) {
@@ -1607,11 +1600,11 @@ window.shareViaEmail = function() {
     const emailBtn = document.querySelector('#shareResult .btn-share');
     if (emailBtn) {
         emailBtn.classList.add('btn-loading');
-        emailBtn.innerHTML = '<i class="fas fa-spinner"></i> פותח Gmail...';
+        emailBtn.innerHTML = '<i class="fas fa-spinner"></i> פותח אפליקציית מייל...';
     }
 
-    setShareProgress(100, 'פותח Gmail בכרום...');
-    openGmailInChrome(subject, body);
+    setShareProgress(100, 'פותח אפליקציית מייל...');
+    openEmailAppCompose(subject, body);
 
     setTimeout(() => {
         if (!emailBtn) return;
