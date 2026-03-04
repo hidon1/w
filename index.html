@@ -1415,6 +1415,12 @@ body.dark-mode .modal-graph-container {
     min-width: 0;
 }
 
+.history-entry-value-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .history-entry-actions {
     display: flex;
     align-items: center;
@@ -6461,9 +6467,10 @@ button,
 #extrasDashboard,
 .secondary-dashboard-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 110px)) !important;
     gap: 6px !important;
     align-items: stretch;
+    justify-content: center;
 }
 
 #fixedDashboardGrid .dashboard-item,
@@ -6480,8 +6487,22 @@ button,
     #additionsDashboard,
     #extrasDashboard,
     .secondary-dashboard-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 4px;
         gap: 6px !important;
+    }
+
+    #fixedDashboardGrid .dashboard-item,
+    #additionsDashboard .dashboard-item,
+    #extrasDashboard .dashboard-item,
+    .secondary-dashboard-item {
+        flex: 0 0 92px !important;
+        width: 92px !important;
+        min-width: 92px !important;
+        max-width: 92px !important;
     }
 }
 
@@ -10041,11 +10062,8 @@ button,
             const dashboardItem = document.createElement('div');
             dashboardItem.className = 'dashboard-item';
             dashboardItem.setAttribute('onclick', `openHistoryModal('${currentStageId}', '${metricId}', '${metricConfig.name}')`);
-            const thumbHtml = latestEntry?.imageUrl
-                ? `<img src="${latestEntry.imageUrl}" class="metric-thumb-preview" onclick="event.stopPropagation(); openMetricImagePreview('${latestEntry.imageUrl}')" alt="תמונת מדידה">`
-                : '';
             dashboardItem.innerHTML = `
-                <h3>${metricConfig.name} ${thumbHtml}</h3>
+                <h3>${metricConfig.name}</h3>
                 <p>${displayValue}</p>
             `;
             return dashboardItem;
@@ -10225,11 +10243,11 @@ button,
                         : '';
                     listItem.innerHTML = `
                         <div class="history-entry-main">
-                            <strong>${displayValue}</strong>
+                            <div class="history-entry-value-row">
+                                <strong>${displayValue}</strong>
+                                ${imagePreviewHtml}
+                            </div>
                             <span class="timestamp">${entry.timestamp}<span class="history-entry-actions-inline">${uploadMetricImageButton}<button class="history-upload-btn" onclick="editHistoryEntry('${sectionId}', '${metricId}', ${originalIndex})">ערוך</button><button class="undo-button" onclick="undoUpdate('${sectionId}', '${metricId}', ${originalIndex})">בטל</button></span></span>
-                        </div>
-                        <div class="history-entry-actions">
-                            ${imagePreviewHtml}
                         </div>
                     `;
                     historyList.appendChild(listItem);
