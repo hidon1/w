@@ -6487,6 +6487,37 @@ button,
     justify-content: center;
 }
 
+@media (min-width: 769px) {
+    #fixedDashboardSection.dashboard-section {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "title title"
+            "grid add";
+        align-items: center;
+        gap: 8px 14px;
+        direction: ltr;
+    }
+
+    #fixedDashboardSection.dashboard-section h2 {
+        grid-area: title;
+        direction: rtl;
+    }
+
+    #fixedDashboardGrid.dashboard-grid {
+        grid-area: grid;
+        justify-content: start;
+    }
+
+    #fixedDashboardSection .add-data-cube {
+        grid-area: add;
+        align-self: center;
+        justify-self: end;
+        margin: 0;
+        white-space: nowrap;
+    }
+}
+
 #fixedDashboardGrid .dashboard-item,
 #additionsDashboard .dashboard-item,
 #extrasDashboard .dashboard-item,
@@ -6501,11 +6532,11 @@ button,
     #additionsDashboard,
     #extrasDashboard,
     .secondary-dashboard-grid {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        overflow-x: auto;
-        justify-content: flex-start;
-        padding-bottom: 4px;
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        overflow-x: hidden;
+        justify-content: stretch;
+        padding-bottom: 0;
         gap: 6px !important;
     }
 
@@ -6513,10 +6544,9 @@ button,
     #additionsDashboard .dashboard-item,
     #extrasDashboard .dashboard-item,
     .secondary-dashboard-item {
-        flex: 0 0 92px !important;
-        width: 92px !important;
-        min-width: 92px !important;
-        max-width: 92px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
     }
 }
 
