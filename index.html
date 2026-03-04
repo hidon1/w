@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת ניטור יין</title>
      <link rel="icon" href="image_00b206.png" type="image/png">
-    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Playfair+Display:wght@400;700&family=Noto+Sans+Hebrew:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&family=Heebo:wght@300;400;700&family=Playfair+Display:wght@400;700&family=Noto+Sans+Hebrew:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -6550,9 +6550,191 @@ button,
     }
 }
 
-    </style>
+    
+
+/* ===== Marketing Showcase Section ===== */
+.marketing-showcase {
+    margin: 22px auto 12px;
+    width: min(1200px, calc(100% - 24px));
+    padding: 26px 22px;
+    border-radius: 24px;
+    background: linear-gradient(130deg, rgba(101,22,47,0.95), rgba(127,29,58,0.92), rgba(212,175,55,0.88));
+    color: #fffaf0;
+    box-shadow: 0 18px 35px rgba(101,22,47,0.3);
+    position: relative;
+    overflow: hidden;
+}
+.marketing-showcase::before,
+.marketing-showcase::after {
+    content: '';
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    filter: blur(2px);
+    pointer-events: none;
+}
+.marketing-showcase::before { top: -70px; right: -55px; }
+.marketing-showcase::after { bottom: -90px; left: -65px; }
+.marketing-hero h1 {
+    font-family: 'Assistant', 'Noto Sans Hebrew', sans-serif;
+    font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+    margin: 0;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    animation: gentleRise 0.9s ease;
+}
+.marketing-hero p {
+    margin: 8px 0 0;
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+    color: rgba(255, 248, 233, 0.94);
+    max-width: 720px;
+    animation: gentleRise 1.1s ease;
+}
+.marketing-grid {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+.marketing-card {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(2px);
+    transform: translateY(0);
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+.marketing-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 26px rgba(20, 10, 15, 0.28);
+}
+.marketing-card h3 {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+    font-family: 'Assistant', 'Noto Sans Hebrew', sans-serif;
+}
+.marketing-card p { margin: 0; font-size: 0.95rem; color: rgba(255, 252, 242, 0.93); }
+.logos-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+.logo-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.22);
+}
+.logo-emblem {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    background: rgba(255,255,255,0.95);
+    color: #65162f;
+}
+.logo-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #fff;
+}
+.kashrut-gallery {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+.kashrut-item {
+    background: rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 10px;
+    border: 1px dashed rgba(255,255,255,0.35);
+    text-align: center;
+}
+.kashrut-placeholder {
+    width: 100%;
+    min-height: 92px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 1.7rem;
+    background: linear-gradient(140deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+}
+.kashrut-item small {
+    margin-top: 8px;
+    display: block;
+    color: rgba(255,252,242,0.9);
+    font-size: 0.86rem;
+}
+@keyframes gentleRise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+body.dark-mode .marketing-showcase {
+    background: linear-gradient(130deg, rgba(32, 10, 18, 0.95), rgba(81, 23, 44, 0.93), rgba(138, 103, 27, 0.9));
+}
+@media (max-width: 768px) {
+    .marketing-showcase { margin-top: 16px; border-radius: 18px; padding: 20px 16px; }
+    .marketing-grid { grid-template-columns: 1fr; }
+}
+
+</style>
 </head>
 <body class="preload">
+    <section class="marketing-showcase" id="brandShowcaseSection">
+        <div class="marketing-hero">
+            <h1>ברוכים הבאים לעולם יין מעוצב ומדויק</h1>
+            <p>מערכת ייצור וניהול יין עם נראות יוקרתית, חוויית משתמש נעימה לעין ופונטים מודרניים שמדגישים איכות בכל שלב.</p>
+        </div>
+
+        <div class="marketing-grid">
+            <article class="marketing-card">
+                <h3>מי אנחנו</h3>
+                <p>אנחנו משלבים מקצוענות בייצור יין עם טכנולוגיה מתקדמת, כדי שכל תהליך יהיה מדויק, ברור ונגיש.</p>
+            </article>
+            <article class="marketing-card">
+                <h3>החברות שמשווקות את המוצרים שלנו</h3>
+                <div class="logos-row">
+                    <div class="logo-pill">
+                        <div class="logo-emblem">ע</div>
+                        <div class="logo-name">עושר אג'י רסד</div>
+                    </div>
+                    <div class="logo-pill">
+                        <div class="logo-emblem">ד</div>
+                        <div class="logo-name">דיברוס</div>
+                    </div>
+                    <div class="logo-pill">
+                        <div class="logo-emblem">א</div>
+                        <div class="logo-name">אשפר</div>
+                    </div>
+                </div>
+            </article>
+            <article class="marketing-card">
+                <h3>כשרות</h3>
+                <p>הכנו אזור ייעודי להצגת תעודות/תמונות כשרות בצורה אלגנטית. כשתעלה את התמונות, אפשר יהיה לעדכן את הכרטיסים כאן בקלות.</p>
+                <div class="kashrut-gallery">
+                    <div class="kashrut-item">
+                        <div class="kashrut-placeholder"><i class="fas fa-certificate"></i></div>
+                        <small>תעודת כשרות – מקום לתמונה 1</small>
+                    </div>
+                    <div class="kashrut-item">
+                        <div class="kashrut-placeholder"><i class="fas fa-stamp"></i></div>
+                        <small>תעודת כשרות – מקום לתמונה 2</small>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </section>
+
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" style="display: none;">
         <div class="loading-spinner">
