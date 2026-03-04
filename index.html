@@ -6454,6 +6454,37 @@ button,
     }
 }
 
+
+/* Unified dashboard card layout for all categories */
+#fixedDashboardGrid.dashboard-grid,
+#additionsDashboard,
+#extrasDashboard,
+.secondary-dashboard-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+    gap: 6px !important;
+    align-items: stretch;
+}
+
+#fixedDashboardGrid .dashboard-item,
+#additionsDashboard .dashboard-item,
+#extrasDashboard .dashboard-item,
+.secondary-dashboard-item {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}
+
+@media (max-width: 768px) {
+    #fixedDashboardGrid.dashboard-grid,
+    #additionsDashboard,
+    #extrasDashboard,
+    .secondary-dashboard-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+    }
+}
+
     </style>
 </head>
 <body class="preload">
