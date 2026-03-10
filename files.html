@@ -1173,9 +1173,10 @@ document.getElementById('yearSelect').addEventListener('change', applyFilters);
 
 const PRODUCTS_FOLDER = 'מוצרים';
 
-function normalizeProductsPath(path) {
-    if (!path) return path;
-    return path.replace(/(^|\/)EM(?=\/|$)/g, `$1${PRODUCTS_FOLDER}`);
+function extractSequenceFromFileName(fileName) {
+    const match = String(fileName || '').match(/\((\d+)\)/);
+    if (!match) return Number.POSITIVE_INFINITY;
+    return Number(match[1]);
 }
 
 function naturalHebrewCompare(a, b) {
@@ -1193,7 +1194,7 @@ async function loadProjectFiles(projectId) {
         </div>`;
 
     try {
-        const folderRef = storageRef(storage, `accounts/${dataUid}/projects/${projectId}/`);
+        const folderRef = storageRef(storage, `accounts/${dataUid}/projects/${projectId}/${PRODUCTS_FOLDER}/`);
         const allItems = await listAllItemsRecursively(folderRef);
 
         if (allItems.length === 0) {
@@ -1211,7 +1212,7 @@ async function loadProjectFiles(projectId) {
                     ref: item,
                     name: item.name,
                     path: item.fullPath,
-                    displayPath: normalizeProductsPath(item.fullPath),
+                    displayPath: item.fullPath,
                     size: metadata.size,
                     timeCreated: new Date(metadata.timeCreated),
                     contentType: metadata.contentType || 'application/octet-stream',
@@ -1222,7 +1223,7 @@ async function loadProjectFiles(projectId) {
                     ref: item,
                     name: item.name,
                     path: item.fullPath,
-                    displayPath: normalizeProductsPath(item.fullPath),
+                    displayPath: item.fullPath,
                     size: 0,
                     timeCreated: new Date(),
                     contentType: 'application/octet-stream',
@@ -1231,8 +1232,11 @@ async function loadProjectFiles(projectId) {
             }
         }));
 
-        // Keep product files in a natural sequence (1,2,3...) after moving EM -> מוצרים for display.
+        // Keep product files in a natural sequence based on numbers inside parentheses, e.g. (1)...(17).
         filesData.sort((a, b) => {
+            const aSeq = extractSequenceFromFileName(a.name);
+            const bSeq = extractSequenceFromFileName(b.name);
+            if (aSeq !== bSeq) return aSeq - bSeq;
             const aRelative = a.displayPath.split('/projects/')[1] || a.displayPath;
             const bRelative = b.displayPath.split('/projects/')[1] || b.displayPath;
             const pathCompare = naturalHebrewCompare(aRelative, bRelative);
@@ -1707,7 +1711,7 @@ window.uploadSelectedFiles = async function() {
     for (const file of selectedFiles) {
         setUploadProgress(true, (uploaded / selectedFiles.length) * 100, `מעלה: ${file.name} (0%)`);
         await new Promise((resolve) => {
-            const fileRef = storageRef(storage, `accounts/${dataUid}/projects/${projectId}/${file.name}`);
+            const fileRef = storageRef(storage, `accounts/${dataUid}/projects/${projectId}/${PRODUCTS_FOLDER}/${file.name}`);
             const uploadTask = uploadBytesResumable(fileRef, file);
             uploadTask.on('state_changed',
                 (snapshot) => {
