@@ -293,6 +293,22 @@ body.dark-mode .file-card {
     border-color: var(--dark-border-color);
 }
 
+.file-card-image-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(101,22,47,0.06);
+    border: 1px solid rgba(101,22,47,0.12);
+}
+
+.file-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 .file-card-icon {
     font-size: 32px;
     color: var(--primary-color);
@@ -319,6 +335,14 @@ body.dark-mode .file-card-icon { color: var(--dark-primary-color); background: r
 }
 
 body.dark-mode .file-card-name { color: var(--dark-text-color); }
+
+.file-card-price {
+    color: var(--secondary-color);
+    font-weight: 700;
+    font-size: calc(var(--font-size-base) * 0.88);
+}
+
+body.dark-mode .file-card-price { color: var(--dark-accent-color); }
 
 .file-card-meta {
     font-size: calc(var(--font-size-base) * 0.8);
@@ -1183,6 +1207,28 @@ function naturalHebrewCompare(a, b) {
     return String(a || '').localeCompare(String(b || ''), 'he', { numeric: true, sensitivity: 'base' });
 }
 
+function parseProductNameAndPrice(fileName) {
+    const baseName = String(fileName || '').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+    const saleMatch = baseName.match(/(?:^|\s)מכירה\s*(\d+(?:\.\d+)?)/);
+    const price = saleMatch ? Number(saleMatch[1]) : null;
+    let cleanName = baseName
+        .replace(/(?:^|\s)מכירה\s*\d+(?:\.\d+)?/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/\s+,/g, ',')
+        .trim();
+
+    cleanName = cleanName.replace(/\s*\(\d+\)\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    cleanName = cleanName.replace(/כמח/g, 'קמח').replace(/חצי קילוגרם/g, 'חצי ק"ג');
+
+    return { name: cleanName || baseName, price };
+}
+
+function isImageFile(file) {
+    if (!file) return false;
+    if (String(file.contentType || '').startsWith('image/')) return true;
+    return /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)$/i.test(String(file.name || ''));
+}
+
 // ===== Load Files =====
 async function loadProjectFiles(projectId) {
     if (!projectId || !currentUser) return;
@@ -1306,30 +1352,47 @@ function applyFilters() {
 // ===== Render Files =====
 function renderFiles(files) {
     const grid = document.getElementById('filesGrid');
+    const imageFiles = files.filter(isImageFile);
 
-    if (files.length === 0) {
-        showEmptyState('לא נמצאו קבצים התואמים את הסינון');
+    if (imageFiles.length === 0) {
+        showEmptyState('לא נמצאו תמונות בתיקיית המוצרים');
         return;
     }
 
     grid.innerHTML = '';
-    files.forEach(file => {
+    imageFiles.forEach(async (file) => {
         const card = document.createElement('div');
         card.className = 'file-card';
 
-        const top = document.createElement('div');
-        top.style.cssText = 'display:flex; align-items:center; gap:14px;';
-
-        const iconDiv = document.createElement('div');
-        iconDiv.className = 'file-card-icon';
-        iconDiv.innerHTML = `<i class="${getFileIcon(file.contentType, file.name)}"></i>`;
+        const imageWrap = document.createElement('div');
+        imageWrap.className = 'file-card-image-wrap';
+        const imgEl = document.createElement('img');
+        imgEl.className = 'file-card-image';
+        imgEl.loading = 'lazy';
+        imgEl.alt = file.name;
+        try {
+            imgEl.src = await getDownloadURL(storageRef(storage, file.path));
+        } catch (e) {
+            imgEl.alt = 'תמונה לא זמינה';
+        }
+        imageWrap.appendChild(imgEl);
 
         const info = document.createElement('div');
         info.className = 'file-card-info';
+        const parsed = parseProductNameAndPrice(file.name);
 
         const nameDiv = document.createElement('div');
         nameDiv.className = 'file-card-name';
-        nameDiv.textContent = file.name;
+        nameDiv.textContent = parsed.name;
+
+        info.appendChild(nameDiv);
+
+        if (Number.isFinite(parsed.price)) {
+            const priceDiv = document.createElement('div');
+            priceDiv.className = 'file-card-price';
+            priceDiv.textContent = `₪${parsed.price}`;
+            info.appendChild(priceDiv);
+        }
 
         const meta = document.createElement('div');
         meta.className = 'file-card-meta';
@@ -1337,10 +1400,7 @@ function renderFiles(files) {
             <span><i class="fas fa-calendar-alt"></i> ${formatDate(file.timeCreated)}</span>
             <span><i class="fas fa-weight-hanging"></i> ${formatFileSize(file.size)}</span>`;
 
-        info.appendChild(nameDiv);
         info.appendChild(meta);
-        top.appendChild(iconDiv);
-        top.appendChild(info);
 
         const actions = document.createElement('div');
         actions.className = 'file-card-actions';
@@ -1360,7 +1420,8 @@ function renderFiles(files) {
             actions.appendChild(shareBtn);
         }
 
-        card.appendChild(top);
+        card.appendChild(imageWrap);
+        card.appendChild(info);
         card.appendChild(actions);
         grid.appendChild(card);
     });
