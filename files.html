@@ -1171,6 +1171,17 @@ document.getElementById('projectSelect').addEventListener('change', async (e) =>
 document.getElementById('monthSelect').addEventListener('change', applyFilters);
 document.getElementById('yearSelect').addEventListener('change', applyFilters);
 
+const PRODUCTS_FOLDER = 'מוצרים';
+
+function normalizeProductsPath(path) {
+    if (!path) return path;
+    return path.replace(/(^|\/)EM(?=\/|$)/g, `$1${PRODUCTS_FOLDER}`);
+}
+
+function naturalHebrewCompare(a, b) {
+    return String(a || '').localeCompare(String(b || ''), 'he', { numeric: true, sensitivity: 'base' });
+}
+
 // ===== Load Files =====
 async function loadProjectFiles(projectId) {
     if (!projectId || !currentUser) return;
@@ -1200,6 +1211,7 @@ async function loadProjectFiles(projectId) {
                     ref: item,
                     name: item.name,
                     path: item.fullPath,
+                    displayPath: normalizeProductsPath(item.fullPath),
                     size: metadata.size,
                     timeCreated: new Date(metadata.timeCreated),
                     contentType: metadata.contentType || 'application/octet-stream',
@@ -1210,6 +1222,7 @@ async function loadProjectFiles(projectId) {
                     ref: item,
                     name: item.name,
                     path: item.fullPath,
+                    displayPath: normalizeProductsPath(item.fullPath),
                     size: 0,
                     timeCreated: new Date(),
                     contentType: 'application/octet-stream',
@@ -1218,8 +1231,14 @@ async function loadProjectFiles(projectId) {
             }
         }));
 
-        // Sort by date descending
-        filesData.sort((a, b) => b.timeCreated - a.timeCreated);
+        // Keep product files in a natural sequence (1,2,3...) after moving EM -> מוצרים for display.
+        filesData.sort((a, b) => {
+            const aRelative = a.displayPath.split('/projects/')[1] || a.displayPath;
+            const bRelative = b.displayPath.split('/projects/')[1] || b.displayPath;
+            const pathCompare = naturalHebrewCompare(aRelative, bRelative);
+            if (pathCompare !== 0) return pathCompare;
+            return b.timeCreated - a.timeCreated;
+        });
         allFiles = filesData;
 
         populateYearFilter(filesData);
@@ -1481,7 +1500,7 @@ window.downloadAllFilteredFilesAsZip = async function() {
             const blob = await getBlob(fileRef);
             await assertImageBlobIsValid(blob, file.name);
 
-            const relativePath = file.path.split('/projects/')[1]?.split('/').slice(1).join('/') || file.name;
+            const relativePath = file.displayPath.split('/projects/')[1]?.split('/').slice(1).join('/') || file.name;
             zip.file(relativePath, blob);
             const loopProgress = ((i + 1) / visibleFiles.length) * 85;
             setDownloadProgress(true, loopProgress, `אוסף ל-ZIP: ${file.name} (${Math.round(loopProgress)}%)`);
