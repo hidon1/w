@@ -6612,24 +6612,6 @@ button,
         font-size: 13px !important;
     }
 }
-
-.secondary-latest { display:block; font-size:12px; font-weight:400; overflow-wrap:anywhere; }
-@media(max-width:768px){
-#fixedDashboardSection[data-category="additions"] #fixedDashboardGrid.dashboard-grid,
-#fixedDashboardSection[data-category="extras"] #fixedDashboardGrid.dashboard-grid {grid-template-columns:minmax(0,1fr) !important;}
-#fixedDashboardSection[data-category="additions"] #fixedDashboardGrid .dashboard-item,
-#fixedDashboardSection[data-category="extras"] #fixedDashboardGrid .dashboard-item {display:flex !important;flex-direction:row !important;align-items:center;justify-content:space-between;gap:6px;aspect-ratio:auto !important;height:auto !important;min-height:36px !important;padding:5px 8px !important;}
-#fixedDashboardSection[data-category="additions"] .dashboard-item h3,
-#fixedDashboardSection[data-category="extras"] .dashboard-item h3,
-#fixedDashboardSection[data-category="additions"] .dashboard-item p,
-#fixedDashboardSection[data-category="extras"] .dashboard-item p {white-space:normal !important;overflow-wrap:anywhere;margin:0 !important;font-size:12px !important;}
-#additionsPanel,#extrasPanel {padding:5px !important;box-sizing:border-box;}
-#additionsPanel #additionsDashboard,#extrasPanel #extrasDashboard {grid-template-columns:minmax(0,1fr) !important;padding:4px !important;gap:5px !important;}
-#additionsDashboard > .input-group,#extrasDashboard > .input-group {display:grid !important;grid-template-columns:minmax(0,1.1fr) minmax(0,0.85fr) minmax(0,0.85fr) auto auto;align-items:center;gap:4px !important;padding:5px !important;margin:0 !important;width:100% !important;min-width:0 !important;box-sizing:border-box;}
-#extrasDashboard > .input-group {grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto auto;}
-#additionsDashboard > .input-group > label,#extrasDashboard > .input-group > label {grid-column:auto;margin:0 !important;font-size:12px !important;min-width:0;overflow-wrap:anywhere;}
-#additionsDashboard > .input-group > :is(input,select,button),#extrasDashboard > .input-group > :is(input,select,button) {width:100% !important;min-width:0 !important;min-height:36px !important;height:36px !important;margin:0 !important;padding:3px 4px !important;font-size:12px !important;box-sizing:border-box;}
-}
 </style>
 </head>
 <body class="preload">
@@ -7608,7 +7590,6 @@ button,
             }
 
             window.projects = projects;
-            if (activeCategory !== 'metrics') renderActiveCategoryDashboard();
         }
 
         function setRemindersData(nextReminders) {
@@ -8786,7 +8767,8 @@ button,
             }
 
             renderActiveCategoryDashboard();
-
+            if (category === 'additions') renderAdditionsPanel();
+            if (category === 'extras') renderExtrasPanel();
         }
 
 
@@ -8892,12 +8874,6 @@ button,
                 card.className = 'input-group';
                 const label = document.createElement('label');
                 label.textContent = name;
-                const latest = entries[entries.length - 1];
-                const summary = document.createElement('small');
-                summary.className = 'secondary-latest';
-                summary.textContent = latest ? `אחרון: ${latest.amount} ${latest.unit || ''}` : 'אין רשומות';
-                label.appendChild(summary);
-                label.onclick = () => openSecondaryHistoryModal('addition', name);
                 const amountInput = document.createElement('input');
                 amountInput.type = 'number';
                 amountInput.step = 'any';
@@ -8916,13 +8892,12 @@ button,
                 const updateBtn = document.createElement('button');
                 updateBtn.type = 'button';
                 updateBtn.setAttribute('aria-label', `עדכן ${name}`);
-                updateBtn.textContent = 'הוסף';
+                updateBtn.textContent = 'עדכן';
                 updateBtn.addEventListener('click', () => addAdditionEntry(name, { amountInput, unitInput: unitSelect }));
                 card.appendChild(label);
                 card.appendChild(amountInput);
                 card.appendChild(unitSelect);
                 card.appendChild(updateBtn);
-                const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'ערוך'; edit.onclick = () => openSecondaryHistoryModal('addition', name); card.appendChild(edit);
                 additionsDashboard.appendChild(card);
             });
         }
@@ -9026,12 +9001,6 @@ button,
                 card.className = 'input-group';
                 const label = document.createElement('label');
                 label.textContent = type;
-                const latest = entries.filter(item => item.type === type).slice(-1)[0];
-                const summary = document.createElement('small');
-                summary.className = 'secondary-latest';
-                summary.textContent = latest ? (latest.notes || 'ללא הערות') : 'אין רשומות';
-                label.appendChild(summary);
-                label.onclick = () => openSecondaryHistoryModal('extra', type);
                 const notesInput = document.createElement('input');
                 notesInput.type = 'text';
                 notesInput.placeholder = 'הערות';
@@ -9039,12 +9008,11 @@ button,
                 const updateBtn = document.createElement('button');
                 updateBtn.type = 'button';
                 updateBtn.setAttribute('aria-label', `עדכן ${type}`);
-                updateBtn.textContent = 'הוסף';
+                updateBtn.textContent = 'עדכן';
                 updateBtn.addEventListener('click', () => addExtraEntry(type, { notesInput }));
                 card.appendChild(label);
                 card.appendChild(notesInput);
                 card.appendChild(updateBtn);
-                const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'ערוך'; edit.onclick = () => openSecondaryHistoryModal('extra', type); card.appendChild(edit);
                 extrasDashboard.appendChild(card);
             });
         }
@@ -10208,7 +10176,6 @@ button,
         }
 
         function updateDashboardForCurrentStage() {
-            if (activeCategory !== 'metrics') { renderActiveCategoryDashboard(); return; }
             fixedDashboardGrid.innerHTML = '';
             const stageConfig = stagesConfig[currentStageId] || {};
             const metricOrder = getOrderedStageMetricIds(currentStageId);
@@ -10237,8 +10204,6 @@ button,
                 <h3>${name}</h3>
                 <p>סה"כ מצטבר: ${total} ${unit}</p>
             `;
-            const latest = entries[entries.length - 1];
-            if (latest) { const value = document.createElement('p'); value.textContent = `אחרון: ${latest.amount} ${latest.unit || ''}`; dashboardItem.appendChild(value); }
             dashboardItem.onclick = () => openSecondaryHistoryModal('addition', name);
             return dashboardItem;
         }
@@ -10249,8 +10214,6 @@ button,
             dashboardItem.innerHTML = `
                 <h3>${type}</h3>
             `;
-            const latest = entries[entries.length - 1];
-            const value = document.createElement('p'); value.textContent = latest?.notes || 'אין הערות'; dashboardItem.appendChild(value);
             dashboardItem.onclick = () => openSecondaryHistoryModal('extra', type);
             return dashboardItem;
         }
@@ -10301,13 +10264,11 @@ button,
                 fixedDashboardStageName.textContent = 'דשבורד תוספות';
                 if (addCubeText) addCubeText.textContent = 'הוסף תוספת';
                 renderAdditionsToMainDashboard();
-                renderAdditionsPanel();
                 return;
             }
             fixedDashboardStageName.textContent = 'דשבורד נתונים נוספים';
             if (addCubeText) addCubeText.textContent = 'הוסף נתון';
             renderExtrasToMainDashboard();
-            renderExtrasPanel();
         }
         /**
          * Determine whether a metric is a custom metric (stage or wine details).
