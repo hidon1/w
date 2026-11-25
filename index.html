@@ -6630,49 +6630,6 @@ button,
 #additionsDashboard > .input-group > label,#extrasDashboard > .input-group > label {grid-column:auto;margin:0 !important;font-size:12px !important;min-width:0;overflow-wrap:anywhere;}
 #additionsDashboard > .input-group > :is(input,select,button),#extrasDashboard > .input-group > :is(input,select,button) {width:100% !important;min-width:0 !important;min-height:36px !important;height:36px !important;margin:0 !important;padding:3px 4px !important;font-size:12px !important;box-sizing:border-box;}
 }
-
-/* Mobile: swipeable dashboard, full-width extra entry forms. */
-@media (max-width: 768px) {
-  #fixedDashboardSection #fixedDashboardGrid.dashboard-grid,
-  #fixedDashboardSection[data-category="additions"] #fixedDashboardGrid.dashboard-grid,
-  #fixedDashboardSection[data-category="extras"] #fixedDashboardGrid.dashboard-grid {
-    display:flex !important; flex-flow:row nowrap !important;
-    width:100% !important; max-width:100% !important; min-width:0 !important;
-    overflow-x:auto !important; overflow-y:hidden !important;
-    justify-content:flex-start !important; align-items:stretch !important;
-    gap:8px !important; padding:4px 6px 8px !important;
-    box-sizing:border-box !important; scrollbar-width:none;
-    -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y;
-  }
-  #fixedDashboardGrid::-webkit-scrollbar {display:none;}
-  #fixedDashboardSection #fixedDashboardGrid .dashboard-item,
-  #fixedDashboardSection[data-category="additions"] #fixedDashboardGrid .dashboard-item,
-  #fixedDashboardSection[data-category="extras"] #fixedDashboardGrid .dashboard-item {
-    flex:0 0 136px !important; width:136px !important; min-width:136px !important;
-    max-width:136px !important; height:auto !important; min-height:58px !important;
-    aspect-ratio:auto !important; display:flex !important; flex-direction:column !important;
-    align-items:center !important; justify-content:center !important; gap:3px !important;
-    box-sizing:border-box !important; padding:7px !important;
-  }
-  #fixedDashboardGrid .dashboard-item :is(h3,p) {white-space:normal !important; overflow-wrap:anywhere; margin:0 !important;}
-  #extrasPanel #extrasDashboard {display:grid !important; grid-template-columns:minmax(0,1fr) !important; gap:10px !important; width:100% !important; box-sizing:border-box;}
-  #extrasPanel #extrasDashboard > .input-group {
-    display:grid !important; grid-template-columns:minmax(0,1fr) auto auto !important;
-    gap:8px !important; padding:12px !important; width:100% !important;
-    max-width:none !important; min-width:0 !important; box-sizing:border-box;
-    border-radius:12px !important;
-  }
-  #extrasPanel #extrasDashboard > .input-group > label {
-    grid-column:1 / -1 !important; font-size:14px !important; text-align:start !important;
-  }
-  #extrasPanel #extrasDashboard > .input-group > textarea {
-    grid-column:1 / -1 !important; width:100% !important; min-width:0 !important;
-    min-height:64px !important; padding:8px !important; font-size:14px !important;
-    box-sizing:border-box; resize:vertical; font-family:inherit;
-  }
-  #extrasPanel #extrasDashboard > .input-group > button:first-of-type {grid-column:2;}
-  #extrasPanel #extrasDashboard > .input-group > button {width:auto !important; padding:4px 14px !important;}
-}
 </style>
 </head>
 <body class="preload">
@@ -9075,8 +9032,8 @@ button,
                 summary.textContent = latest ? (latest.notes || 'ללא הערות') : 'אין רשומות';
                 label.appendChild(summary);
                 label.onclick = () => openSecondaryHistoryModal('extra', type);
-                const notesInput = document.createElement(window.innerWidth <= 768 ? 'textarea' : 'input');
-                if (notesInput.tagName === 'INPUT') notesInput.type = 'text';
+                const notesInput = document.createElement('input');
+                notesInput.type = 'text';
                 notesInput.placeholder = 'הערות';
                 notesInput.setAttribute('aria-label', `הערות עבור ${type}`);
                 const updateBtn = document.createElement('button');
