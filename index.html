@@ -6613,7 +6613,24 @@ button,
     }
 }
 </style>
-</head>
+<style>
+.custom-dashboard-grid {display:flex!important;flex-wrap:wrap;gap:12px;align-content:start}
+.custom-toolbar {width:100%;display:flex;justify-content:flex-start}
+.custom-toolbar button,.custom-dialog button {cursor:pointer;border-radius:9px;padding:9px 14px;border:1px solid var(--border-color,#bbb);background:var(--card-background,#fff);color:inherit}
+.custom-metric-card {flex:1 1 180px;min-width:155px;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
+.custom-metric-card:hover {transform:translateY(-2px);box-shadow:0 4px 16px #0002}
+.custom-metric-card small {display:block;opacity:.7;font-size:11px}
+.custom-sparkline {width:100%;height:65px}
+.custom-dialog-overlay {position:fixed;inset:0;background:#0009;z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px}
+.custom-dialog {direction:rtl;background:var(--card-background,#fff);color:var(--text-color,#222);border-radius:16px;padding:22px;max-width:520px;width:100%;max-height:85vh;overflow:auto;box-shadow:0 16px 50px #0004}
+.custom-dialog label {display:flex;flex-direction:column;gap:5px;margin:12px 0}
+.custom-dialog input,.custom-dialog select,.custom-dialog textarea {width:100%;padding:10px;border-radius:8px;border:1px solid #aaa;background:var(--background-color,#fff);color:inherit}
+.custom-actions {display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.custom-history-row {border-bottom:1px solid #9995;padding:10px 0;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.custom-history-value {width:100%;white-space:pre-wrap;overflow-wrap:anywhere}
+.custom-history-row small {flex:1 1 100%;opacity:.75}
+@media(max-width:768px){.custom-dashboard-grid {flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;overscroll-behavior-x:contain}.custom-toolbar {flex:0 0 100%}.custom-metric-card {flex:0 0 70%;scroll-snap-align:start}.custom-dialog {max-height:90vh}}
+</style></head>
 <body class="preload">
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" style="display: none;">
@@ -6851,6 +6868,7 @@ button,
         <button class="category-nav-btn active" data-category="metrics" onclick="switchCategory('metrics')"><i class="fas fa-chart-line"></i><span>מדדים</span></button>
         <button class="category-nav-btn" data-category="additions" onclick="switchCategory('additions')"><i class="fas fa-flask"></i><span>תוספות</span></button>
         <button class="category-nav-btn" data-category="extras" onclick="switchCategory('extras')"><i class="fas fa-list-check"></i><span>נתונים נוספים</span></button>
+        <button class="category-nav-btn" data-category="custom" onclick="switchCategory('custom')"><i class="fas fa-sliders"></i><span>התאמה אישית</span></button>
     </nav>
         <div id="addMetricModal" class="modal">
             <div class="modal-content add-metric-modal-content">
@@ -8734,7 +8752,7 @@ button,
         }
 
         const savedCategory = localStorage.getItem('activeCategory');
-        let activeCategory = ['metrics', 'additions', 'extras'].includes(savedCategory) ? savedCategory : 'metrics';
+        let activeCategory = 'custom';
         let secondaryHistoryState = { mode: null, key: null };
 
         function switchCategory(category) {
@@ -8769,6 +8787,7 @@ button,
             renderActiveCategoryDashboard();
             if (category === 'additions') renderAdditionsPanel();
             if (category === 'extras') renderExtrasPanel();
+            if (category === 'custom') renderCustomDashboard();
         }
 
 
@@ -8780,6 +8799,7 @@ button,
         }
 
         function handleCategoryAddAction() {
+            if (activeCategory === 'custom') return openCustomBuilder();
             openAddMetricModal();
         }
 
@@ -9553,6 +9573,9 @@ button,
             }
             currentProjectId = id;
             localStorage.setItem('currentProjectId', currentProjectId);
+            activeCategory = 'custom';
+            localStorage.setItem('activeCategory', activeCategory);
+            switchCategory('custom');
             loadCurrentStageContent();
             updateProjectDisplay();
             closeProjectManagementModal();
@@ -10250,6 +10273,161 @@ button,
             });
         }
 
+
+        // Custom dashboard data is stored inside the existing Firebase-synced project object.
+        function customData() {
+            const p = projects[currentProjectId];
+            if (!p) return [];
+            if (!Array.isArray(p.customDashboard)) p.customDashboard = [];
+            return p.customDashboard;
+        }
+        function customSafe(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function customUser() {
+            const u = window.firebaseAccess?.getCurrentUser?.();
+            return {uid:u?.uid || '', name:u?.displayName || u?.email || u?.uid || 'משתמש'};
+        }
+        function customModal(title, fields, onSave) {
+            document.getElementById('customDialog')?.remove();
+            const overlay = document.createElement('div');
+            overlay.id = 'customDialog';
+            overlay.className = 'custom-dialog-overlay';
+            const dialog = document.createElement('div');
+            dialog.className = 'custom-dialog';
+            const heading = document.createElement('h3');
+            heading.textContent = title;
+            dialog.appendChild(heading);
+            const form = document.createElement('form');
+            fields.forEach(f => {
+                const label = document.createElement('label');
+                label.textContent = f.label;
+                const el = document.createElement(f.type === 'select' ? 'select' : f.type === 'textarea' ? 'textarea' : 'input');
+                el.name = f.key;
+                if (el.tagName === 'INPUT') { el.type = f.type || 'text'; if (f.type === 'number') el.step = 'any'; }
+                if (f.options) f.options.forEach(o => { const option = document.createElement('option'); option.value = o[0]; option.textContent = o[1]; el.appendChild(option); });
+                el.value = f.value ?? '';
+                if (f.required) el.required = true;
+                label.appendChild(el); form.appendChild(label);
+            });
+            const actions = document.createElement('div'); actions.className = 'custom-actions';
+            const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'ביטול'; cancel.onclick = () => overlay.remove();
+            const submit = document.createElement('button'); submit.type = 'submit'; submit.textContent = 'שמירה';
+            actions.append(cancel,submit); form.appendChild(actions);
+            form.onsubmit = e => { e.preventDefault(); const values = Object.fromEntries(new FormData(form)); if(onSave(values) !== false) overlay.remove(); };
+            dialog.appendChild(form); overlay.appendChild(dialog);
+            overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
+        }
+        const customKinds = [['current','ערך משתנה'],['sum','ערך מצטבר'],['chart','גרף לאורך זמן'],['notes','הערות / יומן'],['counter','מונה פעולות'],['tasks','רשימת משימות'],['date','תאריך יעד']];
+        function openCustomBuilder() {
+            if (!ensureEditPermission()) return;
+            customModal('הוסף מדד מותאם', [
+                {key:'name',label:'שם המדד',required:true},
+                {key:'kind',label:'סוג המדד',type:'select',options:customKinds},
+                {key:'unit',label:'יחידת מידה (לא חובה)'}
+            ], v => {
+                const name = v.name.trim();
+                if (!name) return false;
+                customData().push({id:'custom_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name,kind:v.kind,unit:v.unit.trim(),entries:[]});
+                saveAllProjects(); renderCustomDashboard();
+            });
+        }
+        function importCustomDashboard() {
+            if (!ensureEditPermission()) return;
+            const sources = Object.entries(projects).filter(([id,p]) => id !== currentProjectId && Array.isArray(p.customDashboard) && p.customDashboard.length);
+            if (!sources.length) return alert('אין עדיין יין אחר עם מדדים מותאמים לייבוא.');
+            customModal('ייבא מדדים מיין אחר', [{key:'source',label:'בחר יין',type:'select',options:sources.map(([id,p])=>[id,p.name||id])}], v => {
+                const source = projects[v.source]?.customDashboard || [];
+                const existing = customData();
+                source.forEach(item => existing.push({...item,id:'custom_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),entries:[]}));
+                saveAllProjects(); renderCustomDashboard();
+            });
+        }
+        function customNumberEntries(item) { return (item.entries||[]).filter(e => Number.isFinite(Number(e.value)) && e.value !== ''); }
+        function customDisplay(item) {
+            const entries = item.entries || [];
+            if (item.kind === 'notes') return entries.length + ' הערות';
+            if (item.kind === 'tasks') return entries.filter(e=>e.done).length + ' / ' + entries.length + ' הושלמו';
+            if (item.kind === 'date') return entries.length ? entries[entries.length-1].value : '—';
+            const nums = customNumberEntries(item);
+            if (!nums.length) return '—';
+            const value = item.kind === 'sum' || item.kind === 'counter' ? nums.reduce((a,e)=>a+Number(e.value),0) : Number(nums[nums.length-1].value);
+            return (Math.round(value*1000)/1000) + (item.unit ? ' '+item.unit : '');
+        }
+        function renderCustomDashboard() {
+            if (activeCategory !== 'custom') return;
+            const root = fixedDashboardGrid;
+            root.replaceChildren();
+            root.classList.add('custom-dashboard-grid');
+            const toolbar = document.createElement('div'); toolbar.className = 'custom-toolbar';
+            const importBtn = document.createElement('button'); importBtn.textContent = 'ייבא מדדים מיין אחר'; importBtn.onclick = importCustomDashboard;
+            toolbar.appendChild(importBtn); root.appendChild(toolbar);
+            const items = customData();
+            if (!items.length) {
+                const empty = document.createElement('p'); empty.textContent = 'עדיין אין מדדים מותאמים. לחץ על הוסף מדד כדי להתחיל, או ייבא מדדים מיין אחר.';
+                root.appendChild(empty); return;
+            }
+            items.forEach((item,index) => {
+                const card = document.createElement('div'); card.className = 'dashboard-item custom-metric-card';
+                const name = document.createElement('h3'); name.textContent = item.name; card.appendChild(name);
+                const value = document.createElement('p'); value.textContent = customDisplay(item); card.appendChild(value);
+                const last = item.entries?.[item.entries.length-1];
+                if (last) {
+                    const meta = document.createElement('small');
+                    meta.textContent = (last.authorName || 'משתמש') + ' · ' + new Date(last.at || Date.now()).toLocaleString('he-IL');
+                    card.appendChild(meta);
+                }
+                if (item.kind === 'chart' && item.entries?.length > 1) {
+                    const values = customNumberEntries(item).slice(-25).map(e=>Number(e.value));
+                    if (values.length > 1) {
+                        const min=Math.min(...values), max=Math.max(...values), span=max-min||1;
+                        const line=document.createElementNS('http://www.w3.org/2000/svg','svg'); line.setAttribute('viewBox','0 0 240 65'); line.setAttribute('class','custom-sparkline');
+                        const path=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+                        path.setAttribute('points',values.map((v,i)=> (i*240/(values.length-1))+','+(60-(v-min)/span*52)).join(' '));
+                        path.setAttribute('fill','none');path.setAttribute('stroke','currentColor');path.setAttribute('stroke-width','2.5');
+                        line.appendChild(path);card.appendChild(line);
+                    }
+                }
+                card.onclick=()=>openCustomHistory(item.id);
+                root.appendChild(card);
+            });
+        }
+        function openCustomHistory(id) {
+            const item = customData().find(i=>i.id===id); if (!item) return;
+            const fields = item.kind === 'notes' || item.kind === 'tasks'
+                ? [{key:'value',label:item.kind==='tasks'?'משימה':'הערה',type:'textarea',required:true}]
+                : [{key:'value',label:'ערך חדש',type:item.kind==='date'?'date':'number',required:true}];
+            const actions = [{key:'add',label:'הוסף רשומה',type:'button'}];
+            document.getElementById('customDialog')?.remove();
+            const overlay=document.createElement('div');overlay.id='customDialog';overlay.className='custom-dialog-overlay';
+            const dialog=document.createElement('div');dialog.className='custom-dialog';
+            const title=document.createElement('h3');title.textContent=item.name;dialog.appendChild(title);
+            const add=document.createElement('button');add.textContent='הוסף רשומה';add.onclick=()=>{
+                if (!ensureEditPermission()) return;
+                customModal('הוסף ל'+item.name,fields,v=>{
+                    const author=customUser();
+                    item.entries.push({id:'entry_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),value:v.value,at:new Date().toISOString(),authorId:author.uid,authorName:author.name,done:false});
+                    saveAllProjects();renderCustomDashboard();openCustomHistory(id);
+                });
+            };dialog.appendChild(add);
+            const history=document.createElement('div');history.className='custom-history';
+            [...(item.entries||[])].reverse().forEach(entry=>{
+                const row=document.createElement('div');row.className='custom-history-row';
+                const content=document.createElement('div');content.className='custom-history-value';content.textContent=entry.value+(entry.done?' ✓':'');row.appendChild(content);
+                const meta=document.createElement('small');meta.textContent=(entry.authorName||'משתמש')+' · '+new Date(entry.at).toLocaleString('he-IL')+(entry.editedBy?' · נערך על ידי '+entry.editedBy:'');row.appendChild(meta);
+                if (item.kind==='tasks') {const done=document.createElement('button');done.textContent=entry.done?'בטל השלמה':'סמן כהושלם';done.onclick=()=>{if(!ensureEditPermission())return;entry.done=!entry.done;entry.editedBy=customUser().name;entry.editedAt=new Date().toISOString();saveAllProjects();renderCustomDashboard();openCustomHistory(id)};row.appendChild(done);}
+                const edit=document.createElement('button');edit.textContent='ערוך';edit.onclick=()=>{if(!ensureEditPermission())return;customModal('ערוך רשומה',fields.map(f=>({...f,value:entry.value})),v=>{entry.edits=entry.edits||[];entry.edits.push({value:entry.value,by:customUser().name,at:new Date().toISOString()});entry.value=v.value;entry.editedBy=customUser().name;entry.editedAt=new Date().toISOString();saveAllProjects();renderCustomDashboard();openCustomHistory(id)})};row.appendChild(edit);
+                const del=document.createElement('button');del.textContent='מחק';del.onclick=()=>{if(!ensureEditPermission()||!confirm('למחוק את הרשומה?'))return;item.deletedEntries=item.deletedEntries||[];item.deletedEntries.push({...entry,deletedBy:customUser().name,deletedAt:new Date().toISOString()});item.entries=item.entries.filter(e=>e.id!==entry.id);saveAllProjects();renderCustomDashboard();openCustomHistory(id)};row.appendChild(del);
+                history.appendChild(row);
+            });dialog.appendChild(history);
+            const footer=document.createElement('div');footer.className='custom-actions';
+            const move=document.createElement('button');move.textContent='הזז שמאלה / ימינה';move.onclick=()=>{if(!ensureEditPermission())return;const list=customData(),idx=list.findIndex(i=>i.id===id);const target=idx===0?1:idx-1;if(target>=0&&target<list.length){[list[idx],list[target]]=[list[target],list[idx]];saveAllProjects();renderCustomDashboard()}overlay.remove()};footer.appendChild(move);
+            const remove=document.createElement('button');remove.textContent='מחק מדד';remove.onclick=()=>{if(!ensureEditPermission()||!confirm('למחוק את המדד ואת כל בדיקותיו?'))return;projects[currentProjectId].customDashboard=customData().filter(i=>i.id!==id);saveAllProjects();renderCustomDashboard();overlay.remove()};footer.appendChild(remove);
+            const close=document.createElement('button');close.textContent='סגור';close.onclick=()=>overlay.remove();footer.appendChild(close);dialog.appendChild(footer);
+            overlay.appendChild(dialog);overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});document.body.appendChild(overlay);
+        }
+
         function renderActiveCategoryDashboard() {
             if (!fixedDashboardStageName) return;
             const addCubeText = categoryAddCube?.querySelector('span');
@@ -10264,6 +10442,12 @@ button,
                 fixedDashboardStageName.textContent = 'דשבורד תוספות';
                 if (addCubeText) addCubeText.textContent = 'הוסף תוספת';
                 renderAdditionsToMainDashboard();
+                return;
+            }
+            if (activeCategory === 'custom') {
+                fixedDashboardStageName.textContent = 'התאמה אישית';
+                if (addCubeText) addCubeText.textContent = 'הוסף מדד';
+                renderCustomDashboard();
                 return;
             }
             fixedDashboardStageName.textContent = 'דשבורד נתונים נוספים';
