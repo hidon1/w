@@ -1302,8 +1302,11 @@ body.dark-mode .modal-graph-container {
 .modal-graph-svg {
     width: 100%;
     height: 100%;
-    overflow: visible;
+    overflow: hidden;
+    touch-action: none;
 }
+.modal-graph-container {border-radius:16px;background:linear-gradient(180deg,#ffffff,#f7f8fa);border-color:#dfe3e8;box-shadow:0 3px 14px #00000008;}
+body.dark-mode .modal-graph-container {background:var(--dark-card-background);}
 
 .modal-graph-line-path {
     fill: none;
@@ -9186,6 +9189,7 @@ button,
                     secondaryHistoryRows.appendChild(row);
                 });
                 const unit = entries[entries.length - 1]?.unit || '';
+                if(entries.every(e=>e.unit===unit)){let running=0;appendWineAdditionGraph(secondaryHistoryRows,entries.map(e=>({value:running+=Number(e.amount)||0,timestamp:e.timestamp||''})));}
                 secondaryHistoryTotal.textContent = `תוצאה מצטברת: ${total} ${unit}`;
             } else {
                 const safeKey = encodeURIComponent(key);
@@ -10520,6 +10524,7 @@ button,
                     dialog.appendChild(svg);
                 }
             }
+            if(item.kind==='sum'){let running=0;appendWineAdditionGraph(dialog,customNumberEntries(item).map(e=>({value:running+=Number(e.value),timestamp:new Date(e.at).toLocaleString('he-IL')})));}
             const history=document.createElement('div');history.className='custom-history';
             [...(item.entries||[])].reverse().forEach(entry=>{
                 const row=document.createElement('div');row.className='custom-history-row';
@@ -10711,125 +10716,57 @@ button,
                     }
                 }
             }
-            const valueRange = maxValue - minValue;
-            const xScale = (index) => paddingLeft + (index / (numericEntries.length - 1 || 1)) * graphWidth;
-            const yScale = (value) => graphHeight - ((value - minValue) / valueRange) * graphHeight + paddingTop;
-            const numYLabels = 3;
-            for (let i = 0; i < numYLabels; i++) {
-                const valueAtY = minValue + (i / (numYLabels - 1)) * valueRange;
-                const yPos = yScale(valueAtY);
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('x1', paddingLeft);
-                line.setAttribute('y1', yPos);
-                line.setAttribute('x2', svgWidth - paddingRight);
-                line.setAttribute('y2', yPos);
-                line.classList.add('modal-graph-grid-line');
-                modalGraphSvg.appendChild(line);
-                const textY = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                textY.setAttribute('x', paddingLeft - 5);
-                textY.setAttribute('y', yPos + 3);
-                textY.classList.add('modal-graph-label-y');
-                textY.textContent = valueAtY.toFixed(precision);
-                modalGraphSvg.appendChild(textY);
-            }
-            let linePath = '';
-            let areaPath = `M ${paddingLeft} ${yScale(minValue)}`;
-            numericEntries.forEach((entry, i) => {
-                const x = xScale(i);
-                const y = yScale(entry.value);
-                if (i === 0) {
-                    linePath += `M ${x} ${y}`;
-                } else {
-                    linePath += `L ${x} ${y}`;
-                }
-                areaPath += `L ${x} ${y}`;
-                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circle.setAttribute('cx', x);
-                circle.setAttribute('cy', y);
-                circle.setAttribute('r', 5);
-                circle.classList.add('modal-graph-point');
-                circle.setAttribute('data-value', entry.value.toFixed(precision));
-                circle.setAttribute('data-timestamp', entry.timestamp);
-                modalGraphSvg.appendChild(circle);
-                const datePart = entry.timestamp.split(',')[0];
-                const timePart = entry.timestamp.split(',')[1] ? entry.timestamp.split(',')[1].trim() : '';
-                const interval = Math.ceil(numericEntries.length / 5);
-                if (numericEntries.length <= 2 || i % interval === 0 || i === numericEntries.length - 1) {
-                    const textX = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    textX.setAttribute('x', x);
-                    textX.setAttribute('y', svgHeight - paddingBottom + 10);
-                    textX.classList.add('modal-graph-label-x');
-                    const tspanDate = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-                    tspanDate.setAttribute('x', x);
-                    tspanDate.setAttribute('dy', '0em');
-                    tspanDate.textContent = datePart;
-                    textX.appendChild(tspanDate);
-                    if (timePart) {
-                        const tspanTime = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-                        tspanTime.setAttribute('x', x);
-                        tspanTime.setAttribute('dy', '1.2em');
-                        tspanTime.textContent = timePart;
-                        textX.appendChild(tspanTime);
-                    }
-                    modalGraphSvg.appendChild(textX);
-                }
-            });
-            areaPath += `L ${xScale(numericEntries.length - 1)} ${yScale(minValue)} L ${paddingLeft} ${yScale(minValue)} Z`;
-            const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            area.setAttribute('d', areaPath);
-            area.classList.add('modal-graph-area-path');
-            modalGraphSvg.appendChild(area);
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', linePath);
-            path.classList.add('modal-graph-line-path');
-            modalGraphSvg.appendChild(path);
-            const pathLength = path.getTotalLength();
-            path.style.strokeDasharray = `${pathLength} ${pathLength}`;
-            path.style.strokeDashoffset = pathLength;
-            setTimeout(() => {
-                path.style.strokeDashoffset = 0;
-            }, 100);
-            if (comparisonEntries) {
-                let compLinePath = '';
-                let compAreaPath = `M ${paddingLeft} ${yScale(minValue)}`;
-                comparisonEntries.forEach((entry, i) => {
-                    const x = paddingLeft + (i / (comparisonEntries.length - 1 || 1)) * graphWidth;
-                    const y = yScale(entry.value);
-                    if (i === 0) {
-                        compLinePath += `M ${x} ${y}`;
-                    } else {
-                        compLinePath += `L ${x} ${y}`;
-                    }
-                    compAreaPath += `L ${x} ${y}`;
-                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                    circle.setAttribute('cx', x);
-                    circle.setAttribute('cy', y);
-                    circle.setAttribute('r', 4);
-                    circle.setAttribute('fill', '#FF6347');
-                    circle.setAttribute('stroke', '#fff');
-                    circle.setAttribute('stroke-width', '2');
-                    circle.setAttribute('data-value', entry.value.toFixed(precision));
-                    circle.setAttribute('data-timestamp', entry.timestamp);
-                    modalGraphSvg.appendChild(circle);
+            renderStableWineGraph(modalGraphSvg,numericEntries,comparisonEntries||[],precision);
+        }
+        function renderStableWineGraph(svg, entries, comparison=[], precision=2) {
+            if(!svg || !entries.length || !window.d3) return;
+            const d=window.d3, root=d.select(svg);
+            root.on('.zoom',null); root.selectAll('*').remove(); svg.style.transform='';
+            const w=svg.clientWidth,h=svg.clientHeight;
+            if(w<80||h<80)return;
+            const m={left:52,right:20,top:20,bottom:48}, pw=w-m.left-m.right, ph=h-m.top-m.bottom;
+            const all=entries.concat(comparison).map(e=>Number(e.value));
+            let lo=Math.min(...all),hi=Math.max(...all),pad=(hi-lo)*.12||Math.max(Math.abs(lo)*.1,1);
+            const y=d.scaleLinear().domain([lo-pad,hi+pad]).nice(5).range([m.top+ph,m.top]);
+            const n=Math.max(entries.length,comparison.length,2);
+            const base=d.scaleLinear().domain([0,n-1]).range([m.left,m.left+pw]);
+            const clipId='wineClip_'+Math.random().toString(36).slice(2);
+            const defs=root.append('defs');defs.append('clipPath').attr('id',clipId).append('rect').attr('x',m.left).attr('y',m.top-5).attr('width',pw).attr('height',ph+10);
+            const grad=defs.append('linearGradient').attr('id',clipId+'_fill').attr('x1','0%').attr('x2','0%').attr('y1','0%').attr('y2','100%');
+            grad.append('stop').attr('offset','0%').attr('stop-color','var(--graph-line-color)').attr('stop-opacity',.22);grad.append('stop').attr('offset','100%').attr('stop-color','var(--graph-line-color)').attr('stop-opacity',.015);
+            const gy=root.append('g').attr('transform','translate('+m.left+',0)').call(d.axisLeft(y).ticks(5).tickSize(-pw).tickFormat(v=>Number(v.toFixed(precision??2))));
+            gy.select('.domain').remove();gy.selectAll('line').attr('stroke','currentColor').attr('opacity',.12);gy.selectAll('text').attr('fill','currentColor').attr('opacity',.75).attr('font-size',11);
+            const plot=root.append('g').attr('clip-path','url(#'+clipId+')');
+            const gx=root.append('g').attr('transform','translate(0,'+(m.top+ph)+')');
+            const hit=root.append('rect').attr('x',m.left).attr('y',m.top).attr('width',pw).attr('height',ph).attr('fill','transparent').style('touch-action','none');
+            const tip=root.append('g').style('pointer-events','none').style('display','none');
+            tip.append('rect').attr('rx',7).attr('fill','#263238').attr('width',112).attr('height',38);
+            const tipValue=tip.append('text').attr('x',56).attr('y',15).attr('text-anchor','middle').attr('fill','white').attr('font-size',12);
+            const tipDate=tip.append('text').attr('x',56).attr('y',29).attr('text-anchor','middle').attr('fill','white').attr('font-size',9);
+            let x=base;
+            function paint(t){
+                x=t.rescaleX(base);plot.selectAll('*').remove();tip.style('display','none');
+                const line=d.line().x((e,i)=>x(i)).y(e=>y(e.value));
+                const area=d.area().x((e,i)=>x(i)).y0(m.top+ph).y1(e=>y(e.value));
+                plot.append('path').datum(entries).attr('d',area).attr('fill','url(#'+clipId+'_fill)');
+                [[entries,'var(--graph-line-color)'],[comparison,'#e68a47']].forEach(([series,color])=>{
+                    if(!series.length)return;
+                    plot.append('path').datum(series).attr('d',line).attr('fill','none').attr('stroke',color).attr('stroke-width',2.6).attr('stroke-linejoin','round').attr('stroke-linecap','round');
+                    plot.selectAll(null).data(series).enter().append('circle').attr('cx',(e,i)=>x(i)).attr('cy',e=>y(e.value)).attr('r',3.5).attr('fill',color).attr('stroke','white').attr('stroke-width',1.3);
                 });
-                compAreaPath += `L ${paddingLeft + ((comparisonEntries.length - 1) / (comparisonEntries.length - 1 || 1)) * graphWidth} ${yScale(minValue)} L ${paddingLeft} ${yScale(minValue)} Z`;
-                const compArea = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                compArea.setAttribute('d', compAreaPath);
-                compArea.setAttribute('fill', 'rgba(255, 99, 71, 0.2)');
-                compArea.setAttribute('opacity', '0.8');
-                modalGraphSvg.appendChild(compArea);
-                const compPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                compPath.setAttribute('d', compLinePath);
-                compPath.setAttribute('fill', 'none');
-                compPath.setAttribute('stroke', '#FF6347');
-                compPath.setAttribute('stroke-width', '3');
-                modalGraphSvg.appendChild(compPath);
+                const visible=entries.map((e,i)=>i).filter(i=>x(i)>=m.left&&x(i)<=m.left+pw), step=Math.max(1,Math.ceil(visible.length/Math.max(2,Math.floor(pw/75))));
+                gx.call(d.axisBottom(x).tickValues(visible.filter((i,j)=>j%step===0)).tickFormat(i=>String(entries[i]?.timestamp||'').split(',')[0]).tickSize(4));
+                gx.select('.domain').attr('opacity',.18);gx.selectAll('text').attr('fill','currentColor').attr('font-size',10);
             }
-            const zoom = d3.zoom().scaleExtent([0.5, 5]).on('zoom', (event) => {
-                const transform = event.transform;
-                modalGraphSvg.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`;
-            });
-            d3.select(modalGraphSvg).call(zoom);
+            const zoom=d.zoom().scaleExtent([1,Math.max(5,n/3)]).extent([[m.left,m.top],[m.left+pw,m.top+ph]]).translateExtent([[m.left,m.top],[m.left+pw,m.top+ph]]).on('zoom',e=>paint(e.transform));
+            hit.call(zoom).on('pointermove.tip',event=>{const i=Math.max(0,Math.min(entries.length-1,Math.round(x.invert(d.pointer(event,svg)[0]))));const e=entries[i],px=x(i);if(px<m.left||px>m.left+pw)return tip.style('display','none');tip.attr('transform','translate('+Math.max(0,Math.min(w-112,px-56))+','+Math.max(0,y(e.value)-44)+')').style('display',null);tipValue.text(Number(e.value.toFixed(precision??2)));tipDate.text(String(e.timestamp||'').split(',')[0]);}).on('pointerleave.tip',()=>tip.style('display','none'));
+            paint(d.zoomIdentity);
+        }
+        function appendWineAdditionGraph(parent,entries){
+            if(!entries.length)return;
+            const box=document.createElement('div');box.className='modal-graph-container';box.style.height='240px';
+            const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('modal-graph-svg');box.appendChild(svg);parent.prepend(box);
+            setTimeout(()=>{if(svg.isConnected)renderStableWineGraph(svg,entries,[],3);},60);
         }
         function closeHistoryModal() {
             resetCustomHistoryControls();
