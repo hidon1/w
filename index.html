@@ -10440,35 +10440,55 @@ button,
             if (activeCategory !== 'custom') return;
             const root = fixedDashboardGrid;
             root.replaceChildren();
-            root.classList.add('custom-dashboard-grid');
+            root.classList.remove('custom-dashboard-grid');
             const items = customData();
             items.forEach((item,index) => {
-                const card = document.createElement('div'); card.className = 'dashboard-item custom-metric-card';
+                const card = document.createElement('div'); card.className = 'dashboard-item';
                 const name = document.createElement('h3'); name.textContent = item.name; if (['current','chart','sum'].includes(item.kind)) { const icon=document.createElement('i'); icon.className=item.kind==='sum'?'fas fa-flask':'fas fa-chart-line'; icon.style.marginInlineEnd='6px'; name.prepend(icon); } card.appendChild(name);
                 const value = document.createElement('p'); value.textContent = customDisplay(item); card.appendChild(value);
-                const last = item.entries?.[item.entries.length-1];
-                if (last) {
-                    const meta = document.createElement('small');
-                    meta.textContent = (last.authorName || 'משתמש') + ' · ' + new Date(last.at || Date.now()).toLocaleString('he-IL');
-                    card.appendChild(meta);
-                }
-                if (['current','chart'].includes(item.kind) && item.entries?.length > 1) {
-                    const values = customNumberEntries(item).slice(-25).map(e=>Number(e.value));
-                    if (values.length > 1) {
-                        const min=Math.min(...values), max=Math.max(...values), span=max-min||1;
-                        const line=document.createElementNS('http://www.w3.org/2000/svg','svg'); line.setAttribute('viewBox','0 0 240 65'); line.setAttribute('class','custom-sparkline');
-                        const path=document.createElementNS('http://www.w3.org/2000/svg','polyline');
-                        path.setAttribute('points',values.map((v,i)=> (i*240/(values.length-1))+','+(60-(v-min)/span*52)).join(' '));
-                        path.setAttribute('fill','none');path.setAttribute('stroke','currentColor');path.setAttribute('stroke-width','2.5');
-                        line.appendChild(path);card.appendChild(line);
-                    }
-                }
                 card.onclick=()=>openCustomHistory(item.id);
                 root.appendChild(card);
             });
         }
+        function resetCustomHistoryControls() {
+            const controls=historyModal.querySelector('.graph-controls');
+            controls.querySelectorAll('[data-custom-history]').forEach(e=>e.remove());
+            Array.from(controls.children).forEach(e=>{if(e.dataset.customHidden){e.style.display=e.dataset.customHidden==='default'?'':e.dataset.customHidden;delete e.dataset.customHidden;}});
+        }
+        function openCustomNumericHistory(item, comparison = []) {
+            resetCustomHistoryControls();
+            document.getElementById('customDialog')?.remove();
+            currentMetricTypeForModal={sectionId:'customDashboard',metricId:item.id};
+            modalTitle.textContent='היסטוריית '+item.name;
+            historyList.replaceChildren(); modalGraphSvg.replaceChildren();
+            const controls=historyModal.querySelector('.graph-controls');
+            Array.from(controls.children).forEach(e=>{e.dataset.customHidden=e.style.display||'default';e.style.display='none';});
+            const button=(parent,label,fn,cls='')=>{const b=document.createElement('button');b.textContent=label;b.className=cls;b.onclick=fn;parent.appendChild(b);return b;};
+            const control=(label,fn)=>{const b=button(controls,label,fn);b.dataset.customHistory='1';};
+            const refresh=()=>{saveAllProjects();renderCustomDashboard();openCustomNumericHistory(item,comparison);};
+            const field={key:'value',label:'ערך'+(item.unit?' ('+item.unit+')':''),type:'number',required:true};
+            control('הוסף רשומה',()=>{if(!ensureEditPermission())return;customModal('הוסף ל'+item.name,[field],v=>{const u=customUser();item.entries.push({id:'entry_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),value:v.value,at:new Date().toISOString(),authorId:u.uid,authorName:u.name,done:false});refresh();});});
+            control('מחק מדד',()=>{if(!ensureEditPermission()||!confirm('למחוק את המדד ואת כל בדיקותיו?'))return;projects[currentProjectId].customDashboard=customData().filter(i=>i.id!==item.id);saveAllProjects();renderCustomDashboard();closeHistoryModal();});
+            const graphEntries=i=>customNumberEntries(i).map(e=>({value:Number(e.value),timestamp:new Date(e.at).toLocaleString('he-IL')}));
+            control('השווה לפרויקט אחר',()=>{const options=Object.entries(projects).filter(([id,p])=>id!==currentProjectId&&(p.customDashboard||[]).some(i=>i.name===item.name&&i.kind===item.kind));if(!options.length)return alert('אין מדד תואם בפרויקט אחר');customModal('השווה לפרויקט אחר',[{key:'project',label:'בחר פרויקט',type:'select',options:options.map(([id,p])=>[id,p.name||id])}],v=>{const other=projects[v.project].customDashboard.find(i=>i.name===item.name&&i.kind===item.kind);openCustomNumericHistory(item,graphEntries(other));});});
+            const entries=graphEntries(item);
+            modalGraphSvg.style.display=entries.length?'block':'none';modalGraphSvg.style.transform='';
+            historyModal.style.display='flex';
+            if(entries.length)setTimeout(()=>{if(historyModal.style.display==='flex'&&currentMetricTypeForModal.sectionId==='customDashboard'&&currentMetricTypeForModal.metricId===item.id)drawModalGraph(entries,3,comparison);},50);
+            [...(item.entries||[])].reverse().forEach(entry=>{
+                const li=document.createElement('li'), main=document.createElement('div');main.className='history-entry-main';
+                const valueRow=document.createElement('div');valueRow.className='history-entry-value-row';const strong=document.createElement('strong');strong.textContent=entry.value+(item.unit?' '+item.unit:'');valueRow.appendChild(strong);main.appendChild(valueRow);
+                const stamp=document.createElement('span');stamp.className='timestamp';stamp.textContent=new Date(entry.at).toLocaleString('he-IL');
+                const actions=document.createElement('span');actions.className='history-entry-actions-inline';
+                button(actions,'ערוך',()=>{if(!ensureEditPermission())return;customModal('ערוך רשומה',[{...field,value:entry.value}],v=>{entry.edits=entry.edits||[];entry.edits.push({value:entry.value,by:customUser().name,at:new Date().toISOString()});entry.value=v.value;entry.editedBy=customUser().name;entry.editedAt=new Date().toISOString();refresh();});},'history-upload-btn');
+                button(actions,'בטל',()=>{if(!ensureEditPermission()||!confirm('למחוק את הרשומה?'))return;item.deletedEntries=item.deletedEntries||[];item.deletedEntries.push({...entry,deletedBy:customUser().name,deletedAt:new Date().toISOString()});item.entries=item.entries.filter(e=>e.id!==entry.id);refresh();},'undo-button');
+                stamp.appendChild(actions);main.appendChild(stamp);li.appendChild(main);historyList.appendChild(li);
+            });
+            if(!entries.length){const li=document.createElement('li');li.textContent='אין נתונים היסטוריים זמינים.';historyList.appendChild(li);}
+        }
         function openCustomHistory(id) {
             const item = customData().find(i=>i.id===id); if (!item) return;
+            if (['current','chart'].includes(item.kind)) return openCustomNumericHistory(item);
             const fields = item.kind === 'notes' || item.kind === 'tasks'
                 ? [{key:'value',label:item.kind==='tasks'?'משימה':'הערה',type:'textarea',required:true}]
                 : [{key:'value',label:'ערך חדש',type:item.kind==='date'?'date':'number',required:true}];
@@ -10559,6 +10579,7 @@ button,
             return { isCustomStageMetric, isCustomWineMetric };
         }
         function openHistoryModal(sectionId, metricId, metricName) {
+            resetCustomHistoryControls();
             currentMetricTypeForModal = { sectionId, metricId };
             modalTitle.textContent = `היסטוריית ${metricName} (${stagesConfig[sectionId].name})`;
             historyList.innerHTML = '';
@@ -10637,7 +10658,7 @@ button,
                 historyList.appendChild(listItem);
             }
         }
-        function drawModalGraph(entries, precision) {
+        function drawModalGraph(entries, precision, customComparison = undefined) {
             modalGraphSvg.innerHTML = '';
             
             // Filter only numeric entries for graph
@@ -10659,7 +10680,7 @@ button,
             let maxValue = Math.max(...values);
             let averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
             if (numericEntries.length === 1 || minValue === maxValue) {
-                const buffer = (values[0] * 0.1) || 1;
+                const buffer = Math.abs(values[0] * 0.1) || 1;
                 minValue = values[0] - buffer;
                 maxValue = values[0] + buffer;
                 if (minValue === maxValue) {
@@ -10668,8 +10689,10 @@ button,
                 }
             }
             let comparisonEntries = null;
-            if (comparisonProjectId && projects[comparisonProjectId]) {
+            if (customComparison !== undefined || (comparisonProjectId && projects[comparisonProjectId])) {
                 let compHistoryEntries;
+                if (customComparison !== undefined) compHistoryEntries = customComparison;
+                else
                 if (currentMetricTypeForModal.sectionId === 'wineDetails') {
                     compHistoryEntries = projects[comparisonProjectId].wineDetails[currentMetricTypeForModal.metricId];
                 } else {
@@ -10809,6 +10832,7 @@ button,
             d3.select(modalGraphSvg).call(zoom);
         }
         function closeHistoryModal() {
+            resetCustomHistoryControls();
             historyModal.style.display = 'none';
             comparisonProjectId = null;
         }
