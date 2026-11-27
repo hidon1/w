@@ -15029,5 +15029,32 @@ window.setWineLanguage(lang);observer.observe(document.body,{subtree:true,childL
 #fixedDashboardSection.dashboard-section.collapsed-mobile{height:0!important;min-height:0!important;padding:0!important;border:0!important;gap:0!important;overflow:visible!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important}
 #fixedDashboardSection.collapsed-mobile h2{display:none!important}
 #fixedDashboardSection.collapsed-mobile #dashboardCollapseBtn{top:auto!important;bottom:4px!important;left:10px!important;background:#81203e!important;box-shadow:0 2px 8px #0003}
-}</style></body>
+}</style><style>
+#wineAiOpen{position:fixed;left:14px;top:40%;z-index:1090;border:1px solid #e6bf65;border-radius:50%;width:43px;height:43px;background:#781b36;color:#f2ce79;font-weight:bold;box-shadow:0 3px 12px #0003}
+#wineAiPanel{position:fixed;inset:auto 12px 12px auto;width:min(420px,calc(100% - 24px));height:min(620px,85dvh);z-index:2000;background:var(--card-background,#fff);color:var(--text-color,#333);border:1px solid #d5b56b;border-radius:18px;box-shadow:0 8px 35px #0005;display:flex;flex-direction:column;padding:12px;box-sizing:border-box}
+#wineAiPanel[hidden]{display:none!important}#wineAiLog{flex:1;min-height:0;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}#wineAiLog p{padding:9px;border-radius:10px;background:#8881}#wineAiForm{display:flex;gap:5px;align-items:center}#wineAiInput{flex:1;min-width:0;padding:10px}#wineAiPanel button{border-radius:9px;padding:8px;background:#781b36;color:white;border:0}
+</style>
+<button id="wineAiOpen" aria-label="Wine AI">AI ✦</button>
+<section id="wineAiPanel" hidden><header style="display:flex;justify-content:space-between;align-items:center"><strong>Wine AI ✦</strong><button id="wineAiClose" aria-label="Close">×</button></header><div id="wineAiLog" aria-live="polite"></div><form id="wineAiForm"><input id="wineAiInput" placeholder="כתוב בקשה או שאלה..." required maxlength="2000"><button type="button" id="wineAiMic" aria-label="Microphone">🎙</button><button type="submit">➤</button></form></section>
+<script>
+(function(){
+const $=id=>document.getElementById(id), panel=$('wineAiPanel'),log=$('wineAiLog'),input=$('wineAiInput');
+const tr=(he,en,fr)=>document.documentElement.lang==='fr'?fr:document.documentElement.lang==='en'?en:he;
+const say=t=>{const p=document.createElement('p');p.textContent=t;log.appendChild(p);log.scrollTop=log.scrollHeight;return p;};
+$('wineAiOpen').onclick=()=>{panel.hidden=false;if(!log.children.length)say(tr('איך אוכל לעזור?','How can I help?','Comment puis-je vous aider ?'));};
+$('wineAiClose').onclick=()=>panel.hidden=true;
+$('wineAiMic').onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return say(tr('הכתבה קולית אינה נתמכת כאן.','Voice dictation is unavailable here.','La dictée vocale est indisponible ici.'));const rec=new R();rec.lang=({he:'he-IL',en:'en-US',fr:'fr-FR'})[document.documentElement.lang]||'he-IL';rec.onresult=e=>input.value=e.results[0][0].transcript;rec.onerror=()=>say(tr('לא ניתן להפעיל מיקרופון.','Microphone unavailable.','Microphone indisponible.'));try{rec.start();}catch(e){rec.onerror();}};
+let busy=false;
+$('wineAiForm').onsubmit=async e=>{e.preventDefault();if(busy)return;const message=input.value.trim();if(!message)return;input.value='';say(message);const endpoint=window.WINE_AI_ENDPOINT;if(!endpoint)return say(tr('העוזר ממתין לחיבור Gemini בצד השרת.','Assistant awaits Gemini server setup.','Assistant en attente de la configuration Gemini.'));busy=true;try{
+const user=window.currentFirebaseUser;if(!user)throw Error('Sign in first');
+const projectId=currentProjectId, owner=sharedAccessContext.ownerUid||user.uid;
+const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({message,projectId,owner,lang:document.documentElement.lang})});
+if(!response.ok)throw Error('AI service unavailable ('+response.status+')');const result=await response.json();say(String(result.reply||''));
+const a=result.action;if(!a)return;
+if(!['create_custom','append_custom'].includes(a.type))return;
+const btn=document.createElement('button');btn.textContent=tr('אשר פעולה','Confirm action','Confirmer');log.appendChild(btn);
+btn.onclick=()=>{if(currentProjectId!==projectId||(sharedAccessContext.ownerUid||window.currentFirebaseUser?.uid)!==owner||!ensureEditPermission(projectId)||projects[projectId]?.isClosed)return;const items=customData();if(a.type==='create_custom'){const name=String(a.name||'').trim().slice(0,100);if(!name||items.some(i=>i.name===name)||!['current','sum','chart'].includes(a.kind))return say('Invalid or duplicate measurement');items.push({id:'custom_'+crypto.randomUUID(),name,kind:a.kind,unit:String(a.unit||'').slice(0,30),entries:[]});}else{const item=items.find(i=>i.id===a.id);if(!item||!['current','sum','chart'].includes(item.kind)||typeof a.value!=='number'||!Number.isFinite(a.value))return say('Invalid measurement');const u=customUser();(item.entries||=[]).push({id:'entry_'+crypto.randomUUID(),value:String(a.value),at:new Date().toISOString(),authorId:u.uid,authorName:u.name,done:false});}btn.disabled=true;saveAllProjects();renderCustomDashboard();say(tr('הפעולה בוצעה.','Action completed.','Action effectuée.'));};
+}catch(err){say(String(err.message));}finally{busy=false;}};
+})();
+</script></body>
 </html>
