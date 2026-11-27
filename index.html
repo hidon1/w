@@ -6710,6 +6710,28 @@ button,
 #fixedDashboardSection[data-category="custom"] .dashboard-item{height:auto;min-height:64px}
 @media(max-width:768px){#fixedDashboardSection[data-category="custom"] .dashboard-item{height:auto!important;min-height:64px!important;overflow:visible!important}.custom-entry-meta{font-size:10px!important;display:block!important}}
 </style>
+<style>
+/* Single-row dashboard, independently scrollable without changing page layout. */
+#fixedDashboardSection #fixedDashboardGrid.dashboard-grid,
+#fixedDashboardSection[data-category] #fixedDashboardGrid.dashboard-grid {
+ display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+ grid-template-columns:none!important;gap:6px!important;justify-content:flex-start!important;
+ align-items:stretch!important;direction:rtl;min-width:0!important;width:100%!important;max-width:100%!important;
+ overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain;
+ scrollbar-width:thin;box-sizing:border-box;padding:3px 2px 6px!important;
+}
+#fixedDashboardSection #fixedDashboardGrid.dashboard-grid > .dashboard-item {
+ flex:0 0 110px!important;width:110px!important;min-width:110px!important;max-width:110px!important;
+ height:auto!important;aspect-ratio:auto!important;box-sizing:border-box;
+}
+@media(max-width:768px){
+ #fixedDashboardSection #fixedDashboardGrid.dashboard-grid > .dashboard-item {
+ flex-basis:calc((100% - 18px)/4)!important;width:auto!important;min-width:76px!important;max-width:none!important;
+ }
+ #fixedDashboardSection #fixedDashboardGrid.dashboard-grid{scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ #fixedDashboardSection #fixedDashboardGrid.dashboard-grid::-webkit-scrollbar{display:none}
+}
+</style>
 </head>
 <body class="preload">
     <!-- Loading Overlay -->
@@ -10314,7 +10336,7 @@ button,
             dashboardItem.className = 'dashboard-item';
             dashboardItem.innerHTML = `
                 <h3>${name}</h3>
-                <p>סה"כ מצטבר: ${total} ${unit}</p>
+                <p>${total} ${unit}</p>
             `;
             dashboardItem.onclick = () => openSecondaryHistoryModal('addition', name);
             return dashboardItem;
