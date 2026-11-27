@@ -6630,6 +6630,12 @@ button,
 .custom-history-value {width:100%;white-space:pre-wrap;overflow-wrap:anywhere}
 .custom-history-row small {flex:1 1 100%;opacity:.75}
 @media(max-width:768px){.custom-dashboard-grid {flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;overscroll-behavior-x:contain}.custom-toolbar {flex:0 0 100%}.custom-metric-card {flex:0 0 70%;scroll-snap-align:start}.custom-dialog {max-height:90vh}}
+
+#fixedDashboardSection[data-category="custom"] #fixedDashboardGrid {min-height:0!important;align-items:start;}
+#fixedDashboardSection[data-category="custom"] #fixedDashboardGrid:empty {display:none!important;}
+#fixedDashboardSection[data-category="custom"] .custom-metric-card {min-height:44px!important;height:auto!important;aspect-ratio:auto!important;padding:6px 8px!important;}
+#fixedDashboardSection[data-category="custom"] #categoryAddCube {min-height:36px!important;height:36px!important;padding:4px 8px!important;}
+@media(max-width:768px){#fixedDashboardSection[data-category="custom"] #fixedDashboardGrid.dashboard-grid {grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;}}
 </style><style>
 /* Compact, horizontal metric update controls on phones only. */
 @media (max-width: 768px) {
@@ -8864,7 +8870,11 @@ button,
         }
 
         function handleCategoryAddAction() {
-            if (activeCategory === 'custom') return openCustomBuilder();
+            if (activeCategory === 'custom') {
+                return customModal('הוסף', [{key:'action',label:'',type:'select',options:[['new','הוסף מדד חדש'],['import','ייבא מדדים מיין אחר']]}], v => {
+                    setTimeout(() => v.action === 'import' ? importCustomDashboard() : openCustomBuilder(), 0);
+                });
+            }
             openAddMetricModal();
         }
 
@@ -10425,14 +10435,7 @@ button,
             const root = fixedDashboardGrid;
             root.replaceChildren();
             root.classList.add('custom-dashboard-grid');
-            const toolbar = document.createElement('div'); toolbar.className = 'custom-toolbar';
-            const importBtn = document.createElement('button'); importBtn.textContent = 'ייבא מדדים מיין אחר'; importBtn.onclick = importCustomDashboard;
-            toolbar.appendChild(importBtn); root.appendChild(toolbar);
             const items = customData();
-            if (!items.length) {
-                const empty = document.createElement('p'); empty.textContent = 'עדיין אין מדדים מותאמים. לחץ על הוסף מדד כדי להתחיל, או ייבא מדדים מיין אחר.';
-                root.appendChild(empty); return;
-            }
             items.forEach((item,index) => {
                 const card = document.createElement('div'); card.className = 'dashboard-item custom-metric-card';
                 const name = document.createElement('h3'); name.textContent = item.name; card.appendChild(name);
@@ -10511,7 +10514,7 @@ button,
             }
             if (activeCategory === 'custom') {
                 fixedDashboardStageName.textContent = 'התאמה אישית';
-                if (addCubeText) addCubeText.textContent = 'הוסף מדד';
+                if (addCubeText) addCubeText.textContent = 'הוסף';
                 renderCustomDashboard();
                 return;
             }
