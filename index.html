@@ -8871,7 +8871,7 @@ button,
 
         function handleCategoryAddAction() {
             if (activeCategory === 'custom') {
-                return customModal('הוסף', [{key:'action',label:'',type:'select',options:[['new','הוסף מדד חדש'],['import','ייבא מדדים מיין אחר']]}], v => {
+                return customModal('הוסף', [{key:'action',label:'',type:'select',immediate:true,options:[['','בחר פעולה'],['new','הוסף מדד חדש'],['import','ייבא מדדים מיין אחר']]}], v => {
                     setTimeout(() => v.action === 'import' ? importCustomDashboard() : openCustomBuilder(), 0);
                 });
             }
@@ -10381,14 +10381,20 @@ button,
                 el.name = f.key;
                 if (el.tagName === 'INPUT') { el.type = f.type || 'text'; if (f.type === 'number') el.step = 'any'; }
                 if (f.options) f.options.forEach(o => { const option = document.createElement('option'); option.value = o[0]; option.textContent = o[1]; el.appendChild(option); });
-                el.value = f.value ?? '';
+                el.value = f.value ?? (f.options?.[0]?.[0] ?? '');
                 if (f.required) el.required = true;
                 label.appendChild(el); form.appendChild(label);
+                if (f.immediate) el.addEventListener('change', () => { if(el.value) { overlay.remove(); onSave(Object.fromEntries(new FormData(form))); } });
+                if (f.key === 'kind') {
+                    const symbol = document.createElement('i');
+                    const sync = () => { symbol.className = el.value === 'sum' ? 'fas fa-flask' : el.value === 'current' || el.value === 'chart' ? 'fas fa-chart-line' : ''; };
+                    label.prepend(symbol); symbol.style.marginInlineEnd = '8px'; el.addEventListener('change',sync); sync();
+                }
             });
             const actions = document.createElement('div'); actions.className = 'custom-actions';
             const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'ביטול'; cancel.onclick = () => overlay.remove();
             const submit = document.createElement('button'); submit.type = 'submit'; submit.textContent = 'שמירה';
-            actions.append(cancel,submit); form.appendChild(actions);
+            actions.append(cancel); if (!fields.some(f=>f.immediate)) actions.append(submit); form.appendChild(actions);
             form.onsubmit = e => { e.preventDefault(); const values = Object.fromEntries(new FormData(form)); if(onSave(values) !== false) overlay.remove(); };
             dialog.appendChild(form); overlay.appendChild(dialog);
             overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
@@ -10438,7 +10444,7 @@ button,
             const items = customData();
             items.forEach((item,index) => {
                 const card = document.createElement('div'); card.className = 'dashboard-item custom-metric-card';
-                const name = document.createElement('h3'); name.textContent = item.name; card.appendChild(name);
+                const name = document.createElement('h3'); name.textContent = item.name; if (['current','chart','sum'].includes(item.kind)) { const icon=document.createElement('i'); icon.className=item.kind==='sum'?'fas fa-flask':'fas fa-chart-line'; icon.style.marginInlineEnd='6px'; name.prepend(icon); } card.appendChild(name);
                 const value = document.createElement('p'); value.textContent = customDisplay(item); card.appendChild(value);
                 const last = item.entries?.[item.entries.length-1];
                 if (last) {
@@ -10446,7 +10452,7 @@ button,
                     meta.textContent = (last.authorName || 'משתמש') + ' · ' + new Date(last.at || Date.now()).toLocaleString('he-IL');
                     card.appendChild(meta);
                 }
-                if (item.kind === 'chart' && item.entries?.length > 1) {
+                if (['current','chart'].includes(item.kind) && item.entries?.length > 1) {
                     const values = customNumberEntries(item).slice(-25).map(e=>Number(e.value));
                     if (values.length > 1) {
                         const min=Math.min(...values), max=Math.max(...values), span=max-min||1;
@@ -10479,6 +10485,21 @@ button,
                     saveAllProjects();renderCustomDashboard();openCustomHistory(id);
                 });
             };dialog.appendChild(add);
+            if (['current','chart','sum'].includes(item.kind)) {
+                const summary=document.createElement('h3'); summary.textContent=(item.kind==='sum'?'סה״כ מצטבר: ':'ערך אחרון: ')+customDisplay(item); dialog.appendChild(summary);
+                const nums=customNumberEntries(item);
+                if(item.kind!=='sum' && nums.length) {
+                    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 340 180'); svg.style.width='100%'; svg.setAttribute('role','img'); svg.setAttribute('aria-label','גרף מדידות לאורך זמן');
+                    const values=nums.map(e=>Number(e.value)), lo=Math.min(...values), hi=Math.max(...values), pad=(hi-lo)*.1||Math.max(Math.abs(lo)*.05,1), min=lo-pad,max=hi+pad;
+                    const node=(tag,attrs,label)=>{const n=document.createElementNS(svg.namespaceURI,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));if(label!==undefined)n.textContent=label;svg.appendChild(n);return n;};
+                    for(let i=0;i<5;i++){const y=15+i*32;node('line',{x1:45,x2:325,y1:y,y2:y,stroke:'currentColor',opacity:.15});node('text',{x:40,y:y+4,'text-anchor':'end','font-size':10,fill:'currentColor'},Number((max-(max-min)*i/4).toFixed(2)));}
+                    const pts=values.map((v,i)=>[values.length===1?185:45+i*280/(values.length-1),15+(max-v)*128/(max-min)]);
+                    node('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',stroke:'currentColor','stroke-width':2});
+                    pts.forEach((p,i)=>{const dot=node('circle',{cx:p[0],cy:p[1],r:3,fill:'currentColor'});const t=document.createElementNS(svg.namespaceURI,'title');t.textContent=values[i]+' · '+new Date(nums[i].at).toLocaleString('he-IL');dot.appendChild(t);});
+                    [0,nums.length-1].filter((v,i,a)=>a.indexOf(v)===i).forEach(i=>node('text',{x:pts[i][0],y:164,'text-anchor':i===0?'start':'end','font-size':10,fill:'currentColor'},new Date(nums[i].at).toLocaleDateString('he-IL')));
+                    dialog.appendChild(svg);
+                }
+            }
             const history=document.createElement('div');history.className='custom-history';
             [...(item.entries||[])].reverse().forEach(entry=>{
                 const row=document.createElement('div');row.className='custom-history-row';
@@ -10486,7 +10507,7 @@ button,
                 const meta=document.createElement('small');meta.textContent=(entry.authorName||'משתמש')+' · '+new Date(entry.at).toLocaleString('he-IL')+(entry.editedBy?' · נערך על ידי '+entry.editedBy:'');row.appendChild(meta);
                 if (item.kind==='tasks') {const done=document.createElement('button');done.textContent=entry.done?'בטל השלמה':'סמן כהושלם';done.onclick=()=>{if(!ensureEditPermission())return;entry.done=!entry.done;entry.editedBy=customUser().name;entry.editedAt=new Date().toISOString();saveAllProjects();renderCustomDashboard();openCustomHistory(id)};row.appendChild(done);}
                 const edit=document.createElement('button');edit.textContent='ערוך';edit.onclick=()=>{if(!ensureEditPermission())return;customModal('ערוך רשומה',fields.map(f=>({...f,value:entry.value})),v=>{entry.edits=entry.edits||[];entry.edits.push({value:entry.value,by:customUser().name,at:new Date().toISOString()});entry.value=v.value;entry.editedBy=customUser().name;entry.editedAt=new Date().toISOString();saveAllProjects();renderCustomDashboard();openCustomHistory(id)})};row.appendChild(edit);
-                const del=document.createElement('button');del.textContent='מחק';del.onclick=()=>{if(!ensureEditPermission()||!confirm('למחוק את הרשומה?'))return;item.deletedEntries=item.deletedEntries||[];item.deletedEntries.push({...entry,deletedBy:customUser().name,deletedAt:new Date().toISOString()});item.entries=item.entries.filter(e=>e.id!==entry.id);saveAllProjects();renderCustomDashboard();openCustomHistory(id)};row.appendChild(del);
+                const del=document.createElement('button');del.textContent=['current','chart','sum'].includes(item.kind)?'בטל':'מחק';del.onclick=()=>{if(!ensureEditPermission()||!confirm('למחוק את הרשומה?'))return;item.deletedEntries=item.deletedEntries||[];item.deletedEntries.push({...entry,deletedBy:customUser().name,deletedAt:new Date().toISOString()});item.entries=item.entries.filter(e=>e.id!==entry.id);saveAllProjects();renderCustomDashboard();openCustomHistory(id)};row.appendChild(del);
                 history.appendChild(row);
             });dialog.appendChild(history);
             const footer=document.createElement('div');footer.className='custom-actions';
