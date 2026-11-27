@@ -6732,6 +6732,10 @@ button,
  #fixedDashboardSection #fixedDashboardGrid.dashboard-grid::-webkit-scrollbar{display:none}
 }
 </style>
+<style>
+#historyList .history-entry-actions-inline{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:8px!important;width:100%!important;margin:8px 0 0!important;align-items:stretch!important}
+#historyList .history-entry-actions-inline > button{flex:1 1 0!important;width:0!important;min-width:0!important;max-width:none!important;height:34px!important;min-height:34px!important;margin:0!important;padding:5px 8px!important;box-sizing:border-box!important;grid-column:auto!important;align-self:stretch!important;font-size:13px!important;line-height:1.2!important;text-align:center!important}
+</style>
 </head>
 <body class="preload">
     <!-- Loading Overlay -->
@@ -10483,8 +10487,6 @@ button,
                 const card = document.createElement('div'); card.className = 'dashboard-item';
                 const name = document.createElement('h3'); name.textContent = item.name; if (['current','chart','sum'].includes(item.kind)) { const icon=document.createElement('i'); icon.className=item.kind==='sum'?'fas fa-flask':'fas fa-chart-line'; icon.style.marginInlineEnd='6px'; name.prepend(icon); } card.appendChild(name);
                 const value = document.createElement('p'); value.textContent = customDisplay(item); card.appendChild(value);
-                const last=item.entries?.[item.entries.length-1];
-                if(last){const meta=document.createElement('small');meta.className='custom-entry-meta';meta.textContent=(last.authorName||'משתמש')+' · '+new Date(last.at).toLocaleString('he-IL');card.appendChild(meta);}
                 card.onclick=()=>openCustomHistory(item.id);
                 root.appendChild(card);
             });
