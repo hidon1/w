@@ -14472,7 +14472,13 @@ button,
             try {
                 // Load all data from Firebase
                 const [projects, reminders, inbox, preferences, stagesConf] = await Promise.all([
-                    loadProjectsFromFirebase(),
+                    loadProjectsFromFirebase().then(projectData => {
+                        if (currentUser && projectData && Object.keys(projectData).length && typeof window.setProjectsData === 'function') {
+                            window.setProjectsData(projectData);
+                            refreshProjectsAndMetricsUI();
+                        }
+                        return projectData;
+                    }),
                     loadReminders(),
                     loadInbox(),
                     loadPreferences(),
@@ -14774,11 +14780,9 @@ button,
             if (user && !isInitialized) {
                 isInitialized = true;
                 closeAuthModal();
-                try {
-                    await ensureUserAccountIndex(user);
-                } catch (error) {
+                ensureUserAccountIndex(user).catch(error => {
                     console.warn('Failed to update user account index:', error);
-                }
+                });
                 // Load data from Firebase when user signs in
                 const restoredSharedAccess = typeof window.restoreSharedAccessFromStorage === 'function'
                     ? window.restoreSharedAccessFromStorage()
@@ -14792,8 +14796,8 @@ button,
                 if (restoredSharedAccess && restoredOwnerUid) {
                     setActiveDataAccountUid(restoredOwnerUid);
                 }
-                await loadAllDataFromFirebase();
                 initializeRealtimeDataListeners();
+                await loadAllDataFromFirebase();
             } else if (!user) {
                 isInitialized = false;
                 detachRealtimeListeners();
