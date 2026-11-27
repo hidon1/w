@@ -14120,11 +14120,40 @@ button,
             }
         }
 
+        let revokingSharedSession = false;
+        async function handleRevokedSharedSession(ownerUid) {
+            if(revokingSharedSession || !currentUser || getActiveDataAccountUid() !== ownerUid) return;
+            revokingSharedSession = true;
+            try {
+                detachRealtimeListeners();
+                if(syncTimeout){clearTimeout(syncTimeout);syncTimeout=null;}
+                window.clearSharedAccess();
+                window.setProjectsData({});
+                window.setRemindersData?.([]);
+                window.setInboxData?.([]);
+                window.showMainContent?.();
+                refreshProjectsAndMetricsUI();
+                await window.firebaseAccess.loadAccountDataByUid(null);
+                const banner=document.createElement('div');
+                banner.setAttribute('role','alert');
+                banner.style.cssText='position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:12px;right:12px;z-index:99999;background:#81203e;color:white;padding:16px;border-radius:12px;text-align:center;box-shadow:0 4px 18px #0004';
+                const lang=document.documentElement.lang;
+                banner.textContent=lang==='fr'?'Votre autorisation a été révoquée. Vous êtes revenu à votre compte.':lang==='en'?'Your access has been revoked. You have returned to your account.':'ההרשאה שלך בוטלה. הוחזרת לחשבון שלך.';
+                document.body.appendChild(banner);setTimeout(()=>banner.remove(),10000);
+            } finally {revokingSharedSession=false;}
+        }
         function initializeRealtimeDataListeners() {
             if (!currentUser || realtimeListenersInitialized) return;
             const dataUid = getActiveDataAccountUid();
             if (!dataUid) return;
 
+            if(dataUid !== currentUser.uid){
+                const permissionRef=doc(db,'accounts',dataUid,'permissions',currentUser.uid);
+                const revoke=()=>handleRevokedSharedSession(dataUid).catch(console.error);
+                realtimeUnsubscribers.push(onSnapshot(permissionRef,{includeMetadataChanges:true},snap=>{
+                    if(!snap.metadata.fromCache&&!snap.exists())revoke();
+                },error=>{if(error.code==='permission-denied')revoke();}));
+            }
             const listeners = [
                 {
                     key: 'projects',
@@ -14164,12 +14193,13 @@ button,
             listeners.forEach(({ key, docRef, applyData }) => {
                 let isInitialSnapshot = true;
                 const unsubscribe = onSnapshot(docRef, (docSnap) => {
-                    if (!docSnap.exists() || docSnap.metadata.hasPendingWrites) return;
+                    if (getActiveDataAccountUid() !== dataUid || !docSnap.exists() || docSnap.metadata.hasPendingWrites) return;
                     const data = docSnap.data() || {};
                     applyData(data, isInitialSnapshot);
                     isInitialSnapshot = false;
                 }, (error) => {
                     console.error(`Realtime listener error (${key}):`, error);
+                    if(error.code==='permission-denied' && currentUser && dataUid!==currentUser.uid)handleRevokedSharedSession(dataUid).catch(console.error);
                 });
                 realtimeUnsubscribers.push(unsubscribe);
             });
@@ -14460,12 +14490,13 @@ button,
         // Load all data from Firebase after authentication
         async function loadAllDataFromFirebase() {
             if (!currentUser) return;
+            const requestedUid=getActiveDataAccountUid();
 
             try {
                 // Load all data from Firebase
                 const [projects, reminders, inbox, preferences, stagesConf] = await Promise.all([
                     loadProjectsFromFirebase().then(projectData => {
-                        if (currentUser && projectData && Object.keys(projectData).length && typeof window.setProjectsData === 'function') {
+                        if (currentUser && getActiveDataAccountUid()===requestedUid && projectData && Object.keys(projectData).length && typeof window.setProjectsData === 'function') {
                             window.setProjectsData(projectData);
                             refreshProjectsAndMetricsUI();
                         }
@@ -14477,6 +14508,7 @@ button,
                     loadStagesConfig()
                 ]);
 
+                if(getActiveDataAccountUid()!==requestedUid)return;
                 // Update global variables if they exist
                 if (projects && Object.keys(projects).length > 0) {
                     if (typeof window.setProjectsData === 'function') {
@@ -14993,5 +15025,9 @@ window.setWineLanguage(lang);observer.observe(document.body,{subtree:true,childL
 <script>
 (function(){const nav=document.getElementById('categoryNav');if(!nav)return;const update=()=>{const h=Math.ceil(nav.getBoundingClientRect().height);if(h>0)document.documentElement.style.setProperty('--wine-nav-height',h+'px');};if(window.ResizeObserver)new ResizeObserver(update).observe(nav);window.addEventListener('resize',update);update();})();
 </script>
-</body>
+<style>@media(max-width:768px){
+#fixedDashboardSection.dashboard-section.collapsed-mobile{height:0!important;min-height:0!important;padding:0!important;border:0!important;gap:0!important;overflow:visible!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important}
+#fixedDashboardSection.collapsed-mobile h2{display:none!important}
+#fixedDashboardSection.collapsed-mobile #dashboardCollapseBtn{top:auto!important;bottom:4px!important;left:10px!important;background:#81203e!important;box-shadow:0 2px 8px #0003}
+}</style></body>
 </html>
