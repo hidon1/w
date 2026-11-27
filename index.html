@@ -14972,5 +14972,26 @@ window.setWineLanguage(lang);observer.observe(document.body,{subtree:true,childL
 })();
 </script>
 <style>html[dir="ltr"] body{direction:ltr}html[dir="ltr"] #fixedDashboardGrid.dashboard-grid{direction:ltr}html[dir="ltr"] .modal-content,html[dir="ltr"] .input-group,html[dir="ltr"] .sidebar{text-align:left;direction:ltr}</style>
+<style>
+#sidebar.sidebar{box-sizing:border-box!important;top:0!important;bottom:0!important;height:100vh!important;height:100dvh!important;max-height:100dvh!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;padding-top:calc(76px + env(safe-area-inset-top,0px))!important;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))!important;justify-content:flex-start!important;z-index:1250!important}
+#sidebar > ul,#sidebar > .sidebar-footer{flex:0 0 auto!important;min-width:0!important;max-width:100%;box-sizing:border-box}
+#sidebar .sidebar-footer{margin-top:auto!important;padding-bottom:24px!important}
+#sidebar .auth-section,#sidebar #authStatus{min-width:0;max-width:100%;overflow-wrap:anywhere;white-space:normal}
+#sidebar ul li button,#sidebar ul li a{white-space:normal;overflow-wrap:anywhere;text-align:start}
+#sidebar .zoom-controls,#sidebar .theme-switch{flex-shrink:0;max-width:100%}
+@media(max-width:768px){
+#categoryNav{box-sizing:border-box!important;bottom:0!important;padding-bottom:env(safe-area-inset-bottom,0px)!important}
+#categoryNav .category-nav-btn{flex:1 1 0!important;min-width:0!important;max-width:25%!important;box-sizing:border-box;white-space:normal!important;padding:8px 3px!important}
+#categoryNav .category-nav-btn span{font-size:clamp(10px,3.1vw,14px)!important;line-height:1.2;white-space:normal!important;overflow-wrap:anywhere;text-align:center;max-width:100%}
+#fixedDashboardSection.dashboard-section{bottom:var(--wine-nav-height,72px)!important;max-width:100%;box-sizing:border-box}
+#fixedDashboardSection.dashboard-section.collapsed-mobile{transform:none!important}
+#fixedDashboardSection.collapsed-mobile #fixedDashboardGrid,#fixedDashboardSection.collapsed-mobile #categoryAddCube{display:none!important}
+#fixedDashboardSection #categoryAddCube{position:absolute!important;top:8px!important;right:10px!important;left:auto!important;margin:0!important}
+#fixedDashboardSection h2{padding-inline:44px!important}
+}
+</style>
+<script>
+(function(){const nav=document.getElementById('categoryNav');if(!nav)return;const update=()=>{const h=Math.ceil(nav.getBoundingClientRect().height);if(h>0)document.documentElement.style.setProperty('--wine-nav-height',h+'px');};if(window.ResizeObserver)new ResizeObserver(update).observe(nav);window.addEventListener('resize',update);update();})();
+</script>
 </body>
 </html>
