@@ -6944,16 +6944,6 @@ button,
             </div>
             <button class="add-custom-property-btn" onclick="addCustomProperty()">+ הוסף שדה מותאם אישית</button>
         </div>
-        <div id="currentStageContent">
-            <div class="input-section" id="currentStageInputSection"></div>
-            <div id="customInputSection" class="input-section" style="display:none"></div>
-        </div>
-        <div class="stage-overview-container" id="stageOverviewContainer" style="display: none;">
-            <h4>נתונים משלבים קודמים</h4>
-            <div class="step-cards-grid" id="stepCardsGrid"></div>
-        </div>
-        <div id="mobileStageMetricSeparator" class="mobile-stage-metric-separator" aria-hidden="true"></div>
-    </div>
     <div class="dashboard-section category-panel active" id="fixedDashboardSection">
         <button class="dashboard-collapse-btn" id="dashboardCollapseBtn" onclick="toggleMobileDashboardCollapse()" aria-label="הסתר/הצג דשבורד תחתון">
             <i class="fas fa-chevron-down"></i>
@@ -6964,6 +6954,16 @@ button,
             <i class="fas fa-plus"></i>
             <span>הוסף מדד</span>
         </div>
+    </div>
+        <div id="currentStageContent">
+            <div class="input-section" id="currentStageInputSection"></div>
+            <div id="customInputSection" class="input-section" style="display:none"></div>
+        </div>
+        <div class="stage-overview-container" id="stageOverviewContainer" style="display: none;">
+            <h4>נתונים משלבים קודמים</h4>
+            <div class="step-cards-grid" id="stepCardsGrid"></div>
+        </div>
+        <div id="mobileStageMetricSeparator" class="mobile-stage-metric-separator" aria-hidden="true"></div>
     </div>
     <div class="secondary-panel category-panel" id="additionsPanel">
         <div id="additionsDashboard" class="secondary-banner-shell"></div>
@@ -15056,5 +15056,12 @@ const btn=document.createElement('button');btn.textContent=tr('אשר פעולה
 btn.onclick=()=>{if(currentProjectId!==projectId||(sharedAccessContext.ownerUid||window.currentFirebaseUser?.uid)!==owner||!ensureEditPermission(projectId)||projects[projectId]?.isClosed)return;const items=customData();if(a.type==='create_custom'){const name=String(a.name||'').trim().slice(0,100);if(!name||items.some(i=>i.name===name)||!['current','sum','chart'].includes(a.kind))return say('Invalid or duplicate measurement');items.push({id:'custom_'+crypto.randomUUID(),name,kind:a.kind,unit:String(a.unit||'').slice(0,30),entries:[]});}else{const item=items.find(i=>i.id===a.id);if(!item||!['current','sum','chart'].includes(item.kind)||typeof a.value!=='number'||!Number.isFinite(a.value))return say('Invalid measurement');const u=customUser();(item.entries||=[]).push({id:'entry_'+crypto.randomUUID(),value:String(a.value),at:new Date().toISOString(),authorId:u.uid,authorName:u.name,done:false});}btn.disabled=true;saveAllProjects();renderCustomDashboard();say(tr('הפעולה בוצעה.','Action completed.','Action effectuée.'));};
 }catch(err){say(String(err.message));}finally{busy=false;}};
 })();
-</script></body>
+</script><style>
+#fixedDashboardSection.dashboard-section{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:48px!important;margin:12px 0!important;padding:12px!important;box-sizing:border-box;z-index:2!important}
+#fixedDashboardSection.dashboard-section.collapsed-mobile{height:42px!important;min-height:42px!important;padding:8px!important;overflow:visible!important}
+#fixedDashboardSection #dashboardCollapseBtn{display:flex!important;position:absolute!important;top:8px!important;bottom:auto!important;left:8px!important;right:auto!important}
+#fixedDashboardSection #fixedDashboardGrid.dashboard-grid{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;width:100%!important;gap:8px!important}
+#fixedDashboardSection #fixedDashboardGrid>.dashboard-item{flex:0 0 clamp(82px,22vw,155px)!important;min-width:0!important}
+#fixedDashboardSection h2{padding-inline:45px!important}
+</style></body>
 </html>
